@@ -252,6 +252,7 @@
         <button class="btn btn-primario" id="btn-login" onclick="intentarLogin()">Ingresar</button>
         <p class="ayuda" style="text-align:center;margin-top:14px;">Solo pedimos esto la primera vez. Luego entrarás directo.</p>
         <button class="btn btn-texto" style="margin-top:2px;" onclick="mostrarAutoregistro()">¿Es tu primera vez y no tienes DNI cargado? Regístrate aquí</button>
+        <button class="btn btn-texto" style="margin-top:0;" onclick="irA('pantalla-config')">⚙️ Configurar conexión a Google Sheets</button>
       </div>
     </div>
   </section>
@@ -354,7 +355,7 @@
   <!-- ================= PANTALLA: CONFIGURACIÓN SINCRONIZACIÓN ================= -->
   <section class="pantalla" id="pantalla-config">
     <div class="barra-superior">
-      <button class="btn-volver" onclick="irA('pantalla-menu')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <button class="btn-volver" onclick="volverDesdeConfig()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg></button>
       <div class="titulo-lg">Conexión a Google Sheets</div>
     </div>
     <div class="contenido" style="padding-top:16px;">
@@ -1114,6 +1115,11 @@ async function renderListaFallas(){
 }
 
 /* ============ SINCRONIZACIÓN CON GOOGLE SHEETS ============ */
+function volverDesdeConfig(){
+  const haySesion = !!localStorage.getItem("sesion_activa");
+  irA(haySesion ? "pantalla-menu" : "pantalla-login");
+}
+
 function guardarConfigUrl(){
   const url = document.getElementById("config-url").value.trim();
   if(!url.startsWith("https://script.google.com/")){
@@ -1122,7 +1128,7 @@ function guardarConfigUrl(){
   }
   localStorage.setItem("sync_url", url);
   mostrarToast("Conexión guardada", true);
-  irA("pantalla-menu");
+  volverDesdeConfig();
 }
 
 async function contarPendientes(){
