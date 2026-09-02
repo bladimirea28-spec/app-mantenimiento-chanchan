@@ -249,8 +249,34 @@
           <input type="password" id="login-clave" inputmode="numeric" maxlength="8" placeholder="Tu N° de DNI">
         </div>
         <div class="error-msg" id="login-error">DNI o contraseña incorrectos. Intenta de nuevo.</div>
-        <button class="btn btn-primario" onclick="intentarLogin()">Ingresar</button>
+        <button class="btn btn-primario" id="btn-login" onclick="intentarLogin()">Ingresar</button>
         <p class="ayuda" style="text-align:center;margin-top:14px;">Solo pedimos esto la primera vez. Luego entrarás directo.</p>
+        <button class="btn btn-texto" style="margin-top:2px;" onclick="mostrarAutoregistro()">¿Es tu primera vez y no tienes DNI cargado? Regístrate aquí</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= PANTALLA: AUTOREGISTRO (usuarios pendientes) ================= -->
+  <section class="pantalla" id="pantalla-autoregistro">
+    <div class="barra-superior">
+      <button class="btn-volver" onclick="irA('pantalla-login')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="titulo-lg">Regístrate</div>
+    </div>
+    <div class="contenido" style="padding-top:16px;">
+      <p class="subtexto" style="margin-bottom:14px;">Toca tu nombre en la lista y luego escribe tu N° de DNI para activar tu usuario. Necesitas conexión a internet solo esta primera vez.</p>
+      <div id="autoregistro-cupos"><div class="subtexto">Cargando usuarios pendientes...</div></div>
+
+      <div id="autoregistro-form" style="display:none;margin-top:16px;">
+        <div class="tarjeta" style="margin-bottom:16px;">
+          <div style="font-weight:700;" id="autoregistro-nombre-elegido"></div>
+          <div class="subtexto" id="autoregistro-cargo-elegido"></div>
+        </div>
+        <div class="campo campo-obligatorio">
+          <label>Tu N° de DNI</label>
+          <input type="text" id="autoregistro-dni" inputmode="numeric" maxlength="8" placeholder="Ej. 45678912">
+        </div>
+        <div class="error-msg" id="autoregistro-error"></div>
+        <button class="btn btn-primario" onclick="confirmarAutoregistro()">Activar mi usuario</button>
       </div>
     </div>
   </section>
@@ -295,6 +321,17 @@
         <div class="modulo-txt">
           <div class="titulo-lg">Historial de Fallas</div>
           <div class="subtexto">Registrar una falla o avería</div>
+        </div>
+        <div class="modulo-flecha"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>
+      </button>
+
+      <button class="modulo-btn" id="btn-panel-admin" style="display:none;" onclick="abrirPanelAdmin()">
+        <div class="modulo-icono" style="background:var(--verde-100);color:var(--verde-800);">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18M7 15l4-4 3 3 5-6"/></svg>
+        </div>
+        <div class="modulo-txt">
+          <div class="titulo-lg">Panel de Administración</div>
+          <div class="subtexto">Ver avance de los técnicos y exportar a Excel</div>
         </div>
         <div class="modulo-flecha"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>
       </button>
@@ -513,21 +550,97 @@
     </div>
   </section>
 
+  <!-- ================= PANTALLA: PANEL DE ADMINISTRACIÓN ================= -->
+  <section class="pantalla" id="pantalla-admin">
+    <div class="barra-superior">
+      <button class="btn-volver" onclick="irA('pantalla-menu')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="titulo-lg">Panel de Administración</div>
+    </div>
+    <div class="contenido" style="padding-top:16px;">
+      <div id="admin-cargando" class="subtexto">Cargando datos desde Google Sheets...</div>
+
+      <div id="admin-contenido" style="display:none;">
+        <div class="fila-2" style="margin-bottom:14px;">
+          <div class="tarjeta"><div class="subtexto">Actividades</div><div class="titulo-xl" id="admin-total-act">0</div></div>
+          <div class="tarjeta"><div class="subtexto">Fallas</div><div class="titulo-xl" id="admin-total-fallas">0</div></div>
+        </div>
+
+        <div class="campo">
+          <label>Filtrar por técnico</label>
+          <select id="admin-filtro-tecnico" onchange="renderizarListadoAdmin()">
+            <option value="">Todos</option>
+          </select>
+        </div>
+
+        <button class="btn btn-secundario" style="margin-bottom:10px;" onclick="exportarExcel()">⬇️ Exportar a Excel</button>
+
+        <div class="tarjeta" style="margin-bottom:14px;">
+          <div style="font-weight:700;font-size:13.5px;margin-bottom:8px;">Liberar dispositivo de un usuario</div>
+          <p class="subtexto" style="margin-bottom:10px;">Úsalo si alguien cambió de celular y ya no puede iniciar sesión.</p>
+          <select id="admin-liberar-select" style="margin-bottom:10px;"></select>
+          <button class="btn btn-secundario" onclick="liberarDispositivoUI()">Liberar dispositivo</button>
+        </div>
+
+        <div id="admin-lista"></div>
+      </div>
+    </div>
+  </section>
+
 </div>
 
 <div id="toast"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg><span id="toast-txt"></span></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 /* ============ DATOS BASE (catálogo de equipos, precargado del Excel) ============ */
 const EQUIPOS = [{"codigo": "04101", "desc": "VL001- TRIMOTO MAVILA 1 - CAMPO"}, {"codigo": "04102", "desc": "VL002- TRIMOTO MAVILA 2 - CAMPO"}, {"codigo": "04103", "desc": "VL003- CUATRIMOTO 1 - CAMPO"}, {"codigo": "04104", "desc": "VL004 - CUATRIMOTO YAMAHA 350  N° 2 - PRODUCCION"}, {"codigo": "04105", "desc": "VL005- CUATRIMOTO HONDA TRX 250 N° 3 - CAMPO"}, {"codigo": "04201", "desc": "VM 001- NISSAN FRONTIER 1 - PRODUCCION BL0-882"}, {"codigo": "04202", "desc": "VM 002- NISSAN FRONTIER 2 - GERENCIA"}, {"codigo": "04203", "desc": "VM 003- TOYOTA HYLUX 1 - MANTENIMIENTO Y OPERACIONES T0H-876"}, {"codigo": "04204", "desc": "VM 004 - SUBARU - RRHH CHV-262"}, {"codigo": "04205", "desc": "VM - 005 FORD CFM-735 - GERENCIA GENERAL"}, {"codigo": "05101", "desc": "IC 001- COSECHADORA 1 - CAMPO"}, {"codigo": "05102", "desc": "IC 002- COSECHADORA 2 - CAMPO"}, {"codigo": "05103", "desc": "IC 003- PICADORA 1  - CAMPO"}, {"codigo": "05104", "desc": "IC 004- PICADORA 2 - CAMPO"}, {"codigo": "05105", "desc": "IC 005- ROTOVATOR 1 - CAMPO"}, {"codigo": "05106", "desc": "IC 006- VERTEDERA 1 - CAMPO"}, {"codigo": "05107", "desc": "IC 007- PICADORA 3 -  CAMPO"}, {"codigo": "05108", "desc": "IC 008- PICADORA 4 - CAMPO"}, {"codigo": "05109", "desc": "IC 009- PICADORA 5 - CAMPO"}, {"codigo": "05110", "desc": "IC 010- COSECHADORA 3 - CAMPO"}, {"codigo": "05111", "desc": "IC 011- ROTOVATOR 2 - CAMPO"}, {"codigo": "05112", "desc": "IC 012- TRACTOR DE FUMIGACIÓN - CAMPO"}, {"codigo": "05201", "desc": "MI 001- CLASIFICADORA A 1 - PACKING"}, {"codigo": "05202", "desc": "MI 002- CLASIFICADORA B 1 - PACKING"}, {"codigo": "05203", "desc": "MI 003- MAQUINA DE CORTE, LAVADO, PRE-EMPAQUE - PACKING"}, {"codigo": "05204", "desc": "MI 004- MAQUINA DE LAVADO QUIMICO -CAMPO"}, {"codigo": "05205", "desc": "MI 005- MAQUINA DE LAVADO TERMICO CAMPO"}, {"codigo": "05206", "desc": "MI 006- MAQUINA DE LAVADO QUIMICO 2 -CAMPO"}, {"codigo": "05207", "desc": "MI 007- CLASIFICADORA A 2 - PACKING 2"}, {"codigo": "05208", "desc": "MI 008- CLASIFICADORA B 2 - PACKING 2"}, {"codigo": "05209", "desc": "MI 009- MAQUINA DE CORTE, LAVADO, PRE-EMPAQUE - PACKING 2"}, {"codigo": "05210", "desc": "MI 0010-MAQUINA DE LAVADO TERMICO 2 - CAMPO"}, {"codigo": "05211", "desc": "MI 0011-MAQUINA DE LAVADO DE JABAS"}, {"codigo": "05301", "desc": "IM001 -IMA 1 - PACKING"}, {"codigo": "05302", "desc": "IM 002- IMA 2- PACKING"}, {"codigo": "05303", "desc": "IM 003- IMA 3 - PACKING"}, {"codigo": "05304", "desc": "IM 004- IMA 4 - PACKING"}, {"codigo": "05305", "desc": "IM 005- IMA 5 - PACKING"}, {"codigo": "05306", "desc": "IM 006- IMA 6 - PACKING"}, {"codigo": "05307", "desc": "IM 007- IMA7 - PACKING 2"}, {"codigo": "05308", "desc": "IM 008- IMA8 - PACKING 2"}, {"codigo": "05309", "desc": "IM 009- IMA9 - PACKING 2"}, {"codigo": "05310", "desc": "IM 010- IMA10 - PACKING 2"}, {"codigo": "05311", "desc": "IM 011- IMA11 - PACKING 2"}, {"codigo": "05401", "desc": "AC 001- A/C OFIC. ADMINISTRACION"}, {"codigo": "05402", "desc": "AC 002- A/C OFIC. SANIDAD"}, {"codigo": "05403", "desc": "AC 003- A/C TOPICO"}, {"codigo": "05404", "desc": "AC 004- A/C OFIC. DE ETIQUETADO - PACKING"}, {"codigo": "05405", "desc": "AC 005- A/C OFC. MANTENIMIENTO"}, {"codigo": "05406", "desc": "AC 006- A/C OFIC. PRODUCCION PACKING 1"}, {"codigo": "05407", "desc": "AC 007- A/C OFC. GERENCIA GERENAL"}, {"codigo": "05408", "desc": "AC 008- A/C OFIC. GERENCIA DE PRODUCCION"}, {"codigo": "05409", "desc": "AC 009- A/C OFIC. VIGILANCIA"}, {"codigo": "05410", "desc": "AC 010- A/C OFIC. RRHH"}, {"codigo": "05411", "desc": "AC 011-A/C VESTUARIO DE MANTENIMIENTO"}, {"codigo": "05412", "desc": "AC 012-A/C OFIC. SALA DE CAPACITACION"}, {"codigo": "05413", "desc": "AC 013- A/C OFIC. PRODUCCION PACKING 2"}, {"codigo": "05414", "desc": "AC 014- A/C OFIC. SENASA PACKING 2"}, {"codigo": "05415", "desc": "AC 015- A/C OFIC. OPERACIONES"}, {"codigo": "05416", "desc": "AC 016- A/C OFIC. ADMINISTRACION HOLANDA"}, {"codigo": "05417", "desc": "AC 017- A/C OFIC. LABORATORIO CAMPO"}, {"codigo": "05501", "desc": "ES 001- EXTRACTOR DE SECADO 1 - PACKING"}, {"codigo": "05502", "desc": "ES 002- EXTRACTOR DE SECADO 2 - PACKING"}, {"codigo": "05503", "desc": "ES 003- EXTRACTOR DE SECADO 3 - PACKING"}, {"codigo": "05504", "desc": "ES 004- EXTRACTOR DE SECADO 4 - PACKING"}, {"codigo": "05505", "desc": "ES 005- EXTRACTOR DE SECADO 5 - PACKING"}, {"codigo": "05506", "desc": "ES 006- EXTRACTOR DE SECADO 6 - PACKING"}, {"codigo": "05507", "desc": "ES 007- EXTRACTOR DE SECADO 7 - PACKING"}, {"codigo": "05508", "desc": "ES 008- EXTRACTOR DE SECADO 8 - PACKING"}, {"codigo": "05509", "desc": "ES 009- EXTRACTOR DE SECADO 9 - PACKING"}, {"codigo": "05510", "desc": "ES 010- EXTRACTOR DE SECADO 10 - PACKING"}, {"codigo": "05511", "desc": "ES 011- EXTRACTOR DE SECADO 11 - PACKING"}, {"codigo": "05512", "desc": "ES 012- EXTRACTOR DE SECADO 12 - PACKING"}, {"codigo": "05513", "desc": "ES 013- EXTRACTOR DE SECADO 13 - PACKING 2"}, {"codigo": "05514", "desc": "ES 014- EXTRACTOR DE SECADO 14 - PACKING 2"}, {"codigo": "05515", "desc": "ES 015- EXTRACTOR DE SECADO 15 - PACKING 2"}, {"codigo": "05516", "desc": "ES 016- EXTRACTOR DE SECADO 16 - PACKING 2"}, {"codigo": "05517", "desc": "ES 017- EXTRACTOR DE SECADO 17 - PACKING 2"}, {"codigo": "05518", "desc": "ES 018- EXTRACTOR DE SECADO 18 - PACKING 2"}, {"codigo": "05519", "desc": "ES 019- EXTRACTOR DE SECADO 19 - PACKING 2"}, {"codigo": "05520", "desc": "ES 020- EXTRACTOR DE SECADO 20 - PACKING 2"}, {"codigo": "05521", "desc": "ES 021- EXTRACTOR DE SECADO 21 - PACKING 2"}, {"codigo": "05522", "desc": "ES 022- EXTRACTOR DE SECADO 22 - PACKING 2"}, {"codigo": "05523", "desc": "ES 023- EXTRACTOR DE SECADO 23 - PACKING 2"}, {"codigo": "05524", "desc": "ES 024- EXTRACTOR DE SECADO 24 - PACKING 2"}, {"codigo": "05601", "desc": "VS 001- VENTILADOR DE SECADO 1- PACKING"}, {"codigo": "05602", "desc": "VS 002- VENTILADOR DE SECADO 2 - PACKING"}, {"codigo": "05603", "desc": "VS 003- VENTILADOR DE SECADO 3 - PACKING"}, {"codigo": "05604", "desc": "VS 004- VENTILADOR DE SECADO 4- PACKING"}, {"codigo": "05605", "desc": "VS 005- VENTILADOR DE SECADO 5- PACKING"}, {"codigo": "05606", "desc": "VS 006- VENTILADOR DE SECADO 6 - PACKING"}, {"codigo": "05607", "desc": "VS 007- VENTILADOR DE SECADO 7- PACKING"}, {"codigo": "05608", "desc": "VS 008- VENTILADOR DE SECADO 8- PACKING"}, {"codigo": "05609", "desc": "VS 009- VENTILADOR DE SECADO 9- PACKING"}, {"codigo": "05610", "desc": "VS 010- VENTILADOR DE SECADO 10- PACKING"}, {"codigo": "05611", "desc": "VS 011- VENTILADOR DE SECADO 11- PACKING"}, {"codigo": "05612", "desc": "VS 012- VENTILADOR DE SECADO 12- PACKING"}, {"codigo": "05613", "desc": "VS 013- VENTILADOR DE SECADO 13- PACKING"}, {"codigo": "05614", "desc": "VS 014- VENTILADOR DE SECADO 14- PACKING"}, {"codigo": "05615", "desc": "VS 015- VENTILADOR DE SECADO 15- PACKING"}, {"codigo": "05616", "desc": "VS 016- VENTILADOR DE SECADO 16- PACKING"}, {"codigo": "05617", "desc": "VS 017- VENTILADOR DE SECADO 17- PACKING"}, {"codigo": "05618", "desc": "VS 018- VENTILADOR DE SECADO 18 - PACKING"}, {"codigo": "05619", "desc": "VS 019- VENTILADOR DE SECADO 19- PACKING"}, {"codigo": "05620", "desc": "VS 020- VENTILADOR DE SECADO 20 - PACKING"}, {"codigo": "05621", "desc": "VS 021- VENTILADOR DE SECADO 21 - PACKING"}, {"codigo": "05622", "desc": "VS 022- VENTILADOR DE SECADO 22- PACKING"}, {"codigo": "05623", "desc": "VS 023- VENTILADOR DE SECADO 23 - PACKING"}, {"codigo": "05624", "desc": "VS 024- VENTILADOR DE SECADO 24 - PACKING 2"}, {"codigo": "05625", "desc": "VS 025- VENTILADOR DE SECADO 25 - PACKING 2"}, {"codigo": "05626", "desc": "VS 026- VENTILADOR DE SECADO 26 - PACKING 2"}, {"codigo": "05627", "desc": "VS 027- VENTILADOR DE SECADO 27 - PACKING 2"}, {"codigo": "05628", "desc": "VS 028- VENTILADOR DE SECADO 28 - PACKING 2"}, {"codigo": "05629", "desc": "VS 029- VENTILADOR DE SECADO 29 - PACKING 2"}, {"codigo": "05630", "desc": "VS 030- VENTILADOR DE SECADO 30 - PACKING 2"}, {"codigo": "05631", "desc": "VS 031- VENTILADOR DE SECADO 31 - PACKING 2"}, {"codigo": "05632", "desc": "VS 032- VENTILADOR DE SECADO 32 - PACKING 2"}, {"codigo": "05633", "desc": "VS 033- VENTILADOR DE SECADO 33 - PACKING 2"}, {"codigo": "05634", "desc": "VS 034- VENTILADOR DE SECADO 34 - PACKING 2"}, {"codigo": "05635", "desc": "VS 035- VENTILADOR DE SECADO 35 - PACKING 2"}, {"codigo": "05636", "desc": "VS 036- VENTILADOR DE SECADO 36 - PACKING 2"}, {"codigo": "05637", "desc": "VS 037- VENTILADOR DE SECADO 37 - PACKING 2"}, {"codigo": "05638", "desc": "VS 038- VENTILADOR DE SECADO 38 - PACKING 2"}, {"codigo": "05639", "desc": "VS 038- VENTILADOR DE SECADO 39 - PACKING 2"}, {"codigo": "05640", "desc": "VS 039- VENTILADOR DE SECADO 40 - PACKING 2"}, {"codigo": "05641", "desc": "VS 040- VENTILADOR DE SECADO 41 - PACKING 2"}, {"codigo": "05642", "desc": "VS 041- VENTILADOR DE SECADO 42 - PACKING 2"}, {"codigo": "05643", "desc": "VS 042- VENTILADOR DE SECADO 43 - PACKING 2"}, {"codigo": "05644", "desc": "VS 043- VENTILADOR DE SECADO 44 - PACKING 2"}, {"codigo": "05645", "desc": "VS 044- VENTILADOR DE SECADO 45 - PACKING 2"}, {"codigo": "05646", "desc": "VS 045- VENTILADOR DE SECADO 46 - PACKING 2"}, {"codigo": "05701", "desc": "MC 001- MESCLADORA DE CONCRETO - PRODUCCION"}, {"codigo": "05702", "desc": "MC 002- MOTOR ESTACIONARIO HONDA GX 390 - 1 (SANIDAD) CAMPO"}, {"codigo": "05703", "desc": "MC 003- MOTOR ESTACIONARIO HONDA GX 160 - CAMPO"}, {"codigo": "05704", "desc": "MC 004- CORTA CESPED"}, {"codigo": "05705", "desc": "MC 005- MOTOR ESTACIONARIO HONDA GX 390 - 2 (SANIDAD) CAMPO"}, {"codigo": "05706", "desc": "MC 006- GENERADOR DE ENERGIA HONDA EG 6500 CXS - PRODUCCION"}, {"codigo": "05707", "desc": "MC 007-TRITURADORA DE BULBOS -  CAMPO"}, {"codigo": "05708", "desc": "MC 008- ATOMIZADORA MASTER 452 X 15 LTS - N°"}, {"codigo": "05709", "desc": "MC 009-ATOMIZADORA MOD. M1200 / VERS. MODERNA 17 LT CIFARELLI - N°2"}, {"codigo": "05710", "desc": "MC 010- CORTADORA Y PODADORA DE CESPED RONIX 4805 EQUIPO MULTIFUNCIONAL"}, {"codigo": "05801", "desc": "ML 001- COMPRESOR DE AIRE 50 LT - PACKING"}, {"codigo": "05802", "desc": "ML 002- COMPRESOR DE AIRE 227 LT - MTO Y OPER"}, {"codigo": "05803", "desc": "ML 003- HIDROLAVADORA - PACKING"}, {"codigo": "05804", "desc": "ML 004- ASPIRADORA - PACKING"}, {"codigo": "05805", "desc": "ML 005- MAQUINA DE SOLDAR STANLEY"}, {"codigo": "05806", "desc": "ML 006- MAQUINA DE SOLDAR ESAB"}, {"codigo": "05807", "desc": "ML 007 HIDROLAVADORA UBERMANN - N°2"}, {"codigo": "05808", "desc": "ML 008- COMPRESOR DE AIRE 50 LT N°2"}, {"codigo": "05901", "desc": "TE 001- TABLERO GENERAL - PACKING"}, {"codigo": "05902", "desc": "TE 002- TABLERO TD1 (AREA DE EMBARQUE)- PACKING"}, {"codigo": "05903", "desc": "TE 003- TABLERO TD2 (MAQUINA INDUSTRIALES) - PACKING"}, {"codigo": "05904", "desc": "TE 004- TABLERO TD3 (AREA DE SECADO) - PACKING"}, {"codigo": "05905", "desc": "TE 005- TABLERO TD4 (MTTO Y OPERACIONES)"}];
 
-/* Usuarios de PRUEBA — reemplazar por los DNI reales de los 4 técnicos */
-const USUARIOS_DEMO = [
-  {dni:"10000001", nombre:"Técnico 1"},
-  {dni:"10000002", nombre:"Técnico 2"},
-  {dni:"10000003", nombre:"Técnico 3"},
-  {dni:"10000004", nombre:"Técnico 4"},
-];
+/* ============ USUARIOS REALES ============
+   El roster de técnicos/admins (nombre, DNI, cargo) ya NO vive en este
+   archivo: vive en la pestaña "USUARIOS" de tu Google Sheet, y el login
+   se valida contra ella a través del Apps Script (acciones "login",
+   "autoregistro" y "cupos"). Así puedes agregar o corregir usuarios sin
+   tocar el código de la app. */
+
+/* Identificador único de este dispositivo/instalación (se genera una sola
+   vez y se guarda para siempre en este celular). Sirve para que el mismo
+   usuario no pueda estar activo en dos dispositivos a la vez. */
+function obtenerDispositivoId(){
+  let id = localStorage.getItem("device_id");
+  if(!id){
+    id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID()
+      : "dev-" + Date.now() + "-" + Math.random().toString(16).slice(2);
+    localStorage.setItem("device_id", id);
+  }
+  return id;
+}
+
+/* Envía una acción al Apps Script (login, autoregistro, cupos, listado, etc.)
+   Devuelve siempre un objeto con al menos {ok:boolean, mensaje}. */
+async function llamarServidor(payload){
+  const url = localStorage.getItem("sync_url");
+  if(!url){
+    return {ok:false, mensaje:"Falta configurar la conexión a Google Sheets (⚙️ en el menú)."};
+  }
+  if(!navigator.onLine){
+    return {ok:false, mensaje:"Necesitas conexión a internet para esto."};
+  }
+  try{
+    const resp = await fetch(url, {
+      method:"POST",
+      headers:{"Content-Type":"text/plain;charset=utf-8"},
+      body: JSON.stringify(payload)
+    });
+    return await resp.json();
+  }catch(err){
+    console.error("Error llamando al servidor:", err);
+    return {ok:false, mensaje:"No se pudo conectar. Revisa tu internet e intenta de nuevo."};
+  }
+}
+
+function primerNombre(nombreCompleto){
+  return (nombreCompleto||"").trim().split(/\s+/)[0] || nombreCompleto;
+}
 
 /* ============ ALMACENAMIENTO LOCAL (IndexedDB) ============ */
 let db;
@@ -581,13 +694,12 @@ function irA(idPantalla){
 }
 
 /* ============ LOGIN ============ */
-function intentarLogin(){
+async function intentarLogin(){
   const usuario = document.getElementById("login-usuario").value.trim();
   const clave = document.getElementById("login-clave").value.trim();
   const errorEl = document.getElementById("login-error");
+  const boton = document.getElementById("btn-login");
 
-  // Cualquier técnico puede entrar con su DNI (mismo número en usuario y contraseña).
-  // Debe tener 8 dígitos (DNI peruano) y coincidir usuario = contraseña.
   const dniValido = /^\d{8}$/.test(usuario);
   if(!dniValido || usuario !== clave){
     errorEl.textContent = "Ingresa tu N° de DNI (8 dígitos) igual en ambos campos.";
@@ -595,13 +707,38 @@ function intentarLogin(){
     return;
   }
   errorEl.classList.remove("activo");
-  const encontrado = { dni: usuario, nombre: "Técnico " + usuario };
-  localStorage.setItem("sesion_activa", JSON.stringify(encontrado));
-  entrarAMenu(encontrado);
+  boton.disabled = true; boton.textContent = "Verificando...";
+
+  const resp = await llamarServidor({ tipo:"login", dni:usuario, dispositivo_id: obtenerDispositivoId() });
+
+  boton.disabled = false; boton.textContent = "Ingresar";
+
+  if(!resp.ok){
+    errorEl.textContent = resp.mensaje || "No se pudo iniciar sesión.";
+    errorEl.classList.add("activo");
+    return;
+  }
+  guardarSesionYEntrar(resp.usuario);
+}
+
+function guardarSesionYEntrar(usuario){
+  const sesion = {
+    dni: usuario.dni,
+    nombre: usuario.nombre,
+    rol: usuario.rol,
+    cargo: usuario.cargo,
+    dispositivo_id: obtenerDispositivoId()
+  };
+  localStorage.setItem("sesion_activa", JSON.stringify(sesion));
+  entrarAMenu(sesion);
 }
 
 function entrarAMenu(usuario){
-  document.getElementById("menu-nombre-usuario").textContent = usuario.nombre;
+  const esAdmin = usuario.rol === "admin";
+  document.getElementById("menu-nombre-usuario").textContent = esAdmin
+    ? primerNombre(usuario.nombre)
+    : `${primerNombre(usuario.nombre)} (${usuario.cargo})`;
+  document.getElementById("btn-panel-admin").style.display = esAdmin ? "flex" : "none";
   irA("pantalla-menu");
 }
 
@@ -617,6 +754,72 @@ function revisarSesionGuardada(){
   if(guardada){
     entrarAMenu(JSON.parse(guardada));
   }
+}
+
+/* ============ AUTOREGISTRO (usuarios sin DNI cargado todavía) ============ */
+let cupoElegido = null;
+
+async function mostrarAutoregistro(){
+  irA("pantalla-autoregistro");
+  document.getElementById("autoregistro-form").style.display = "none";
+  cupoElegido = null;
+  const cont = document.getElementById("autoregistro-cupos");
+  cont.innerHTML = `<div class="subtexto">Cargando usuarios pendientes...</div>`;
+
+  const resp = await llamarServidor({ tipo:"cupos" });
+  if(!resp.ok){
+    cont.innerHTML = `<div class="error-msg activo">${resp.mensaje || "No se pudo cargar la lista."}</div>`;
+    return;
+  }
+  const pendientes = resp.cupos.filter(c=>c.disponible);
+  if(pendientes.length===0){
+    cont.innerHTML = `<div class="subtexto">Ya no hay usuarios pendientes por registrar.</div>`;
+    return;
+  }
+  cont.innerHTML = pendientes.map(c=>`
+    <button class="modulo-btn" style="margin-bottom:10px;" onclick='elegirCupo(${JSON.stringify(c).replace(/'/g,"&#39;")})'>
+      <div class="modulo-txt">
+        <div class="titulo-lg">${c.nombre}</div>
+        <div class="subtexto">${c.cargo}</div>
+      </div>
+      <div class="modulo-flecha"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>
+    </button>
+  `).join("");
+}
+
+function elegirCupo(cupo){
+  cupoElegido = cupo;
+  document.getElementById("autoregistro-nombre-elegido").textContent = cupo.nombre;
+  document.getElementById("autoregistro-cargo-elegido").textContent = cupo.cargo;
+  document.getElementById("autoregistro-dni").value = "";
+  document.getElementById("autoregistro-error").classList.remove("activo");
+  document.getElementById("autoregistro-form").style.display = "block";
+}
+
+async function confirmarAutoregistro(){
+  const dni = document.getElementById("autoregistro-dni").value.trim();
+  const errorEl = document.getElementById("autoregistro-error");
+  if(!cupoElegido){ return; }
+  if(!/^\d{8}$/.test(dni)){
+    errorEl.textContent = "Ingresa un DNI válido de 8 dígitos.";
+    errorEl.classList.add("activo");
+    return;
+  }
+  errorEl.classList.remove("activo");
+
+  const resp = await llamarServidor({
+    tipo:"autoregistro",
+    slot_id: cupoElegido.slot_id,
+    dni,
+    dispositivo_id: obtenerDispositivoId()
+  });
+  if(!resp.ok){
+    errorEl.textContent = resp.mensaje || "No se pudo completar el registro.";
+    errorEl.classList.add("activo");
+    return;
+  }
+  mostrarToast("¡Usuario activado!", true);
+  guardarSesionYEntrar(resp.usuario);
 }
 
 /* ============ CAMPOS "OTROS (ESPECIFICAR)" ============ */
@@ -980,6 +1183,107 @@ async function enviarRegistro(url, tipo, registro){
     console.error("Error sincronizando:", err);
     return false;
   }
+}
+
+/* ============ PANEL DE ADMINISTRACIÓN ============ */
+let adminDatosCache = { actividades: [], fallas: [] };
+
+async function abrirPanelAdmin(){
+  irA("pantalla-admin");
+  document.getElementById("admin-cargando").style.display = "block";
+  document.getElementById("admin-contenido").style.display = "none";
+
+  const sesion = JSON.parse(localStorage.getItem("sesion_activa")||"{}");
+  const resp = await llamarServidor({ tipo:"listado", dni_admin: sesion.dni });
+  if(!resp.ok){
+    document.getElementById("admin-cargando").textContent = resp.mensaje || "No se pudo cargar la información.";
+    return;
+  }
+  adminDatosCache = { actividades: resp.actividades||[], fallas: resp.fallas||[] };
+
+  document.getElementById("admin-total-act").textContent = adminDatosCache.actividades.length;
+  document.getElementById("admin-total-fallas").textContent = adminDatosCache.fallas.length;
+
+  const nombres = new Set();
+  adminDatosCache.actividades.forEach(r=> r.USUARIO && nombres.add(r.USUARIO));
+  adminDatosCache.fallas.forEach(r=> r.TECNICO && nombres.add(r.TECNICO));
+  const selFiltro = document.getElementById("admin-filtro-tecnico");
+  selFiltro.innerHTML = `<option value="">Todos</option>` +
+    [...nombres].sort().map(n=>`<option value="${n}">${n}</option>`).join("");
+
+  const selLiberar = document.getElementById("admin-liberar-select");
+  const cupos = await llamarServidor({ tipo:"cupos" });
+  if(cupos.ok){
+    selLiberar.innerHTML = cupos.cupos.filter(c=>!c.disponible).map(c=>
+      `<option value="${c.slot_id}">${c.nombre} (${c.cargo})</option>`
+    ).join("");
+  }
+
+  document.getElementById("admin-cargando").style.display = "none";
+  document.getElementById("admin-contenido").style.display = "block";
+  renderizarListadoAdmin();
+}
+
+function renderizarListadoAdmin(){
+  const filtro = document.getElementById("admin-filtro-tecnico").value;
+  const cont = document.getElementById("admin-lista");
+
+  const actividades = adminDatosCache.actividades
+    .filter(r => !filtro || r.USUARIO === filtro)
+    .map(r => ({ tipo:"Actividad", tecnico:r.USUARIO, equipo:r.EQUIPO, fecha:r.FECHA, desc:r.DESCRIPCION, fotos:r.FOTOS }));
+  const fallas = adminDatosCache.fallas
+    .filter(r => !filtro || r.TECNICO === filtro)
+    .map(r => ({ tipo:"Falla", tecnico:r.TECNICO, equipo:r.EQUIPO, fecha:r.FECHA, desc:r.DESCRIPCION, fotos:r.FOTOS }));
+
+  const todos = actividades.concat(fallas);
+  if(todos.length===0){
+    cont.innerHTML = `<div class="vacio"><div class="subtexto">No hay registros para este filtro.</div></div>`;
+    return;
+  }
+  cont.innerHTML = todos.map(r=>{
+    const fotos = (r.fotos||"").split("|").map(f=>f.trim()).filter(f=>f && f!=="ERROR_SUBIENDO_FOTO");
+    const fotosHtml = fotos.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">${
+      fotos.map(f=>`<a href="${f}" target="_blank" rel="noopener"><img src="${f}" style="width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid var(--linea);"></a>`).join("")
+    }</div>` : "";
+    return `
+    <div class="registro-item">
+      <div class="fila1">
+        <div>
+          <div style="font-weight:700;font-size:14px;">${r.equipo||"—"}</div>
+          <div class="subtexto" style="margin-top:2px;">${r.tecnico||"—"} · ${r.tipo}</div>
+        </div>
+        <span class="badge">${r.fecha||""}</span>
+      </div>
+      ${r.desc?`<div class="desc">${r.desc}</div>`:""}
+      ${fotosHtml}
+    </div>`;
+  }).join("");
+}
+
+function exportarExcel(){
+  const quitarFotos = (arr) => arr.map(r=>{
+    const copia = Object.assign({}, r);
+    delete copia.FOTOS;
+    return copia;
+  });
+  const libro = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(libro, XLSX.utils.json_to_sheet(quitarFotos(adminDatosCache.actividades)), "Actividades");
+  XLSX.utils.book_append_sheet(libro, XLSX.utils.json_to_sheet(quitarFotos(adminDatosCache.fallas)), "Fallas");
+  const fecha = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(libro, `Mantenimiento_ChanChan_${fecha}.xlsx`);
+}
+
+async function liberarDispositivoUI(){
+  const sesion = JSON.parse(localStorage.getItem("sesion_activa")||"{}");
+  const slotId = document.getElementById("admin-liberar-select").value;
+  if(!slotId) return;
+
+  const resp = await llamarServidor({
+    tipo:"liberar_dispositivo",
+    dni_admin: sesion.dni,
+    slot_id: slotId
+  });
+  mostrarToast(resp.mensaje || (resp.ok? "Dispositivo liberado":"No se pudo liberar"), resp.ok);
 }
 
 /* ============ TOAST ============ */
