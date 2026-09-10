@@ -352,6 +352,7 @@
         <button class="btn btn-primario" id="btn-login" onclick="intentarLogin()">Ingresar</button>
         <p class="ayuda" style="text-align:center;margin-top:14px;">Solo pedimos esto la primera vez. Luego entrarás directo.</p>
         <button class="btn btn-texto" style="margin-top:2px;" onclick="mostrarAutoregistro()">¿Es tu primera vez y no tienes DNI cargado? Regístrate aquí</button>
+        <button class="btn btn-texto" style="margin-top:2px;" onclick="mostrarRegistroOperador()">¿Eres operador de campo, packing u otra área? Regístrate aquí</button>
       </div>
     </div>
   </section>
@@ -381,6 +382,53 @@
     </div>
   </section>
 
+  <!-- ================= PANTALLA: REGISTRO DE OPERADOR ================= -->
+  <section class="pantalla" id="pantalla-registro-operador">
+    <div class="barra-superior">
+      <button class="btn-volver" onclick="irA('pantalla-login')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="titulo-lg">Registro de operador</div>
+    </div>
+    <div class="contenido" style="padding-top:16px;">
+      <p class="subtexto" style="margin-bottom:14px;">Para reportar una falla desde cualquier área (campo, packing, etc.) completa tus datos. Necesitas conexión a internet solo esta primera vez.</p>
+
+      <div class="campo campo-obligatorio">
+        <label>Tu N° de DNI</label>
+        <input type="text" id="oper-reg-dni" inputmode="numeric" maxlength="8" placeholder="Ej. 45678912">
+      </div>
+      <div class="campo campo-obligatorio">
+        <label>Nombres y apellidos</label>
+        <input type="text" id="oper-reg-nombre" placeholder="Ej. Juan Pérez Ríos">
+      </div>
+      <div class="campo campo-obligatorio">
+        <label>Área</label>
+        <select id="oper-reg-area">
+          <option value="">Selecciona un área</option>
+          <option>Campo</option><option>SSGG</option><option>Packing 1</option><option>Packing 2</option>
+          <option>Mantenimiento</option><option>RRHH</option><option>Administrativos</option>
+          <option>Tópico</option><option>Operaciones</option><option>Almacén</option><option value="Otros">Otros (especificar)</option>
+        </select>
+        <input type="text" id="oper-reg-area-otro" data-otros placeholder="Especifica el área" style="display:none;" onchange="mostrarOtro('oper-reg-area','oper-reg-area-otro')">
+      </div>
+      <div class="campo campo-obligatorio">
+        <label>N° de WhatsApp</label>
+        <input type="text" id="oper-reg-whatsapp" inputmode="numeric" maxlength="9" placeholder="Ej. 987654321">
+      </div>
+
+      <div class="campo" style="display:flex;align-items:center;gap:10px;">
+        <input type="checkbox" id="oper-reg-jefe" style="width:auto;" onchange="toggleCorreoJefeArea()">
+        <label style="margin:0;">Soy jefe/supervisor de área</label>
+      </div>
+      <div class="campo" id="oper-reg-correo-campo" style="display:none;">
+        <label>Correo corporativo</label>
+        <input type="email" id="oper-reg-correo" placeholder="nombre@chanchan.com">
+        <div class="ayuda">Obligatorio para jefes/supervisores de área: solo ellos pueden generar solicitudes de actividad.</div>
+      </div>
+
+      <div class="error-msg" id="oper-reg-error"></div>
+      <button class="btn btn-primario" onclick="confirmarRegistroOperador()">Registrarme</button>
+    </div>
+  </section>
+
   <!-- ================= PANTALLA: MENÚ PRINCIPAL ================= -->
   <section class="pantalla" id="pantalla-menu">
     <div class="placa">
@@ -403,7 +451,7 @@
         <span>Elige qué vas a registrar. Tus datos se guardan aunque no tengas señal, y se suben solos cuando vuelva la conexión.</span>
       </div>
 
-      <button class="modulo-btn" onclick="irA('pantalla-lista-mtto')">
+      <button class="modulo-btn" id="btn-modulo-actividades" onclick="irA('pantalla-lista-mtto')">
         <div class="modulo-icono verde">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14.7 6.3a4 4 0 1 1-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 1 1 5.4-5.4l3.6-3.6-3-3-3.6 3.6z"/></svg>
         </div>
@@ -414,7 +462,7 @@
         <div class="modulo-flecha"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>
       </button>
 
-      <button class="modulo-btn" onclick="irA('pantalla-lista-fallas')">
+      <button class="modulo-btn" id="btn-modulo-fallas" onclick="irA('pantalla-lista-fallas')">
         <div class="modulo-icono rojo">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 9v4M12 17h.01M10.3 3.9L2.5 17a1.8 1.8 0 0 0 1.5 2.7h16a1.8 1.8 0 0 0 1.5-2.7L13.7 3.9a1.8 1.8 0 0 0-3.4 0z"/></svg>
         </div>
@@ -424,6 +472,38 @@
         </div>
         <div class="modulo-flecha"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>
       </button>
+
+      <button class="modulo-btn" id="btn-reportar-falla-operador" style="display:none;" onclick="abrirFormFallaOperador()">
+        <div class="modulo-icono rojo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 9v4M12 17h.01M10.3 3.9L2.5 17a1.8 1.8 0 0 0 1.5 2.7h16a1.8 1.8 0 0 0 1.5-2.7L13.7 3.9a1.8 1.8 0 0 0-3.4 0z"/></svg>
+        </div>
+        <div class="modulo-txt">
+          <div class="titulo-lg">Reportar falla</div>
+          <div class="subtexto">Avisa a mantenimiento de una falla o avería</div>
+        </div>
+        <div class="modulo-flecha"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>
+      </button>
+
+      <button class="modulo-btn" id="btn-solicitar-actividad" style="display:none;" onclick="abrirFormSolicitud()">
+        <div class="modulo-icono verde">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14.7 6.3a4 4 0 1 1-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 1 1 5.4-5.4l3.6-3.6-3-3-3.6 3.6z"/></svg>
+        </div>
+        <div class="modulo-txt">
+          <div class="titulo-lg">Solicitar actividad</div>
+          <div class="subtexto">Pide un trabajo de mantenimiento para tu área</div>
+        </div>
+        <div class="modulo-flecha"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>
+      </button>
+
+      <div class="tarjeta" id="tarjeta-pedir-correo" style="display:none;margin-top:4px;">
+        <div style="font-weight:700;font-size:13.5px;margin-bottom:6px;">Falta tu correo corporativo</div>
+        <p class="subtexto" style="margin-bottom:10px;">Lo usaremos más adelante para enviarte alertas de fallas. Puedes agregarlo ahora o luego.</p>
+        <input type="email" id="pedir-correo-input" placeholder="nombre@chanchan.com" style="margin-bottom:8px;">
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-secundario" style="margin-top:0;flex:1;" onclick="document.getElementById('tarjeta-pedir-correo').style.display='none';">Ahora no</button>
+          <button class="btn btn-primario" style="margin-top:0;flex:1;" onclick="guardarCorreoAdmin()">Guardar</button>
+        </div>
+      </div>
 
       <button class="modulo-btn" id="btn-panel-admin" style="display:none;" onclick="abrirPanelAdmin()">
         <div class="modulo-icono" style="background:var(--verde-100);color:var(--verde-texto);">
@@ -754,6 +834,158 @@
     </div>
   </section>
 
+  <!-- ================= PANTALLA: REPORTAR FALLA (OPERADOR) ================= -->
+  <section class="pantalla" id="pantalla-form-falla-operador">
+    <div class="barra-superior">
+      <button class="btn-volver" onclick="irA('pantalla-menu')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="titulo-lg">Reportar falla</div>
+    </div>
+    <div class="contenido" style="padding-top:16px;">
+
+      <div class="campo campo-obligatorio">
+        <label>Área donde se registra</label>
+        <select id="oper-falla-area" onchange="mostrarOtro('oper-falla-area','oper-falla-area-otro')">
+          <option value="">Selecciona un área</option>
+          <option>Campo</option><option>SSGG</option><option>Packing 1</option><option>Packing 2</option>
+          <option>Mantenimiento</option><option>RRHH</option><option>Administrativos</option>
+          <option>Tópico</option><option>Operaciones</option><option>Almacén</option><option value="Otros">Otros (especificar)</option>
+        </select>
+        <input type="text" id="oper-falla-area-otro" data-otros placeholder="Especifica el área" style="display:none;">
+      </div>
+
+      <div class="campo campo-obligatorio">
+        <label>Equipo</label>
+        <input type="text" id="oper-falla-equipo" placeholder="Escribe código o nombre del equipo" autocomplete="off">
+        <div class="autocomplete-lista" id="oper-falla-equipo-lista"></div>
+      </div>
+
+      <div class="campo">
+        <label>Operador que reporta</label>
+        <input type="text" id="oper-falla-nombre" disabled>
+      </div>
+
+      <div class="campo campo-obligatorio">
+        <label>Tipo de falla</label>
+        <input type="text" id="oper-falla-tipo" placeholder="Ej. Mecánica, Eléctrica, Hidráulica...">
+      </div>
+
+      <div class="campo campo-obligatorio">
+        <label>Criticidad</label>
+        <select id="oper-falla-criticidad">
+          <option value="">Selecciona la criticidad</option>
+          <option value="Alta">Alta</option>
+          <option value="Media">Media</option>
+          <option value="Baja">Baja</option>
+        </select>
+      </div>
+
+      <div class="campo campo-obligatorio">
+        <label>Descripción de la falla</label>
+        <textarea id="oper-falla-descripcion" placeholder="¿Qué pasó?"></textarea>
+      </div>
+
+      <div class="campo">
+        <label>Evidencia fotográfica (opcional)</label>
+        <div class="foto-zona">
+          <div class="foto-botones">
+            <label class="foto-btn" for="oper-falla-foto-camara">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8a2 2 0 0 1 2-2h1.5l1-1.5h7l1 1.5H18a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8z"/><circle cx="12" cy="13" r="3.5"/></svg>
+              Tomar foto
+            </label>
+            <label class="foto-btn foto-btn-secundario" for="oper-falla-foto-galeria">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 16l-5.5-5.5a2 2 0 0 0-2.8 0L3 20"/></svg>
+              Elegir de galería
+            </label>
+          </div>
+          <input type="file" id="oper-falla-foto-camara" accept="image/*" capture="environment" multiple>
+          <input type="file" id="oper-falla-foto-galeria" accept="image/*" multiple>
+          <div class="foto-previews" id="oper-falla-foto-previews"></div>
+          <div class="foto-ayuda">Puedes adjuntar más de una. Se guardan en el celular y se suben cuando haya señal.</div>
+        </div>
+      </div>
+
+      <div class="ayuda" style="margin-top:-6px;margin-bottom:14px;">La fecha y hora se registran automáticamente. Un técnico de mantenimiento se hará cargo y completará el resto de la información.</div>
+
+      <button class="btn btn-primario" onclick="guardarFallaOperador()" style="margin-top:6px;background:var(--rojo-600);color:#fff;">Reportar falla</button>
+    </div>
+  </section>
+
+  <!-- ================= PANTALLA: SOLICITAR ACTIVIDAD (OPERADOR JEFE/SUPERVISOR) ================= -->
+  <section class="pantalla" id="pantalla-form-solicitud">
+    <div class="barra-superior">
+      <button class="btn-volver" onclick="irA('pantalla-menu')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="titulo-lg">Solicitar actividad</div>
+    </div>
+    <div class="contenido" style="padding-top:16px;">
+
+      <div class="campo campo-obligatorio">
+        <label>Equipo</label>
+        <input type="text" id="solicitud-equipo" placeholder="Escribe código o nombre del equipo" autocomplete="off">
+        <div class="autocomplete-lista" id="solicitud-equipo-lista"></div>
+      </div>
+
+      <div class="campo campo-obligatorio">
+        <label>Área</label>
+        <select id="solicitud-area" onchange="mostrarOtro('solicitud-area','solicitud-area-otro')">
+          <option value="">Selecciona un área</option>
+          <option>Campo</option><option>SSGG</option><option>Packing 1</option><option>Packing 2</option>
+          <option>Mantenimiento</option><option>RRHH</option><option>Administrativos</option>
+          <option>Tópico</option><option>Operaciones</option><option>Almacén</option><option value="Otros">Otros (especificar)</option>
+        </select>
+        <input type="text" id="solicitud-area-otro" data-otros placeholder="Especifica el área" style="display:none;">
+      </div>
+
+      <div class="campo campo-obligatorio">
+        <label>Prioridad</label>
+        <select id="solicitud-prioridad">
+          <option value="">Selecciona la prioridad</option>
+          <option value="Alta">Alta</option>
+          <option value="Media">Media</option>
+          <option value="Baja">Baja</option>
+        </select>
+      </div>
+
+      <div class="campo campo-obligatorio">
+        <label>Fecha tentativa de culminación</label>
+        <input type="date" id="solicitud-fecha-tentativa">
+      </div>
+
+      <div class="campo campo-obligatorio">
+        <label>Detalle de la solicitud</label>
+        <textarea id="solicitud-detalle" placeholder="¿Qué se necesita?"></textarea>
+      </div>
+
+      <div class="campo">
+        <label>Comentarios adicionales (opcional)</label>
+        <textarea id="solicitud-comentarios" placeholder="Información adicional"></textarea>
+      </div>
+
+      <div class="campo">
+        <label>Evidencia fotográfica (opcional)</label>
+        <div class="foto-zona">
+          <div class="foto-botones">
+            <label class="foto-btn" for="solicitud-foto-camara">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8a2 2 0 0 1 2-2h1.5l1-1.5h7l1 1.5H18a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8z"/><circle cx="12" cy="13" r="3.5"/></svg>
+              Tomar foto
+            </label>
+            <label class="foto-btn foto-btn-secundario" for="solicitud-foto-galeria">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 16l-5.5-5.5a2 2 0 0 0-2.8 0L3 20"/></svg>
+              Elegir de galería
+            </label>
+          </div>
+          <input type="file" id="solicitud-foto-camara" accept="image/*" capture="environment" multiple>
+          <input type="file" id="solicitud-foto-galeria" accept="image/*" multiple>
+          <div class="foto-previews" id="solicitud-foto-previews"></div>
+          <div class="foto-ayuda">Puedes adjuntar más de una.</div>
+        </div>
+      </div>
+
+      <div class="ayuda" style="margin-top:-6px;margin-bottom:14px;">El supervisor/admin coordinará la fecha y el técnico que la realizará.</div>
+
+      <button class="btn btn-primario" onclick="guardarSolicitud()" style="margin-top:6px;">Enviar solicitud</button>
+    </div>
+  </section>
+
   <!-- ================= PANTALLA: PANEL DE ADMINISTRACIÓN ================= -->
   <section class="pantalla" id="pantalla-admin">
     <div class="barra-superior">
@@ -791,6 +1023,12 @@
         </div>
 
         <button class="btn btn-secundario" style="margin-bottom:10px;" onclick="exportarExcel()">⬇️ Exportar a Excel</button>
+
+        <div class="tarjeta" style="margin-bottom:14px;">
+          <div style="font-weight:700;font-size:13.5px;margin-bottom:8px;">Solicitudes de actividad pendientes</div>
+          <p class="subtexto" style="margin-bottom:10px;">Generadas por jefes/supervisores de área. La programación se coordina fuera de la app.</p>
+          <div id="admin-solicitudes-lista" class="subtexto">Cargando...</div>
+        </div>
 
         <div class="tarjeta" style="margin-bottom:14px;">
           <div style="font-weight:700;font-size:13.5px;margin-bottom:8px;">Liberar dispositivo de un usuario</div>
@@ -987,6 +1225,10 @@ function guardarSesionYEntrar(usuario){
     nombre: usuario.nombre,
     rol: usuario.rol,
     cargo: usuario.cargo,
+    area: usuario.area || "",
+    whatsapp: usuario.whatsapp || "",
+    correo: usuario.correo || "",
+    es_jefe_area: !!usuario.es_jefe_area,
     dispositivo_id: obtenerDispositivoId()
   };
   localStorage.setItem("sesion_activa", JSON.stringify(sesion));
@@ -995,11 +1237,32 @@ function guardarSesionYEntrar(usuario){
 
 function entrarAMenu(usuario){
   const esAdmin = usuario.rol === "admin";
+  const esOperador = usuario.rol === "operador";
   document.getElementById("menu-nombre-usuario").textContent = esAdmin
     ? primerNombre(usuario.nombre)
     : `${primerNombre(usuario.nombre)} (${usuario.cargo})`;
   document.getElementById("btn-panel-admin").style.display = esAdmin ? "flex" : "none";
+  document.getElementById("btn-modulo-actividades").style.display = esOperador ? "none" : "flex";
+  document.getElementById("btn-modulo-fallas").style.display = esOperador ? "none" : "flex";
+  document.getElementById("btn-reportar-falla-operador").style.display = esOperador ? "flex" : "none";
+  document.getElementById("btn-solicitar-actividad").style.display = (esOperador && usuario.es_jefe_area) ? "flex" : "none";
+  document.getElementById("tarjeta-pedir-correo").style.display = (esAdmin && !usuario.correo) ? "block" : "none";
   irA("pantalla-menu");
+}
+
+async function guardarCorreoAdmin(){
+  const correo = document.getElementById("pedir-correo-input").value.trim();
+  if(!correo){ mostrarToast("Ingresa un correo o toca \"Ahora no\"", false); return; }
+  const sesion = JSON.parse(localStorage.getItem("sesion_activa")||"{}");
+  const resp = await llamarServidor({ tipo:"actualizar_correo", dni: sesion.dni, correo });
+  if(!resp || !resp.ok){
+    mostrarToast((resp && resp.mensaje) || "No se pudo guardar el correo.", false);
+    return;
+  }
+  sesion.correo = correo;
+  localStorage.setItem("sesion_activa", JSON.stringify(sesion));
+  document.getElementById("tarjeta-pedir-correo").style.display = "none";
+  mostrarToast("Correo guardado", true);
 }
 
 function cerrarSesion(){
@@ -1115,6 +1378,59 @@ async function confirmarAutoregistro(){
     return;
   }
   mostrarToast("¡Usuario activado!", true);
+  guardarSesionYEntrar(resp.usuario);
+}
+
+/* ============ REGISTRO DE OPERADOR (campo, packing, etc.) ============ */
+function mostrarRegistroOperador(){
+  ["oper-reg-dni","oper-reg-nombre","oper-reg-whatsapp","oper-reg-correo"].forEach(id=>{
+    document.getElementById(id).value = "";
+  });
+  document.getElementById("oper-reg-area").value = "";
+  document.getElementById("oper-reg-area-otro").value = "";
+  document.getElementById("oper-reg-area-otro").style.display = "none";
+  document.getElementById("oper-reg-jefe").checked = false;
+  document.getElementById("oper-reg-correo-campo").style.display = "none";
+  document.getElementById("oper-reg-error").classList.remove("activo");
+  irA("pantalla-registro-operador");
+}
+
+function toggleCorreoJefeArea(){
+  const esJefe = document.getElementById("oper-reg-jefe").checked;
+  document.getElementById("oper-reg-correo-campo").style.display = esJefe ? "block" : "none";
+}
+
+async function confirmarRegistroOperador(){
+  const dni = document.getElementById("oper-reg-dni").value.trim();
+  const nombre = document.getElementById("oper-reg-nombre").value.trim();
+  const area = valorOtro("oper-reg-area","oper-reg-area-otro");
+  const whatsapp = document.getElementById("oper-reg-whatsapp").value.trim();
+  const esJefeArea = document.getElementById("oper-reg-jefe").checked;
+  const correo = document.getElementById("oper-reg-correo").value.trim();
+  const errorEl = document.getElementById("oper-reg-error");
+
+  if(!/^\d{8}$/.test(dni) || !nombre || !area || !/^\d{9}$/.test(whatsapp) || (esJefeArea && !correo)){
+    errorEl.textContent = esJefeArea && !correo
+      ? "Como jefe/supervisor de área, el correo corporativo es obligatorio."
+      : "Completa todos los campos obligatorios (DNI de 8 dígitos, WhatsApp de 9 dígitos).";
+    errorEl.classList.add("activo");
+    return;
+  }
+  errorEl.classList.remove("activo");
+
+  const resp = await llamarServidor({
+    tipo: "registrar_operador",
+    dni, nombre, area, whatsapp,
+    correo: correo || "",
+    es_jefe_area: esJefeArea,
+    dispositivo_id: obtenerDispositivoId()
+  });
+  if(!resp.ok){
+    errorEl.textContent = resp.mensaje || "No se pudo completar el registro.";
+    errorEl.classList.add("activo");
+    return;
+  }
+  mostrarToast("¡Registro completado!", true);
   guardarSesionYEntrar(resp.usuario);
 }
 
@@ -1344,7 +1660,7 @@ async function renderListaMtto(){
 }
 
 /* ============ EVIDENCIA FOTOGRÁFICA (reutilizable) ============ */
-const fotosTemp = { mtto: [], falla: [] };
+const fotosTemp = { mtto: [], falla: [], falla_operador: [], solicitud: [] };
 
 function iniciarFotoInput(modulo, idInput, idPreviews){
   const input = document.getElementById(idInput);
@@ -1480,6 +1796,68 @@ async function guardarFalla(){
   await guardarEnStore("fallas", registro);
   mostrarToast("Falla reportada" + (navigator.onLine ? "" : " (pendiente de sincronizar)"), true);
   irA("pantalla-lista-fallas");
+}
+
+/* Pantalla simplificada para que cualquier operador (campo, packing, etc.)
+   reporte una falla. Se guarda en el MISMO almacén local "fallas" que usa
+   el técnico, así que reutiliza tal cual la sincronización con el servidor.
+   Queda sin Técnico Responsable (se asigna solo/a cuando un técnico la
+   toma desde "Fallas abiertas"), y sin hora de inicio/turno manual. */
+function abrirFormFallaOperador(){
+  ["oper-falla-equipo","oper-falla-tipo","oper-falla-descripcion"].forEach(id=>{
+    document.getElementById(id).value="";
+  });
+  document.getElementById("oper-falla-area").value="";
+  document.getElementById("oper-falla-area-otro").value="";
+  document.getElementById("oper-falla-area-otro").style.display="none";
+  document.getElementById("oper-falla-criticidad").value="";
+  const sesion = JSON.parse(localStorage.getItem("sesion_activa")||"{}");
+  document.getElementById("oper-falla-nombre").value = sesion.nombre || "";
+  fotosTemp.falla_operador = [];
+  renderFotoPreviews("falla_operador","oper-falla-foto-previews");
+  irA("pantalla-form-falla-operador");
+}
+
+async function guardarFallaOperador(){
+  const equipo = document.getElementById("oper-falla-equipo").value.trim();
+  const area = valorOtro("oper-falla-area","oper-falla-area-otro");
+  const tipo = document.getElementById("oper-falla-tipo").value.trim();
+  const criticidad = document.getElementById("oper-falla-criticidad").value;
+  const descripcion = document.getElementById("oper-falla-descripcion").value.trim();
+
+  if(!area || !equipo || !tipo || !criticidad || !descripcion){
+    mostrarToast("Completa los campos obligatorios (*)", false);
+    return;
+  }
+
+  contadorFalla++;
+  localStorage.setItem("contador_falla", contadorFalla);
+  const idFalla = "F-" + String(contadorFalla).padStart(4,"0");
+  const sesion = JSON.parse(localStorage.getItem("sesion_activa")||"{}");
+  const ahora = new Date();
+
+  const registro = {
+    id: idFalla + "_" + Date.now(),
+    id_falla: idFalla,
+    fecha: ahora.toLocaleDateString("es-PE"),
+    tecnico: sesion.nombre || "—",
+    dni: sesion.dni || "—",
+    tecnico_responsable: "",
+    equipo, area, tipo, criticidad,
+    descripcion, causa:"", accion:"",
+    hora_inicio:"", hora_fin:"",
+    minutos_parada: null,
+    operarios:"", turno:"",
+    tipo_atencion:"",
+    estado: "Abierta",
+    fotos: [...fotosTemp.falla_operador],
+    creado: ahora.getTime(),
+    sincronizado: false
+  };
+
+  await guardarEnStore("fallas", registro);
+  mostrarToast("Falla reportada" + (navigator.onLine ? "" : " (pendiente de sincronizar)"), true);
+  irA("pantalla-menu");
 }
 
 async function renderListaFallas(){
@@ -1640,6 +2018,55 @@ async function guardarResolucionFalla(){
   irA("pantalla-fallas-abiertas");
 }
 
+/* ============ SOLICITUD DE ACTIVIDAD (solo jefes/supervisores de área) ============
+   A diferencia de las fallas, esta se envía directo al servidor (no se
+   guarda offline primero) porque el servidor valida ahí mismo que quien
+   la pide sea realmente jefe/supervisor de área con correo registrado. */
+function abrirFormSolicitud(){
+  ["solicitud-equipo","solicitud-detalle","solicitud-comentarios","solicitud-fecha-tentativa"].forEach(id=>{
+    document.getElementById(id).value="";
+  });
+  document.getElementById("solicitud-area").value="";
+  document.getElementById("solicitud-area-otro").value="";
+  document.getElementById("solicitud-area-otro").style.display="none";
+  document.getElementById("solicitud-prioridad").value="";
+  fotosTemp.solicitud = [];
+  renderFotoPreviews("solicitud","solicitud-foto-previews");
+  irA("pantalla-form-solicitud");
+}
+
+async function guardarSolicitud(){
+  const equipo = document.getElementById("solicitud-equipo").value.trim();
+  const area = valorOtro("solicitud-area","solicitud-area-otro");
+  const prioridad = document.getElementById("solicitud-prioridad").value;
+  const fechaTentativa = document.getElementById("solicitud-fecha-tentativa").value;
+  const detalle = document.getElementById("solicitud-detalle").value.trim();
+  const comentarios = document.getElementById("solicitud-comentarios").value.trim();
+
+  if(!equipo || !area || !prioridad || !fechaTentativa || !detalle){
+    mostrarToast("Completa los campos obligatorios (*)", false);
+    return;
+  }
+
+  const sesion = JSON.parse(localStorage.getItem("sesion_activa")||"{}");
+  const resp = await llamarServidor({
+    tipo: "solicitar_actividad",
+    dni: sesion.dni,
+    registro: {
+      area, equipo, prioridad,
+      fecha_tentativa: fechaTentativa,
+      detalle, comentarios,
+      fotos: [...fotosTemp.solicitud]
+    }
+  });
+  if(!resp || !resp.ok){
+    mostrarToast((resp && resp.mensaje) || "No se pudo enviar la solicitud.", false);
+    return;
+  }
+  mostrarToast("Solicitud enviada", true);
+  irA("pantalla-menu");
+}
+
 /* ============ SINCRONIZACIÓN CON GOOGLE SHEETS ============ */
 function guardarConfigUrl(){
   const url = document.getElementById("config-url").value.trim();
@@ -1748,6 +2175,31 @@ async function abrirPanelAdmin(){
   document.getElementById("admin-cargando").style.display = "none";
   document.getElementById("admin-contenido").style.display = "block";
   renderizarListadoAdmin();
+  cargarSolicitudesAdmin(sesion);
+}
+
+async function cargarSolicitudesAdmin(sesion){
+  const cont = document.getElementById("admin-solicitudes-lista");
+  cont.textContent = "Cargando...";
+  const resp = await llamarServidor({ tipo:"listado_solicitudes_actividad", dni_admin: sesion.dni });
+  if(!resp || !resp.ok){
+    cont.textContent = (resp && resp.mensaje) || "No se pudo cargar.";
+    return;
+  }
+  const pendientes = (resp.solicitudes||[]).filter(s => String(s.ESTADO||"Pendiente")==="Pendiente");
+  if(pendientes.length===0){
+    cont.textContent = "No hay solicitudes pendientes.";
+    return;
+  }
+  cont.innerHTML = pendientes.map(s=>`
+    <div class="registro-item">
+      <div style="font-weight:700;font-size:14px;">${s.EQUIPO||''} · ${s.AREA||''}</div>
+      <div class="subtexto" style="margin-top:2px;">Pedido por ${s.SOLICITADO_POR||''} · Prioridad ${s.PRIORIDAD||''}</div>
+      <div class="desc">${s.DETALLE||''}</div>
+      ${s.COMENTARIOS?`<div class="subtexto" style="margin-top:4px;">${s.COMENTARIOS}</div>`:''}
+      <div class="meta">${s.ID_SOLICITUD||''} · culminar antes de ${s.FECHA_TENTATIVA||'—'} · pedido el ${s.FECHA||''}</div>
+    </div>
+  `).join("");
 }
 
 function topPorConteo(lista, campo, top){
@@ -1896,10 +2348,16 @@ window.addEventListener("offline", actualizarEstadoConexion);
     await abrirDB();
     iniciarAutocompleteEquipo("mtto-equipo","mtto-equipo-lista");
     iniciarAutocompleteEquipo("falla-equipo","falla-equipo-lista");
+    iniciarAutocompleteEquipo("oper-falla-equipo","oper-falla-equipo-lista");
+    iniciarAutocompleteEquipo("solicitud-equipo","solicitud-equipo-lista");
     iniciarFotoInput("mtto","mtto-foto-camara","mtto-foto-previews");
     iniciarFotoInput("mtto","mtto-foto-galeria","mtto-foto-previews");
     iniciarFotoInput("falla","falla-foto-camara","falla-foto-previews");
     iniciarFotoInput("falla","falla-foto-galeria","falla-foto-previews");
+    iniciarFotoInput("falla_operador","oper-falla-foto-camara","oper-falla-foto-previews");
+    iniciarFotoInput("falla_operador","oper-falla-foto-galeria","oper-falla-foto-previews");
+    iniciarFotoInput("solicitud","solicitud-foto-camara","solicitud-foto-previews");
+    iniciarFotoInput("solicitud","solicitud-foto-galeria","solicitud-foto-previews");
     document.getElementById("resolver-hora-fin").addEventListener("change", actualizarDuracionResolver);
     document.getElementById("mtto-fechahora-inicio").addEventListener("change", actualizarDuracionMtto);
     document.getElementById("mtto-fechahora-fin").addEventListener("change", actualizarDuracionMtto);
