@@ -152,7 +152,7 @@
   /* ---------- Inputs ---------- */
   label{display:block;font-size:12.5px;font-weight:700;color:var(--tinta-600);margin-bottom:6px;letter-spacing:.01em;}
   .campo{margin-bottom:16px;position:relative;}
-  input[type=text],input[type=password],input[type=number],input[type=time],select,textarea{
+  input[type=text],input[type=password],input[type=number],input[type=time],input[type=date],select,textarea{
     width:100%;padding:13px 14px;border-radius:10px;border:1.5px solid var(--linea);
     font-size:15px;background:var(--card);color:var(--tinta-900);font-family:inherit;
   }
@@ -311,6 +311,13 @@
   .kpi-card.acento-ambar .kpi-valor{color:var(--ambar-600);}
   .kpi-card.acento-verde .kpi-valor{color:var(--verde-700);}
   .kpi-card.acento-azul .kpi-valor{color:var(--azul-700);}
+
+  /* ---------- Gráficos simples (SVG, sin librerías externas) ---------- */
+  .grafico-caja{width:100%;}
+  .grafico-svg{width:100%;height:auto;display:block;}
+  .grafico-leyenda{display:flex;gap:14px;margin-bottom:4px;font-size:11.5px;color:var(--tinta-600);flex-wrap:wrap;}
+  .grafico-leyenda i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:middle;}
+  .grafico-nota{font-size:11px;color:var(--tinta-600);margin-top:2px;}
 
   /* ---------- Skeleton loaders (estado "cargando" de listas) ---------- */
   .skeleton{
@@ -1006,12 +1013,29 @@
         </div>
 
         <div class="tarjeta" style="margin-bottom:14px;">
-          <div style="font-weight:700;font-size:13.5px;margin-bottom:8px;">Equipos con más fallas</div>
-          <div id="admin-top-equipos" class="subtexto">Sin datos.</div>
-        </div>
+          <div style="font-weight:700;font-size:13.5px;margin-bottom:10px;">Análisis por período</div>
+          <div class="fila-2">
+            <div class="campo" style="margin-bottom:10px;">
+              <label>Desde</label>
+              <input type="date" id="admin-filtro-fecha-desde" onchange="actualizarAnalisisPeriodo()">
+            </div>
+            <div class="campo" style="margin-bottom:10px;">
+              <label>Hasta</label>
+              <input type="date" id="admin-filtro-fecha-hasta" onchange="actualizarAnalisisPeriodo()">
+            </div>
+          </div>
+          <button type="button" class="btn btn-texto" style="width:auto;justify-content:flex-start;padding:0 0 14px;" onclick="limpiarFiltroFechaAdmin()">Ver todo el historial</button>
 
-        <div class="tarjeta" style="margin-bottom:14px;">
-          <div style="font-weight:700;font-size:13.5px;margin-bottom:8px;">Fallas atendidas por técnico</div>
+          <div style="font-weight:700;font-size:12.5px;margin-bottom:6px;color:var(--tinta-600);">Fallas por semana</div>
+          <div id="admin-grafico-tendencia" class="grafico-caja">Sin datos.</div>
+
+          <div style="font-weight:700;font-size:12.5px;margin:18px 0 6px;color:var(--tinta-600);">Fallas por criticidad</div>
+          <div id="admin-grafico-criticidad" class="grafico-caja">Sin datos.</div>
+
+          <div style="font-weight:700;font-size:12.5px;margin:18px 0 6px;color:var(--tinta-600);">Equipos con más fallas</div>
+          <div id="admin-top-equipos" class="subtexto">Sin datos.</div>
+
+          <div style="font-weight:700;font-size:12.5px;margin:18px 0 6px;color:var(--tinta-600);">Fallas atendidas por técnico</div>
           <div id="admin-ranking-tecnicos" class="subtexto">Sin datos.</div>
         </div>
 
@@ -2172,9 +2196,13 @@ async function abrirPanelAdmin(){
     ).join("");
   }
 
+  document.getElementById("admin-filtro-fecha-desde").value = "";
+  document.getElementById("admin-filtro-fecha-hasta").value = "";
+
   document.getElementById("admin-cargando").style.display = "none";
   document.getElementById("admin-contenido").style.display = "block";
   renderizarListadoAdmin();
+  actualizarAnalisisPeriodo();
   cargarSolicitudesAdmin(sesion);
 }
 
@@ -2243,9 +2271,160 @@ function actualizarKpisAdmin(){
   document.getElementById("admin-kpi-resueltas").textContent = resueltas.length;
   document.getElementById("admin-kpi-criticas").textContent = criticas.length;
   document.getElementById("admin-kpi-minutos").textContent = minutosParadaDelMes(fallas);
+}
+
+/* ============ Fase 2: análisis por período (filtro de fechas + gráficos) ============ */
+
+function parsearFechaDDMMYYYY(str){
+  const partes = String(str||"").split("/");
+  if(partes.length!==3) return null;
+  const d = new Date(+partes[2], +partes[1]-1, +partes[0]);
+  if(isNaN(d.getTime())) return null;
+  return d;
+}
+
+function obtenerFallasFiltradasPorFecha(){
+  const desdeStr = document.getElementById("admin-filtro-fecha-desde").value;
+  const hastaStr = document.getElementById("admin-filtro-fecha-hasta").value;
+  if(!desdeStr && !hastaStr) return adminDatosCache.fallas.slice();
+  const desde = desdeStr ? new Date(desdeStr+"T00:00:00") : null;
+  const hasta = hastaStr ? new Date(hastaStr+"T23:59:59") : null;
+  return adminDatosCache.fallas.filter(r=>{
+    const f = parsearFechaDDMMYYYY(r.FECHA);
+    if(!f) return false;
+    if(desde && f < desde) return false;
+    if(hasta && f > hasta) return false;
+    return true;
+  });
+}
+
+function limpiarFiltroFechaAdmin(){
+  document.getElementById("admin-filtro-fecha-desde").value = "";
+  document.getElementById("admin-filtro-fecha-hasta").value = "";
+  actualizarAnalisisPeriodo();
+}
+
+function obtenerLunesDeSemana(fecha){
+  const d = new Date(fecha);
+  d.setHours(0,0,0,0);
+  const dia = d.getDay();
+  const diff = (dia===0 ? -6 : 1-dia);
+  d.setDate(d.getDate()+diff);
+  return d;
+}
+
+function etiquetaSemana(lunes){
+  return lunes.toLocaleDateString("es-PE",{day:"2-digit",month:"short"});
+}
+
+function construirTendenciaSemanal(fallas){
+  const buckets = {};
+  fallas.forEach(r=>{
+    const f = parsearFechaDDMMYYYY(r.FECHA);
+    if(!f) return;
+    const lunes = obtenerLunesDeSemana(f);
+    const key = lunes.toISOString().slice(0,10);
+    if(!buckets[key]) buckets[key] = { lunes, reportadas:0, resueltas:0 };
+    buckets[key].reportadas++;
+    if(String(r.ESTADO)==="Resuelta") buckets[key].resueltas++;
+  });
+  const claves = Object.keys(buckets).sort();
+  if(claves.length===0) return null;
+  const MAX_SEMANAS = 12;
+  const recortado = claves.length > MAX_SEMANAS;
+  const clavesFinales = claves.slice(-MAX_SEMANAS);
+  return {
+    recortado,
+    labels: clavesFinales.map(k=>etiquetaSemana(buckets[k].lunes)),
+    reportadas: clavesFinales.map(k=>buckets[k].reportadas),
+    resueltas: clavesFinales.map(k=>buckets[k].resueltas)
+  };
+}
+
+/* Gráfico de barras simple en SVG (sin librerías externas).
+   labels: nombres en el eje X.
+   series: [{ nombre, color, colores?, valores:[...] }]
+     - "color" se usa para todas las barras de esa serie.
+     - "colores" (arreglo, mismo largo que labels) da un color distinto
+       por barra y tiene prioridad sobre "color" (usado en el gráfico de
+       criticidad, que tiene una sola serie con 3 colores). */
+function grafBarras(labels, series){
+  const ancho = 600, alto = 190;
+  const margenIzq = 30, margenDer = 8, margenSup = 14, margenInf = 26;
+  const areaAncho = ancho - margenIzq - margenDer;
+  const areaAlto = alto - margenSup - margenInf;
+  const n = labels.length;
+  let maxValor = 0;
+  series.forEach(s=> s.valores.forEach(v=>{ if(v>maxValor) maxValor = v; }));
+  const maxEscala = Math.max(Math.ceil(maxValor*1.15), 1);
+
+  const anchoGrupo = areaAncho / n;
+  const numSeries = series.length;
+  const anchoBarra = Math.max(6, Math.min(26, (anchoGrupo*0.62)/numSeries));
+  const gapBarra = 4;
+
+  let svg = `<svg viewBox="0 0 ${ancho} ${alto}" class="grafico-svg" preserveAspectRatio="xMidYMid meet">`;
+
+  const LINEAS = 4;
+  for(let i=0;i<=LINEAS;i++){
+    const val = Math.round(maxEscala * i / LINEAS);
+    const y = margenSup + areaAlto - (areaAlto * i / LINEAS);
+    svg += `<line x1="${margenIzq}" y1="${y.toFixed(1)}" x2="${ancho-margenDer}" y2="${y.toFixed(1)}" style="stroke:var(--linea);stroke-width:1"/>`;
+    svg += `<text x="${margenIzq-5}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="9" style="fill:var(--tinta-600)">${val}</text>`;
+  }
+
+  labels.forEach((lab,i)=>{
+    const xGrupo = margenIzq + anchoGrupo*i;
+    const anchoTotalGrupo = anchoBarra*numSeries + gapBarra*(numSeries-1);
+    const xInicio = xGrupo + (anchoGrupo-anchoTotalGrupo)/2;
+    series.forEach((s,si)=>{
+      const v = s.valores[i]||0;
+      const color = (s.colores && s.colores[i]) || s.color;
+      const h = (v/maxEscala)*areaAlto;
+      const x = xInicio + si*(anchoBarra+gapBarra);
+      const y = margenSup + areaAlto - h;
+      svg += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${anchoBarra.toFixed(1)}" height="${h.toFixed(1)}" rx="3" style="fill:${color}"/>`;
+      if(v>0) svg += `<text x="${(x+anchoBarra/2).toFixed(1)}" y="${(y-4).toFixed(1)}" text-anchor="middle" font-size="9" font-weight="700" style="fill:${color}">${v}</text>`;
+    });
+    svg += `<text x="${(xGrupo+anchoGrupo/2).toFixed(1)}" y="${alto-8}" text-anchor="middle" font-size="9" style="fill:var(--tinta-600)">${lab}</text>`;
+  });
+
+  svg += `</svg>`;
+  return svg;
+}
+
+function actualizarAnalisisPeriodo(){
+  if(!adminDatosCache.fallas) return;
+  const fallas = obtenerFallasFiltradasPorFecha();
 
   document.getElementById("admin-top-equipos").innerHTML = renderRankingHtml(topPorConteo(fallas, "EQUIPO"));
   document.getElementById("admin-ranking-tecnicos").innerHTML = renderRankingHtml(topPorConteo(fallas, "TECNICO_RESPONSABLE"));
+
+  const contTendencia = document.getElementById("admin-grafico-tendencia");
+  const tendencia = construirTendenciaSemanal(fallas);
+  if(!tendencia){
+    contTendencia.innerHTML = `<div class="subtexto">Sin datos en este período.</div>`;
+  } else {
+    contTendencia.innerHTML =
+      `<div class="grafico-leyenda"><span><i style="background:var(--azul-700);"></i>Reportadas</span><span><i style="background:var(--verde-700);"></i>Resueltas</span></div>` +
+      grafBarras(tendencia.labels, [
+        { nombre:"Reportadas", color:"var(--azul-700)", valores:tendencia.reportadas },
+        { nombre:"Resueltas", color:"var(--verde-700)", valores:tendencia.resueltas }
+      ]) +
+      (tendencia.recortado ? `<div class="grafico-nota">Mostrando las últimas 12 semanas con datos.</div>` : "");
+  }
+
+  const contCriticidad = document.getElementById("admin-grafico-criticidad");
+  const alta = fallas.filter(r=>String(r.CRITICIDAD||"").toLowerCase()==="alta").length;
+  const media = fallas.filter(r=>String(r.CRITICIDAD||"").toLowerCase()==="media").length;
+  const baja = fallas.filter(r=>String(r.CRITICIDAD||"").toLowerCase()==="baja").length;
+  if(alta+media+baja===0){
+    contCriticidad.innerHTML = `<div class="subtexto">Sin datos en este período.</div>`;
+  } else {
+    contCriticidad.innerHTML = grafBarras(["Alta","Media","Baja"], [
+      { nombre:"Fallas", colores:["var(--rojo-600)","var(--ambar-600)","var(--verde-700)"], valores:[alta,media,baja] }
+    ]);
+  }
 }
 
 function renderizarListadoAdmin(){
