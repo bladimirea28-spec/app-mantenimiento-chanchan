@@ -33,6 +33,8 @@
     --verde-texto:#1F4D2C;
     --rojo-texto:#A6362D;
     --ambar-texto:#8A5A00;
+    --morado-100:#E7E1F7;
+    --morado-700:#5B3FA6;
     --radio:14px;
     --sombra:0 2px 10px rgba(18,48,27,0.08);
   }
@@ -52,6 +54,8 @@
       --verde-texto:#8FD6A0;
       --rojo-texto:#F0A79E;
       --ambar-texto:#F0C874;
+      --morado-100:#2C2440;
+      --morado-700:#B9A6EA;
       --sombra:0 2px 10px rgba(0,0,0,0.35);
     }
   }
@@ -70,6 +74,8 @@
     --verde-texto:#8FD6A0;
     --rojo-texto:#F0A79E;
     --ambar-texto:#F0C874;
+    --morado-100:#2C2440;
+    --morado-700:#B9A6EA;
     --sombra:0 2px 10px rgba(0,0,0,0.35);
   }
   *{box-sizing:border-box;}
@@ -216,8 +222,70 @@
   .modulo-icono svg{width:28px;height:28px;}
   .modulo-icono.verde{background:var(--verde-100);color:var(--verde-texto);}
   .modulo-icono.rojo{background:var(--rojo-100);color:var(--rojo-600);}
+  .modulo-icono.ambar{background:var(--ambar-100);color:var(--ambar-texto);}
+  .modulo-icono.azul{background:var(--azul-100);color:var(--azul-700);}
+  .modulo-icono.morado{background:var(--morado-100);color:var(--morado-700);}
   .modulo-txt .titulo-lg{margin-bottom:2px;}
   .modulo-flecha{margin-left:auto;color:var(--tinta-600);flex-shrink:0;}
+  .modulo-btn.proximamente{opacity:.7;}
+  .pill-proximo{
+    font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;
+    background:var(--ambar-100);color:var(--ambar-texto);padding:2px 7px;border-radius:20px;margin-left:6px;
+    vertical-align:middle;
+  }
+
+  /* ---------- Resumen de hoy (inicio técnico/admin) ---------- */
+  .resumen-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px;}
+  .resumen-tile{background:var(--card);border:1px solid var(--linea);border-radius:12px;padding:12px 14px;box-shadow:var(--sombra);}
+  .resumen-tile .num{font-size:21px;font-weight:800;line-height:1.1;}
+  .resumen-tile .lbl{font-size:11px;color:var(--tinta-600);margin-top:3px;line-height:1.25;}
+  .resumen-tile.rojo .num{color:var(--rojo-texto);}
+  .resumen-tile.ambar .num{color:var(--ambar-texto);}
+  .resumen-tile.verde .num{color:var(--verde-texto);}
+  .resumen-tile.azul .num{color:var(--azul-700);}
+
+  /* ---------- Barra de navegación inferior (técnico/admin) ---------- */
+  .tabbar{
+    display:none;position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+    width:100%;max-width:480px;background:var(--card);border-top:1px solid var(--linea);
+    padding:6px 4px 12px;z-index:40;box-shadow:0 -2px 10px rgba(0,0,0,.06);
+  }
+  .tabbar.visible{display:flex;}
+  .tab-item{
+    position:relative;flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
+    color:var(--tinta-600);padding:6px 2px;border-radius:10px;cursor:pointer;background:none;border:none;font-family:inherit;
+  }
+  .tab-item svg{width:21px;height:21px;}
+  .tab-item span{font-size:9.5px;font-weight:700;text-align:center;line-height:1.15;}
+  .tab-item.activo{color:var(--verde-800);}
+  .tab-item.activo svg{color:var(--verde-800);}
+  .tab-badge{
+    position:absolute;top:2px;right:calc(50% - 16px);min-width:16px;height:16px;padding:0 3px;
+    background:var(--rojo-600);color:#fff;border-radius:20px;font-size:9px;font-weight:800;
+    display:flex;align-items:center;justify-content:center;border:2px solid var(--card);
+  }
+  .tab-item.central .tab-circulo{
+    width:36px;height:36px;border-radius:50%;background:var(--verde-800);color:#fff;
+    display:flex;align-items:center;justify-content:center;margin-top:-20px;
+    box-shadow:0 3px 8px rgba(31,77,44,.4);border:3px solid var(--card);
+  }
+  .tab-item.central svg{width:18px;height:18px;color:#fff;}
+  .tab-item.central span{color:var(--tinta-600);margin-top:1px;}
+  .tab-item.central.activo .tab-circulo{background:var(--ambar-500);}
+  .tab-item.central.activo span{color:var(--verde-800);}
+
+  /* ---------- Interruptor (modo oscuro) ---------- */
+  .interruptor{position:relative;display:inline-block;width:44px;height:26px;flex-shrink:0;}
+  .interruptor input{opacity:0;width:0;height:0;}
+  .interruptor-slider{
+    position:absolute;cursor:pointer;inset:0;background:var(--linea);border-radius:26px;transition:.2s;
+  }
+  .interruptor-slider::before{
+    content:"";position:absolute;width:20px;height:20px;left:3px;bottom:3px;background:#fff;
+    border-radius:50%;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.3);
+  }
+  .interruptor input:checked + .interruptor-slider{background:var(--verde-800);}
+  .interruptor input:checked + .interruptor-slider::before{transform:translateX(18px);}
 
   .franja-ilustracion{
     display:flex;align-items:center;gap:10px;background:var(--verde-950);border-radius:14px;
@@ -334,6 +402,14 @@
 </style>
 </head>
 <body>
+<script>
+(function(){
+  try{
+    var t = localStorage.getItem("tema_preferido");
+    if(t === "oscuro" || t === "claro") document.documentElement.setAttribute("data-tema", t);
+  }catch(e){}
+})();
+</script>
 <div id="app">
 
   <!-- ================= PANTALLA: LOGIN ================= -->
@@ -453,32 +529,63 @@
       </div>
     </div>
     <div class="contenido">
-      <div class="franja-ilustracion">
+      <div class="franja-ilustracion" id="franja-operador-info" style="display:none;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14.7 6.3a4 4 0 1 1-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 1 1 5.4-5.4l3.6-3.6-3-3-3.6 3.6z"/></svg>
         <span>Elige qué vas a registrar. Tus datos se guardan aunque no tengas señal, y se suben solos cuando vuelva la conexión.</span>
       </div>
 
-      <button class="modulo-btn" id="btn-modulo-actividades" onclick="irA('pantalla-lista-mtto')">
-        <div class="modulo-icono verde">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14.7 6.3a4 4 0 1 1-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 1 1 5.4-5.4l3.6-3.6-3-3-3.6 3.6z"/></svg>
-        </div>
-        <div class="modulo-txt">
-          <div class="titulo-lg">Actividades de Mantenimiento</div>
-          <div class="subtexto">Registrar trabajos realizados en equipos</div>
-        </div>
-        <div class="modulo-flecha"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>
-      </button>
+      <div id="resumen-inicio" class="resumen-grid" style="display:none;">
+        <div class="resumen-tile rojo"><div class="num" id="resumen-fallas-abiertas">0</div><div class="lbl">Fallas abiertas</div></div>
+        <div class="resumen-tile ambar"><div class="num" id="resumen-criticas">0</div><div class="lbl">Críticas sin resolver</div></div>
+        <div class="resumen-tile verde"><div class="num" id="resumen-actividades-semana">0</div><div class="lbl">Actividades esta semana</div></div>
+        <div class="resumen-tile azul"><div class="num" id="resumen-pendientes-sync">0</div><div class="lbl">Pendiente de sincronizar</div></div>
+      </div>
 
-      <button class="modulo-btn" id="btn-modulo-fallas" onclick="irA('pantalla-lista-fallas')">
-        <div class="modulo-icono rojo">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 9v4M12 17h.01M10.3 3.9L2.5 17a1.8 1.8 0 0 0 1.5 2.7h16a1.8 1.8 0 0 0 1.5-2.7L13.7 3.9a1.8 1.8 0 0 0-3.4 0z"/></svg>
-        </div>
-        <div class="modulo-txt">
-          <div class="titulo-lg">Historial de Fallas</div>
-          <div class="subtexto">Registrar una falla o avería</div>
-        </div>
-        <div class="modulo-flecha"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>
-      </button>
+      <div id="menu-tecnico-admin" style="display:none;">
+        <button class="modulo-btn" id="btn-registros-mtto" onclick="irA('pantalla-registros-mtto')">
+          <div class="modulo-icono verde">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14.7 6.3a4 4 0 1 1-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 1 1 5.4-5.4l3.6-3.6-3-3-3.6 3.6z"/></svg>
+          </div>
+          <div class="modulo-txt">
+            <div class="titulo-lg">Registros de mantenimiento</div>
+            <div class="subtexto">Actividades y fallas</div>
+          </div>
+          <div class="modulo-flecha"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>
+        </button>
+
+        <button class="modulo-btn" id="btn-requerimientos" onclick="abrirFormRequerimiento()">
+          <div class="modulo-icono ambar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 2h9l3 3v17H6zM9 2v5H4"/></svg>
+          </div>
+          <div class="modulo-txt">
+            <div class="titulo-lg">Requerimientos</div>
+            <div class="subtexto">Solicita materiales para tu trabajo</div>
+          </div>
+          <div class="modulo-flecha"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>
+        </button>
+
+        <button class="modulo-btn proximamente" onclick="mostrarToast('Esta función todavía está en desarrollo. Pronto la activamos.', true)">
+          <div class="modulo-icono morado">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 3h6v3H9zM6 6h12v15H6z"/><path d="M9 12l2 2 4-4"/></svg>
+          </div>
+          <div class="modulo-txt">
+            <div class="titulo-lg">Checklist<span class="pill-proximo">Próximamente</span></div>
+            <div class="subtexto">Revisión y llenado de formatos de máquinas</div>
+          </div>
+          <div class="modulo-flecha"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>
+        </button>
+
+        <button class="modulo-btn proximamente" onclick="mostrarToast('Esta función todavía está en desarrollo. Pronto la activamos.', true)">
+          <div class="modulo-icono azul">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7V4h3M20 7V4h-3M4 17v3h3M20 17v3h-3M4 4l16 16"/></svg>
+          </div>
+          <div class="modulo-txt">
+            <div class="titulo-lg">Resumen<span class="pill-proximo">Próximamente</span></div>
+            <div class="subtexto">Escanea el QR de un equipo y ve su historial</div>
+          </div>
+          <div class="modulo-flecha"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>
+        </button>
+      </div>
 
       <button class="modulo-btn" id="btn-reportar-falla-operador" style="display:none;" onclick="abrirFormFallaOperador()">
         <div class="modulo-icono rojo">
@@ -512,28 +619,123 @@
         </div>
       </div>
 
-      <button class="modulo-btn" id="btn-panel-admin" style="display:none;" onclick="abrirPanelAdmin()">
-        <div class="modulo-icono" style="background:var(--verde-100);color:var(--verde-texto);">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18M7 15l4-4 3 3 5-6"/></svg>
+      <div id="bloque-perfil-inline" style="display:none;">
+        <div class="tarjeta" style="margin-top:4px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+            <div>
+              <div style="font-weight:700;font-size:13.5px;">Sincronización</div>
+              <div class="subtexto" id="txt-pendientes" style="margin-top:2px;">Revisando pendientes...</div>
+            </div>
+            <button class="btn btn-secundario" style="width:auto;padding:10px 14px;font-size:13px;" onclick="sincronizarTodo()">Sincronizar</button>
+          </div>
+        </div>
+        <button class="btn btn-texto" onclick="irA('pantalla-config')" style="margin-top:6px;">⚙️ Configurar conexión a Google Sheets</button>
+
+        <button class="btn btn-texto" onclick="cerrarSesion()" style="margin-top:2px;">Cerrar sesión</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= PANTALLA: REGISTROS DE MANTENIMIENTO (hub) ================= -->
+  <section class="pantalla" id="pantalla-registros-mtto">
+    <div class="barra-superior">
+      <button class="btn-volver" onclick="irA('pantalla-menu')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="titulo-lg">Registros de mantenimiento</div>
+    </div>
+    <div class="contenido">
+      <button class="modulo-btn" onclick="irA('pantalla-lista-mtto')">
+        <div class="modulo-icono verde">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14.7 6.3a4 4 0 1 1-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 1 1 5.4-5.4l3.6-3.6-3-3-3.6 3.6z"/></svg>
         </div>
         <div class="modulo-txt">
-          <div class="titulo-lg">Panel de Administración</div>
-          <div class="subtexto">Ver avance de los técnicos y exportar a Excel</div>
+          <div class="titulo-lg">Actividades de Mantenimiento</div>
+          <div class="subtexto">Registrar trabajos realizados en equipos</div>
         </div>
         <div class="modulo-flecha"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>
       </button>
 
-      <div class="tarjeta" style="margin-top:4px;">
+      <button class="modulo-btn" onclick="irA('pantalla-lista-fallas')">
+        <div class="modulo-icono rojo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 9v4M12 17h.01M10.3 3.9L2.5 17a1.8 1.8 0 0 0 1.5 2.7h16a1.8 1.8 0 0 0 1.5-2.7L13.7 3.9a1.8 1.8 0 0 0-3.4 0z"/></svg>
+        </div>
+        <div class="modulo-txt">
+          <div class="titulo-lg">Historial de Fallas</div>
+          <div class="subtexto">Registrar una falla o avería</div>
+        </div>
+        <div class="modulo-flecha"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>
+      </button>
+    </div>
+  </section>
+
+  <!-- ================= PANTALLA: REQUERIMIENTOS DE MATERIALES ================= -->
+  <section class="pantalla" id="pantalla-form-requerimiento">
+    <div class="barra-superior">
+      <button class="btn-volver" onclick="irA('pantalla-menu')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="titulo-lg">Nuevo requerimiento</div>
+    </div>
+    <div class="contenido">
+      <p class="subtexto" style="margin-bottom:16px;">Estás usando un catálogo de materiales de ejemplo mientras se carga el real. Los precios cambiarán cuando conectemos tu base de datos.</p>
+
+      <div class="campo">
+        <label>Buscar material</label>
+        <input type="text" id="req-material-buscar" placeholder="Ej: rodamiento, correa, faja..." autocomplete="off">
+        <div class="autocomplete-lista" id="req-material-lista"></div>
+      </div>
+
+      <div class="campo" id="req-material-seleccionado-caja" style="display:none;background:var(--superficie);border:1px solid var(--linea);border-radius:10px;padding:14px;">
+        <div style="font-weight:700;font-size:13.5px;margin-bottom:10px;">Precio de referencia: <span id="req-material-precio"></span></div>
+        <label>Cantidad</label>
+        <input type="number" id="req-material-cantidad" min="1" value="1" style="margin-bottom:12px;">
+        <button type="button" class="btn btn-secundario" style="margin-top:0;" onclick="agregarMaterialALista()">+ Agregar a la lista</button>
+      </div>
+
+      <div class="tarjeta" style="margin:16px 0;">
+        <div style="font-weight:700;font-size:13.5px;margin-bottom:8px;">Materiales del requerimiento</div>
+        <div id="req-items-lista"><div class="subtexto">Aún no agregas materiales.</div></div>
+        <div style="display:flex;justify-content:space-between;margin-top:12px;padding-top:10px;border-top:1px solid var(--linea);font-weight:800;">
+          <span>Total estimado</span><span id="req-total">S/ 0.00</span>
+        </div>
+      </div>
+
+      <div class="campo">
+        <label>Comentarios (opcional)</label>
+        <textarea id="req-comentarios" placeholder="Información adicional"></textarea>
+      </div>
+
+      <button class="btn btn-primario" onclick="guardarRequerimiento()">Enviar requerimiento</button>
+      <p class="subtexto" style="text-align:center;margin-top:10px;">Por ahora se guarda en tu celular. Cuando conectemos el catálogo real también se enviará al servidor.</p>
+    </div>
+  </section>
+
+  <!-- ================= PANTALLA: PERFIL (técnico/admin) ================= -->
+  <section class="pantalla" id="pantalla-perfil">
+    <div class="barra-superior">
+      <button class="btn-volver" onclick="irA('pantalla-menu')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="titulo-lg">Perfil</div>
+    </div>
+    <div class="contenido">
+      <div class="tarjeta" style="margin-bottom:14px;">
+        <div style="font-weight:700;font-size:13.5px;margin-bottom:10px;">Apariencia</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span class="subtexto">Modo oscuro</span>
+          <label class="interruptor">
+            <input type="checkbox" id="switch-modo-oscuro" onchange="alternarModoOscuro()">
+            <span class="interruptor-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="tarjeta" style="margin-bottom:14px;">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
           <div>
             <div style="font-weight:700;font-size:13.5px;">Sincronización</div>
-            <div class="subtexto" id="txt-pendientes" style="margin-top:2px;">Revisando pendientes...</div>
+            <div class="subtexto" id="txt-pendientes-perfil" style="margin-top:2px;">Revisando pendientes...</div>
           </div>
           <button class="btn btn-secundario" style="width:auto;padding:10px 14px;font-size:13px;" onclick="sincronizarTodo()">Sincronizar</button>
         </div>
       </div>
-      <button class="btn btn-texto" onclick="irA('pantalla-config')" style="margin-top:6px;">⚙️ Configurar conexión a Google Sheets</button>
 
+      <button class="btn btn-texto" onclick="irA('pantalla-config')" style="margin-top:2px;">⚙️ Configurar conexión a Google Sheets</button>
       <button class="btn btn-texto" onclick="cerrarSesion()" style="margin-top:2px;">Cerrar sesión</button>
     </div>
   </section>
@@ -1067,6 +1269,30 @@
 
 </div>
 
+<div id="tabbar-principal" class="tabbar">
+  <button type="button" class="tab-item" id="tab-inicio" onclick="irA('pantalla-menu')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>
+    <span>Inicio</span>
+  </button>
+  <button type="button" class="tab-item" id="tab-panel-admin" style="display:none;" onclick="abrirPanelAdmin()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18M7 15l4-4 3 3 5-6"/></svg>
+    <span>Panel Admin</span>
+  </button>
+  <button type="button" class="tab-item central" id="tab-registrar" onclick="irA('pantalla-registros-mtto')">
+    <div class="tab-circulo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg></div>
+    <span>Registrar</span>
+  </button>
+  <button type="button" class="tab-item" id="tab-alertas" onclick="irA('pantalla-fallas-abiertas')">
+    <span class="tab-badge" id="tab-alertas-badge" style="display:none;">0</span>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+    <span>Alertas</span>
+  </button>
+  <button type="button" class="tab-item" id="tab-perfil" onclick="irA('pantalla-perfil')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+    <span>Perfil</span>
+  </button>
+</div>
+
 <div id="toast"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg><span id="toast-txt"></span></div>
 
 <div id="loader-global">
@@ -1184,10 +1410,24 @@ function primerNombre(nombreCompleto){
   return (nombreCompleto||"").trim().split(/\s+/)[0] || nombreCompleto;
 }
 
+/* ============ MODO OSCURO (manual) ============ */
+function aplicarTemaGuardado(){
+  const tema = localStorage.getItem("tema_preferido");
+  if(tema === "oscuro" || tema === "claro"){
+    document.documentElement.setAttribute("data-tema", tema);
+  }
+}
+function alternarModoOscuro(){
+  const activado = document.getElementById("switch-modo-oscuro").checked;
+  const tema = activado ? "oscuro" : "claro";
+  document.documentElement.setAttribute("data-tema", tema);
+  localStorage.setItem("tema_preferido", tema);
+}
+
 /* ============ ALMACENAMIENTO LOCAL (IndexedDB) ============ */
 let db;
 const DB_NAME = "mantenimiento_chanchan";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 function abrirDB(){
   return new Promise((resolve,reject)=>{
@@ -1199,6 +1439,9 @@ function abrirDB(){
       }
       if(!d.objectStoreNames.contains("fallas")){
         d.createObjectStore("fallas",{keyPath:"id"});
+      }
+      if(!d.objectStoreNames.contains("requerimientos")){
+        d.createObjectStore("requerimientos",{keyPath:"id"});
       }
     };
     req.onsuccess = (e)=>{ db = e.target.result; resolve(db); };
@@ -1225,6 +1468,20 @@ function leerStore(store){
 }
 
 /* ============ NAVEGACIÓN ============ */
+const TABS_POR_PANTALLA = {
+  "pantalla-menu": "tab-inicio",
+  "pantalla-registros-mtto": "tab-registrar",
+  "pantalla-lista-mtto": "tab-registrar",
+  "pantalla-form-mtto": "tab-registrar",
+  "pantalla-lista-fallas": "tab-registrar",
+  "pantalla-form-fallas": "tab-registrar",
+  "pantalla-form-requerimiento": "tab-registrar",
+  "pantalla-admin": "tab-panel-admin",
+  "pantalla-fallas-abiertas": "tab-alertas",
+  "pantalla-resolver-falla": "tab-alertas",
+  "pantalla-perfil": "tab-perfil",
+  "pantalla-config": "tab-perfil"
+};
 function irA(idPantalla){
   document.querySelectorAll(".pantalla").forEach(p=>p.classList.remove("activa"));
   document.getElementById(idPantalla).classList.add("activa");
@@ -1234,6 +1491,18 @@ function irA(idPantalla){
   if(idPantalla === "pantalla-menu") actualizarTextoPendientes();
   if(idPantalla === "pantalla-form-mtto" || idPantalla === "pantalla-form-fallas") cargarTecnicosResponsables();
   if(idPantalla === "pantalla-config") document.getElementById("config-url").value = localStorage.getItem("sync_url")||"";
+  if(idPantalla === "pantalla-perfil"){
+    const tema = localStorage.getItem("tema_preferido");
+    document.getElementById("switch-modo-oscuro").checked = tema === "oscuro";
+  }
+
+  document.querySelectorAll("#tabbar-principal .tab-item").forEach(t=>t.classList.remove("activo"));
+  const tabActivo = TABS_POR_PANTALLA[idPantalla];
+  if(tabActivo){
+    const el = document.getElementById(tabActivo);
+    if(el) el.classList.add("activo");
+  }
+
   window.scrollTo(0,0);
 }
 
@@ -1284,16 +1553,28 @@ function guardarSesionYEntrar(usuario){
 function entrarAMenu(usuario){
   const esAdmin = usuario.rol === "admin";
   const esOperador = usuario.rol === "operador";
+  const esTecnicoOAdmin = !esOperador;
   document.getElementById("menu-nombre-usuario").textContent = esAdmin
     ? primerNombre(usuario.nombre)
     : `${primerNombre(usuario.nombre)} (${usuario.cargo})`;
-  document.getElementById("btn-panel-admin").style.display = esAdmin ? "flex" : "none";
-  document.getElementById("btn-modulo-actividades").style.display = esOperador ? "none" : "flex";
-  document.getElementById("btn-modulo-fallas").style.display = esOperador ? "none" : "flex";
+
+  document.getElementById("franja-operador-info").style.display = esOperador ? "flex" : "none";
+  document.getElementById("resumen-inicio").style.display = esTecnicoOAdmin ? "grid" : "none";
+  document.getElementById("menu-tecnico-admin").style.display = esTecnicoOAdmin ? "block" : "none";
+  document.getElementById("bloque-perfil-inline").style.display = esOperador ? "block" : "none";
   document.getElementById("btn-reportar-falla-operador").style.display = esOperador ? "flex" : "none";
   document.getElementById("btn-solicitar-actividad").style.display = (esOperador && usuario.es_jefe_area) ? "flex" : "none";
   document.getElementById("tarjeta-pedir-correo").style.display = (esAdmin && !usuario.correo) ? "block" : "none";
+
+  const tabbar = document.getElementById("tabbar-principal");
+  tabbar.classList.toggle("visible", esTecnicoOAdmin);
+  document.getElementById("tab-panel-admin").style.display = esAdmin ? "flex" : "none";
+
   irA("pantalla-menu");
+
+  if(esTecnicoOAdmin){
+    actualizarResumenInicio();
+  }
 }
 
 async function guardarCorreoAdmin(){
@@ -1315,6 +1596,7 @@ function cerrarSesion(){
   localStorage.removeItem("sesion_activa");
   document.getElementById("login-usuario").value="";
   document.getElementById("login-clave").value="";
+  document.getElementById("tabbar-principal").classList.remove("visible");
   irA("pantalla-login");
 }
 
@@ -1957,6 +2239,34 @@ async function cargarFallasAbiertas(){
   }
   fallasAbiertasCache = resp.fallas || [];
   renderFallasAbiertas();
+  actualizarBadgeAlertas();
+}
+
+function actualizarBadgeAlertas(){
+  const badge = document.getElementById("tab-alertas-badge");
+  if(!badge) return;
+  const criticas = fallasAbiertasCache.filter(f=>f.CRITICIDAD==="Alta").length;
+  if(criticas>0){
+    badge.textContent = criticas>9 ? "9+" : String(criticas);
+    badge.style.display = "flex";
+  }else{
+    badge.style.display = "none";
+  }
+}
+
+async function actualizarResumenInicio(){
+  if(!document.getElementById("resumen-fallas-abiertas")) return;
+  await cargarFallasAbiertas();
+  document.getElementById("resumen-fallas-abiertas").textContent = fallasAbiertasCache.length;
+  document.getElementById("resumen-criticas").textContent = fallasAbiertasCache.filter(f=>f.CRITICIDAD==="Alta").length;
+
+  const pendientes = await contarPendientes();
+  document.getElementById("resumen-pendientes-sync").textContent = pendientes;
+
+  const acts = await leerStore("actividades");
+  const haceUnaSemana = Date.now() - 7*24*60*60*1000;
+  const actsSemana = acts.filter(r=>(r.creado||0) >= haceUnaSemana).length;
+  document.getElementById("resumen-actividades-semana").textContent = actsSemana;
 }
 
 function renderFallasAbiertas(){
@@ -2113,6 +2423,147 @@ async function guardarSolicitud(){
   irA("pantalla-menu");
 }
 
+/* ============ MÓDULO: REQUERIMIENTOS DE MATERIALES ============
+   MATERIALES_EJEMPLO es un catálogo de muestra (nombre + precio referencial)
+   solo para poder probar el buscador. Se reemplaza por el catálogo real de
+   materiales y precios en cuanto se pase esa base de datos. */
+const MATERIALES_EJEMPLO = [
+  {nombre:"Rodamiento 6204", precio:18.50},
+  {nombre:"Rodamiento 6205", precio:22.00},
+  {nombre:"Rodamiento 6305", precio:35.00},
+  {nombre:"Correa de transmisión A-45", precio:28.00},
+  {nombre:"Correa de transmisión B-60", precio:42.00},
+  {nombre:"Retén 25x40x7", precio:9.50},
+  {nombre:"Retén 30x52x7", precio:12.00},
+  {nombre:"Perno hexagonal 1/2 x 2\"", precio:1.20},
+  {nombre:"Perno hexagonal 3/8 x 1\"", precio:0.80},
+  {nombre:"Faja de transmisión industrial", precio:55.00},
+  {nombre:"Aceite hidráulico ISO 68 (galón)", precio:38.00},
+  {nombre:"Grasa multiusos (kg)", precio:15.00},
+  {nombre:"Filtro de aire industrial", precio:24.00},
+  {nombre:"Filtro de aceite", precio:19.00},
+  {nombre:"Electrodo de soldadura E6011 (kg)", precio:16.50},
+  {nombre:"Manguera hidráulica 1/2\" (metro)", precio:11.00},
+  {nombre:"Fusible industrial 32A", precio:3.50},
+  {nombre:"Contactor eléctrico 25A", precio:65.00}
+];
+
+let reqMaterialSeleccionado = null;
+let reqItems = [];
+
+function iniciarAutocompleteMaterial(){
+  const input = document.getElementById("req-material-buscar");
+  const lista = document.getElementById("req-material-lista");
+  if(!input || !lista) return;
+
+  input.addEventListener("input", ()=>{
+    reqMaterialSeleccionado = null;
+    document.getElementById("req-material-seleccionado-caja").style.display = "none";
+    const q = input.value.trim().toLowerCase();
+    if(q.length < 2){ lista.classList.remove("activa"); lista.innerHTML=""; return; }
+    const resultados = MATERIALES_EJEMPLO.filter(m => m.nombre.toLowerCase().includes(q)).slice(0,8);
+    if(resultados.length===0){
+      lista.innerHTML = `<div class="autocomplete-item" style="opacity:.7;">Sin resultados en el catálogo de ejemplo</div>`;
+      lista.classList.add("activa");
+      return;
+    }
+    lista.innerHTML = resultados.map((m,i)=>`<div class="autocomplete-item" data-idx="${i}">${resaltarCoincidencia(m.nombre,q)} — S/ ${m.precio.toFixed(2)}</div>`).join("");
+    lista.classList.add("activa");
+    lista.querySelectorAll(".autocomplete-item").forEach((item,i)=>{
+      item.addEventListener("click", ()=>{
+        seleccionarMaterial(resultados[i]);
+        lista.classList.remove("activa");
+      });
+    });
+  });
+
+  document.addEventListener("click",(e)=>{
+    if(!input.contains(e.target) && !lista.contains(e.target)){
+      lista.classList.remove("activa");
+    }
+  });
+}
+
+function seleccionarMaterial(m){
+  reqMaterialSeleccionado = m;
+  document.getElementById("req-material-buscar").value = m.nombre;
+  document.getElementById("req-material-seleccionado-caja").style.display = "block";
+  document.getElementById("req-material-precio").textContent = `S/ ${m.precio.toFixed(2)} c/u`;
+  document.getElementById("req-material-cantidad").value = 1;
+}
+
+function agregarMaterialALista(){
+  if(!reqMaterialSeleccionado) return;
+  const cantidad = Math.max(1, parseInt(document.getElementById("req-material-cantidad").value,10) || 1);
+  reqItems.push({ nombre: reqMaterialSeleccionado.nombre, precio: reqMaterialSeleccionado.precio, cantidad });
+  reqMaterialSeleccionado = null;
+  document.getElementById("req-material-buscar").value = "";
+  document.getElementById("req-material-seleccionado-caja").style.display = "none";
+  renderReqItems();
+}
+
+function quitarMaterialDeLista(idx){
+  reqItems.splice(idx,1);
+  renderReqItems();
+}
+
+function renderReqItems(){
+  const cont = document.getElementById("req-items-lista");
+  if(reqItems.length===0){
+    cont.innerHTML = `<div class="subtexto">Aún no agregas materiales.</div>`;
+  }else{
+    cont.innerHTML = reqItems.map((it,i)=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--linea);">
+        <div>
+          <div style="font-weight:700;font-size:13.5px;">${it.nombre}</div>
+          <div class="subtexto">${it.cantidad} x S/ ${it.precio.toFixed(2)}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <b>S/ ${(it.cantidad*it.precio).toFixed(2)}</b>
+          <button type="button" onclick="quitarMaterialDeLista(${i})" style="background:none;border:none;color:var(--rojo-600);font-size:16px;cursor:pointer;padding:4px;">✕</button>
+        </div>
+      </div>
+    `).join("");
+  }
+  const total = reqItems.reduce((s,it)=>s + it.cantidad*it.precio, 0);
+  document.getElementById("req-total").textContent = `S/ ${total.toFixed(2)}`;
+}
+
+function abrirFormRequerimiento(){
+  reqItems = [];
+  reqMaterialSeleccionado = null;
+  document.getElementById("req-material-buscar").value = "";
+  document.getElementById("req-material-lista").innerHTML = "";
+  document.getElementById("req-material-lista").classList.remove("activa");
+  document.getElementById("req-material-seleccionado-caja").style.display = "none";
+  document.getElementById("req-comentarios").value = "";
+  renderReqItems();
+  irA("pantalla-form-requerimiento");
+}
+
+async function guardarRequerimiento(){
+  if(reqItems.length===0){
+    mostrarToast("Agrega al menos un material a la lista.", false);
+    return;
+  }
+  const sesion = JSON.parse(localStorage.getItem("sesion_activa")||"{}");
+  const comentarios = document.getElementById("req-comentarios").value.trim();
+  const total = reqItems.reduce((s,it)=>s + it.cantidad*it.precio, 0);
+  const registro = {
+    id: "REQ-" + Date.now(),
+    tecnico: sesion.nombre || "",
+    dni: sesion.dni || "",
+    materiales: [...reqItems],
+    total,
+    comentarios,
+    creado: Date.now(),
+    sincronizado: false
+  };
+  await guardarEnStore("requerimientos", registro);
+  mostrarToast("Requerimiento guardado en tu celular", true);
+  irA("pantalla-menu");
+}
+
 /* ============ SINCRONIZACIÓN CON GOOGLE SHEETS ============ */
 function guardarConfigUrl(){
   const url = document.getElementById("config-url").value.trim();
@@ -2132,12 +2583,12 @@ async function contarPendientes(){
 }
 
 async function actualizarTextoPendientes(){
-  const el = document.getElementById("txt-pendientes");
-  if(!el) return;
+  const els = [document.getElementById("txt-pendientes"), document.getElementById("txt-pendientes-perfil")].filter(Boolean);
+  if(els.length===0) return;
   const n = await contarPendientes();
   const url = obtenerSyncUrl();
-  if(!url){ el.textContent = "Falta configurar la conexión"; return; }
-  el.textContent = n===0 ? "Todo sincronizado ✓" : `${n} registro(s) pendiente(s)`;
+  const texto = !url ? "Falta configurar la conexión" : (n===0 ? "Todo sincronizado ✓" : `${n} registro(s) pendiente(s)`);
+  els.forEach(el=>{ el.textContent = texto; });
 }
 
 async function sincronizarTodo(){
@@ -2577,6 +3028,7 @@ window.addEventListener("offline", actualizarEstadoConexion);
     iniciarAutocompleteEquipo("falla-equipo","falla-equipo-lista");
     iniciarAutocompleteEquipo("oper-falla-equipo","oper-falla-equipo-lista");
     iniciarAutocompleteEquipo("solicitud-equipo","solicitud-equipo-lista");
+    iniciarAutocompleteMaterial();
     iniciarFotoInput("mtto","mtto-foto-camara","mtto-foto-previews");
     iniciarFotoInput("mtto","mtto-foto-galeria","mtto-foto-previews");
     iniciarFotoInput("falla","falla-foto-camara","falla-foto-previews");
