@@ -703,7 +703,7 @@
       </div>
 
       <button class="btn btn-primario" onclick="guardarRequerimiento()">Enviar requerimiento</button>
-      <p class="subtexto" style="text-align:center;margin-top:10px;">Por ahora se guarda en tu celular. Cuando conectemos el catálogo real también se enviará al servidor.</p>
+      <p class="subtexto" style="text-align:center;margin-top:10px;">Se guarda en tu celular y se sube a la nube cuando sincronices. Los precios son de un catálogo de ejemplo hasta que conectemos el catálogo real de materiales.</p>
     </div>
   </section>
 
@@ -2560,7 +2560,7 @@ async function guardarRequerimiento(){
     sincronizado: false
   };
   await guardarEnStore("requerimientos", registro);
-  mostrarToast("Requerimiento guardado en tu celular", true);
+  mostrarToast("Requerimiento guardado" + (navigator.onLine ? "" : " (pendiente de sincronizar)"), true);
   irA("pantalla-menu");
 }
 
@@ -2579,7 +2579,8 @@ function guardarConfigUrl(){
 async function contarPendientes(){
   const acts = await leerStore("actividades");
   const falls = await leerStore("fallas");
-  return acts.filter(r=>!r.sincronizado).length + falls.filter(r=>!r.sincronizado).length;
+  const reqs = await leerStore("requerimientos");
+  return acts.filter(r=>!r.sincronizado).length + falls.filter(r=>!r.sincronizado).length + reqs.filter(r=>!r.sincronizado).length;
 }
 
 async function actualizarTextoPendientes(){
@@ -2606,6 +2607,7 @@ async function sincronizarTodo(){
 
   const acts = (await leerStore("actividades")).filter(r=>!r.sincronizado);
   const falls = (await leerStore("fallas")).filter(r=>!r.sincronizado);
+  const reqs = (await leerStore("requerimientos")).filter(r=>!r.sincronizado);
   let exitos = 0, fallos = 0;
 
   for(const r of acts){
@@ -2615,6 +2617,10 @@ async function sincronizarTodo(){
   for(const r of falls){
     const ok = await enviarRegistro(url, "falla", r);
     if(ok){ r.sincronizado = true; await guardarEnStore("fallas", r); exitos++; } else fallos++;
+  }
+  for(const r of reqs){
+    const ok = await enviarRegistro(url, "requerimiento", r);
+    if(ok){ r.sincronizado = true; await guardarEnStore("requerimientos", r); exitos++; } else fallos++;
   }
 
   mostrarToast(fallos===0 ? `${exitos} registro(s) sincronizado(s)` : `${exitos} listo(s), ${fallos} con error`, fallos===0);
