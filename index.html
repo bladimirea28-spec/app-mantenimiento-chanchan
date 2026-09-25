@@ -2590,12 +2590,12 @@ function agregarMaterialALista(){
   const precio = Math.max(0, parseFloat(document.getElementById("req-item-precio").value) || 0);
   const um = document.getElementById("req-item-um").value.trim() || "UND";
   const especificaciones = document.getElementById("req-item-especificaciones").value.trim() || reqItemDraft.nombre;
-  const equipo = document.getElementById("req-item-equipo").value.trim();
+  const equipoTexto = document.getElementById("req-item-equipo").value.trim(); const matchEquipo = equipoTexto.match(/^(\d{4,6})\s*-\s*(.+)$/); const equipoCodigo = matchEquipo ? matchEquipo[1] : ""; const equipo = matchEquipo ? matchEquipo[2] : equipoTexto;
 
   reqItems.push({
     codigo: reqItemDraft.codigo,
     nombre: reqItemDraft.nombre,
-    especificaciones, equipo, cantidad, um, precio,
+    especificaciones, equipo, equipoCodigo, cantidad, um, precio,
     foto: reqItemFotoBase64
   });
 
