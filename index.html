@@ -535,10 +535,10 @@
       </div>
 
       <div id="resumen-inicio" class="resumen-grid" style="display:none;">
-        <div class="resumen-tile rojo"><div class="num" id="resumen-fallas-abiertas">0</div><div class="lbl">Fallas abiertas</div></div>
-        <div class="resumen-tile ambar"><div class="num" id="resumen-criticas">0</div><div class="lbl">Críticas sin resolver</div></div>
-        <div class="resumen-tile verde"><div class="num" id="resumen-actividades-semana">0</div><div class="lbl">Actividades esta semana</div></div>
-        <div class="resumen-tile azul"><div class="num" id="resumen-pendientes-sync">0</div><div class="lbl">Pendiente de sincronizar</div></div>
+        <div class="resumen-tile rojo" style="cursor:pointer;" onclick="abrirFallasAbiertas()"><div class="num" id="resumen-fallas-abiertas">0</div><div class="lbl">Fallas abiertas</div></div>
+        <div class="resumen-tile ambar" style="cursor:pointer;" onclick="abrirFallasAbiertas()"><div class="num" id="resumen-criticas">0</div><div class="lbl">Críticas sin resolver</div></div>
+        <div class="resumen-tile verde" style="cursor:pointer;" onclick="irA('pantalla-lista-mtto')"><div class="num" id="resumen-actividades-semana">0</div><div class="lbl">Actividades esta semana</div></div>
+        <div class="resumen-tile azul" style="cursor:pointer;" onclick="irA('pantalla-perfil')"><div class="num" id="resumen-pendientes-sync">0</div><div class="lbl">Pendiente de sincronizar</div></div>
       </div>
 
       <div id="menu-tecnico-admin" style="display:none;">
