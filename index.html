@@ -680,7 +680,7 @@ abrirCajaItemRequerimiento(nombre, "UND", 0, "");          <label>Buscar materia
         </div>
 
         <div class="campo" id="req-material-seleccionado-caja" style="display:none;background:var(--superficie);border:1px solid var(--linea);border-radius:10px;padding:14px;">
-          <label>Especificaciones</label>
+          <div id="req-item-codigo-info" style="font-weight:700;font-size:13px;margin-bottom:10px;"></div><label>Especificaciones</label>
           <textarea id="req-item-especificaciones" placeholder="Detalle o característica del material" style="margin-bottom:12px;"></textarea>
 
           <label>Equipo / Maquinaria / Activo</label>
@@ -2524,9 +2524,9 @@ function iniciarAutocompleteMaterial(){
   });
 }
 
-function abrirCajaItemRequerimiento(nombre, um, precio){
+function abrirCajaItemRequerimiento(nombre, um, precio, codigo){
   document.getElementById("req-material-buscar").value = nombre;
-  document.getElementById("req-material-seleccionado-caja").style.display = "block";
+  document.getElementById("req-material-seleccionado-caja").style.display = "block"; const infoCodigo = document.getElementById("req-item-codigo-info"); infoCodigo.innerHTML = codigo ? `Código: <span style="font-weight:700;color:var(--azul-600,#2563eb);">${codigo}</span>` : `<span style="opacity:.7;font-weight:400;font-style:italic;">Sin código de catálogo (material manual)</span>`;
   document.getElementById("req-item-especificaciones").value = nombre;
   document.getElementById("req-item-equipo").value = "";
   document.getElementById("req-material-cantidad").value = 1;
