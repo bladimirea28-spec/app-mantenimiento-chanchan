@@ -674,20 +674,9 @@
       <div class="titulo-lg">Nuevo requerimiento</div>
     </div>
     <div class="contenido">
-      <button type="button" class="btn btn-texto" style="width:auto;justify-content:flex-start;padding:0 0 12px;" onclick="abrirMisRequerimientos()">📋 Ver mis requerimientos</button>
-
-      <div class="campo">
-        <label>Motivo del requerimiento</label>
-        <textarea id="req-motivo" placeholder="¿Para qué es este requerimiento? Ej: Reparación de tractor de aplicación"></textarea>
-      </div>
-
-      <div class="tarjeta" style="margin:14px 0;">
-        <div style="font-weight:700;font-size:13.5px;margin-bottom:10px;">Agregar material</div>
-
-        <div class="campo">
-          <label>Buscar material</label>
-          <input type="text" id="req-material-buscar" placeholder="Ej: rodamiento, correa, faja..." autocomplete="off">
-          <div class="autocomplete-lista" id="req-material-lista"></div>
+<div style="font-weight:700;font-size:13.5px;">${i+1}. ${it.nombre}</div>abrirCajaItemRequerimiento(m.nombre, m.um, m.precio, m.codigo);
+abrirCajaItemRequerimiento(nombre, "UND", 0, "");          <label>Buscar material</label>
+<div style="font-weight:700;font-size:13.5px;">${i+1}. ${it.nombre}${it.codigo?` <span style="font-weight:400;color:var(--azul-600,#2563eb);">(Cód: ${it.codigo})</span>`:''}</div>          <div class="autocomplete-lista" id="req-material-lista"></div>
         </div>
 
         <div class="campo" id="req-material-seleccionado-caja" style="display:none;background:var(--superficie);border:1px solid var(--linea);border-radius:10px;padding:14px;">
