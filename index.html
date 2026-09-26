@@ -722,7 +722,7 @@
           </div>
 
           <label>Foto (opcional, ejemplo o muestra)</label>
-          <input type="file" id="req-item-foto-input" accept="image/*" capture="environment">
+          <input type="file" id="req-item-foto-input" accept="image/*">
           <div id="req-item-foto-preview" style="margin:8px 0;"></div>
 
           <button type="button" class="btn btn-secundario" style="margin-top:6px;" onclick="agregarMaterialALista()">+ Agregar a la lista</button>
@@ -3135,6 +3135,16 @@ function renderizarListadoAdmin(){
   }).join("");
 }
 
+function soloFechaExcel(valor){
+  if(!valor) return "";
+  const texto = String(valor);
+  const m = texto.match(/^(\d{4}-\d{2}-\d{2})/);
+  if(m) return m[1];
+  const d = new Date(valor);
+  if(!isNaN(d.getTime())) return d.toISOString().slice(0,10);
+  return texto;
+}
+
 function exportarExcel(){
   const quitarFotos = (arr) => arr.map(r=>{
     const copia = Object.assign({}, r);
@@ -3151,7 +3161,7 @@ function exportarExcel(){
     items.forEach(it=>{
       filasReq.push({
         CORRELATIVO: r.CORRELATIVO || r.ID,
-        FECHA: r.FECHA,
+        FECHA: soloFechaExcel(r.FECHA),
         TECNICO: r.TECNICO,
         MOTIVO: r.MOTIVO,
         N_ITEM: it.numero || "",
@@ -3164,11 +3174,26 @@ function exportarExcel(){
         EQUIPO: it.equipo || "",
         PRECIO_UNITARIO: it.precio_unitario || "",
         PRECIO_TOTAL: it.precio_total || "",
+        FOTO: it.foto || "",
         COMENTARIOS: r.COMENTARIOS || ""
       });
     });
   });
-  XLSX.utils.book_append_sheet(libro, XLSX.utils.json_to_sheet(filasReq), "Requerimientos");
+  const hojaReq = XLSX.utils.json_to_sheet(filasReq);
+  const columnasReq = filasReq.length ? Object.keys(filasReq[0]) : [];
+  const colFoto = columnasReq.indexOf("FOTO");
+  if(colFoto > -1){
+    filasReq.forEach((fila, i)=>{
+      if(fila.FOTO){
+        const celda = XLSX.utils.encode_cell({ r: i + 1, c: colFoto });
+        if(hojaReq[celda]){
+          hojaReq[celda].l = { Target: fila.FOTO, Tooltip: "Ver foto" };
+          hojaReq[celda].v = "Ver foto";
+        }
+      }
+    });
+  }
+  XLSX.utils.book_append_sheet(libro, hojaReq, "Requerimientos");
 
   const fecha = new Date().toISOString().slice(0,10);
   XLSX.writeFile(libro, `Mantenimiento_ChanChan_${fecha}.xlsx`);
