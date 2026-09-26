@@ -316,6 +316,25 @@
   #toast.mostrar{opacity:1;transform:translateX(-50%) translateY(0);}
   #toast svg{width:18px;height:18px;flex-shrink:0;color:#6FCF97;}
 
+  /* ---------- Modal genérico (Ver detalle / Editar / Eliminar) ---------- */
+  #modal-overlay{
+    position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;
+    display:none;align-items:flex-end;justify-content:center;
+  }
+  #modal-overlay.mostrar{display:flex;}
+  #modal-caja{
+    background:var(--card);width:100%;max-width:520px;max-height:86vh;overflow-y:auto;
+    border-radius:18px 18px 0 0;padding:20px 18px 26px;box-shadow:0 -10px 30px rgba(0,0,0,.3);
+  }
+  @media (min-width:560px){
+    #modal-overlay{align-items:center;}
+    #modal-caja{border-radius:18px;}
+  }
+  #modal-caja .modal-titulo{font-weight:700;font-size:15.5px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  #modal-caja .modal-cerrar{background:none;border:none;font-size:20px;line-height:1;cursor:pointer;color:var(--tinta-600);padding:2px 6px;}
+  #modal-caja .modal-fila{padding:7px 0;border-bottom:1px solid var(--linea);font-size:13px;}
+  #modal-caja .modal-fila b{display:block;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.02em;color:var(--tinta-600);margin-bottom:2px;}
+
   /* ---------- Cargando (tuerquita girando) ---------- */
   #loader-global{
     position:fixed;inset:0;display:none;align-items:center;justify-content:center;
@@ -1256,74 +1275,175 @@
       <div id="admin-cargando" class="subtexto">Cargando datos desde Google Sheets...</div>
 
       <div id="admin-contenido" style="display:none;">
-        <div class="kpi-grid kpi-grid-3">
-          <div class="kpi-card"><div class="kpi-valor" id="admin-kpi-actividades">0</div><div class="kpi-etiqueta">Actividades</div></div>
-          <div class="kpi-card acento-ambar"><div class="kpi-valor" id="admin-kpi-abiertas">0</div><div class="kpi-etiqueta">Fallas abiertas</div></div>
-          <div class="kpi-card acento-verde"><div class="kpi-valor" id="admin-kpi-resueltas">0</div><div class="kpi-etiqueta">Fallas resueltas</div></div>
-          <div class="kpi-card acento-rojo"><div class="kpi-valor" id="admin-kpi-criticas">0</div><div class="kpi-etiqueta">Críticas abiertas</div></div>
-          <div class="kpi-card acento-azul"><div class="kpi-valor" id="admin-kpi-minutos">0</div><div class="kpi-etiqueta">Min. parada (mes)</div></div>
-          <div class="kpi-card"><div class="kpi-valor" id="admin-kpi-total-fallas">0</div><div class="kpi-etiqueta">Fallas totales</div></div>
-        </div>
-
-        <div class="tarjeta" style="margin-bottom:14px;">
-          <div style="font-weight:700;font-size:13.5px;margin-bottom:10px;">Análisis por período</div>
-          <div class="fila-2">
-            <div class="campo" style="margin-bottom:10px;">
-              <label>Desde</label>
-              <input type="date" id="admin-filtro-fecha-desde" onchange="actualizarAnalisisPeriodo()">
-            </div>
-            <div class="campo" style="margin-bottom:10px;">
-              <label>Hasta</label>
-              <input type="date" id="admin-filtro-fecha-hasta" onchange="actualizarAnalisisPeriodo()">
-            </div>
+        <button class="modulo-btn" onclick="irA('pantalla-admin-actividades')">
+          <div class="modulo-icono verde">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14.7 6.3a4 4 0 1 1-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 1 1 5.4-5.4l3.6-3.6-3-3-3.6 3.6z"/></svg>
           </div>
-          <button type="button" class="btn btn-texto" style="width:auto;justify-content:flex-start;padding:0 0 14px;" onclick="limpiarFiltroFechaAdmin()">Ver todo el historial</button>
-
-          <div style="font-weight:700;font-size:12.5px;margin-bottom:6px;color:var(--tinta-600);">Fallas por semana</div>
-          <div id="admin-grafico-tendencia" class="grafico-caja">Sin datos.</div>
-
-          <div style="font-weight:700;font-size:12.5px;margin:18px 0 6px;color:var(--tinta-600);">Fallas por criticidad</div>
-          <div id="admin-grafico-criticidad" class="grafico-caja">Sin datos.</div>
-
-          <div style="font-weight:700;font-size:12.5px;margin:18px 0 6px;color:var(--tinta-600);">Equipos con más fallas</div>
-          <div id="admin-top-equipos" class="subtexto">Sin datos.</div>
-
-          <div style="font-weight:700;font-size:12.5px;margin:18px 0 6px;color:var(--tinta-600);">Fallas atendidas por técnico</div>
-          <div id="admin-ranking-tecnicos" class="subtexto">Sin datos.</div>
-        </div>
-
-        <div class="campo">
-          <label>Filtrar por técnico</label>
-          <select id="admin-filtro-tecnico" onchange="renderizarListadoAdmin()">
-            <option value="">Todos</option>
-          </select>
-        </div>
-
-        <button class="btn btn-secundario" style="margin-bottom:10px;" onclick="exportarExcel()">⬇️ Exportar a Excel</button>
-
-        <div class="tarjeta" style="margin-bottom:14px;">
-          <div style="font-weight:700;font-size:13.5px;margin-bottom:8px;">Requerimientos de materiales</div>
-          <div style="display:flex;gap:10px;margin-bottom:10px;">
-            <div class="kpi-card" style="flex:1;"><div class="kpi-valor" id="admin-kpi-requerimientos">0</div><div class="kpi-etiqueta">Requerimientos</div></div>
-            <div class="kpi-card acento-azul" style="flex:1;"><div class="kpi-valor" id="admin-kpi-requerimientos-monto">S/ 0</div><div class="kpi-etiqueta">Monto total</div></div>
+          <div class="modulo-txt">
+            <div class="titulo-lg">Resumen de Actividades</div>
+            <div class="subtexto" id="admin-badge-actividades">Cargando...</div>
           </div>
-          <div id="admin-requerimientos-lista" class="subtexto">Cargando...</div>
-        </div>
+          <div class="modulo-flecha"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>
+        </button>
 
-        <div class="tarjeta" style="margin-bottom:14px;">
-          <div style="font-weight:700;font-size:13.5px;margin-bottom:8px;">Solicitudes de actividad pendientes</div>
-          <p class="subtexto" style="margin-bottom:10px;">Generadas por jefes/supervisores de área. La programación se coordina fuera de la app.</p>
-          <div id="admin-solicitudes-lista" class="subtexto">Cargando...</div>
-        </div>
+        <button class="modulo-btn" onclick="irA('pantalla-admin-fallas')">
+          <div class="modulo-icono rojo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+          </div>
+          <div class="modulo-txt">
+            <div class="titulo-lg">Historial de Fallas</div>
+            <div class="subtexto" id="admin-badge-fallas">Cargando...</div>
+          </div>
+          <div class="modulo-flecha"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>
+        </button>
 
-        <div class="tarjeta" style="margin-bottom:14px;">
-          <div style="font-weight:700;font-size:13.5px;margin-bottom:8px;">Dispositivos registrados</div>
-          <p class="subtexto" style="margin-bottom:10px;">Por ahora cualquier cuenta puede iniciar sesión desde varios dispositivos sin bloqueo (restricción desactivada temporalmente). Aquí ves el último dispositivo usado por cada cuenta y puedes liberarlo si hace falta.</p>
-          <div id="admin-dispositivos-lista" class="subtexto">Cargando...</div>
-        </div>
+        <button class="modulo-btn" onclick="irA('pantalla-admin-requerimientos')">
+          <div class="modulo-icono ambar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 2h9l3 3v17H6zM9 2v5H4"/></svg>
+          </div>
+          <div class="modulo-txt">
+            <div class="titulo-lg">Resumen de Requerimientos</div>
+            <div class="subtexto" id="admin-badge-requerimientos">Cargando...</div>
+          </div>
+          <div class="modulo-flecha"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>
+        </button>
 
-        <div id="admin-lista"></div>
+        <button class="modulo-btn" onclick="irA('pantalla-admin-solicitudes')">
+          <div class="modulo-icono morado">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 3h6v3H9zM6 6h12v15H6z"/><path d="M9 12l2 2 4-4"/></svg>
+          </div>
+          <div class="modulo-txt">
+            <div class="titulo-lg">Solicitudes de Área</div>
+            <div class="subtexto" id="admin-badge-solicitudes">Cargando...</div>
+          </div>
+          <div class="modulo-flecha"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>
+        </button>
+
+        <button class="modulo-btn" onclick="irA('pantalla-admin-dispositivos')">
+          <div class="modulo-icono azul">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7V4h3M20 7V4h-3M4 17v3h3M20 17v3h-3M4 4l16 16"/></svg>
+          </div>
+          <div class="modulo-txt">
+            <div class="titulo-lg">Dispositivos</div>
+            <div class="subtexto" id="admin-badge-dispositivos">Cargando...</div>
+          </div>
+          <div class="modulo-flecha"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>
+        </button>
+
+        <button class="btn btn-secundario" style="margin-top:14px;" onclick="exportarExcel()">⬇️ Exportar todo a Excel</button>
+        <button class="btn btn-texto" style="margin-top:2px;" onclick="abrirPanelAdmin()">🔄 Actualizar datos</button>
       </div>
+    </div>
+  </section>
+
+  <!-- ================= PANTALLA: ADMIN - RESUMEN DE ACTIVIDADES ================= -->
+  <section class="pantalla" id="pantalla-admin-actividades">
+    <div class="barra-superior">
+      <button class="btn-volver" onclick="irA('pantalla-admin')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="titulo-lg">Resumen de Actividades</div>
+    </div>
+    <div class="contenido" style="padding-top:16px;">
+      <div class="kpi-grid kpi-grid-3">
+        <div class="kpi-card"><div class="kpi-valor" id="admin-kpi-actividades">0</div><div class="kpi-etiqueta">Actividades registradas</div></div>
+      </div>
+      <div class="campo">
+        <label>Filtrar por técnico</label>
+        <select id="admin-filtro-tecnico-actividades" onchange="renderizarListadoActividadesAdmin()">
+          <option value="">Todos</option>
+        </select>
+      </div>
+      <div id="admin-lista-actividades"></div>
+    </div>
+  </section>
+
+  <!-- ================= PANTALLA: ADMIN - HISTORIAL DE FALLAS ================= -->
+  <section class="pantalla" id="pantalla-admin-fallas">
+    <div class="barra-superior">
+      <button class="btn-volver" onclick="irA('pantalla-admin')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="titulo-lg">Historial de Fallas</div>
+    </div>
+    <div class="contenido" style="padding-top:16px;">
+      <div class="kpi-grid kpi-grid-3">
+        <div class="kpi-card acento-ambar"><div class="kpi-valor" id="admin-kpi-abiertas">0</div><div class="kpi-etiqueta">Fallas abiertas</div></div>
+        <div class="kpi-card acento-verde"><div class="kpi-valor" id="admin-kpi-resueltas">0</div><div class="kpi-etiqueta">Fallas resueltas</div></div>
+        <div class="kpi-card acento-rojo"><div class="kpi-valor" id="admin-kpi-criticas">0</div><div class="kpi-etiqueta">Críticas abiertas</div></div>
+        <div class="kpi-card acento-azul"><div class="kpi-valor" id="admin-kpi-minutos">0</div><div class="kpi-etiqueta">Min. parada (mes)</div></div>
+        <div class="kpi-card"><div class="kpi-valor" id="admin-kpi-total-fallas">0</div><div class="kpi-etiqueta">Fallas totales</div></div>
+      </div>
+
+      <div class="tarjeta" style="margin-bottom:14px;">
+        <div style="font-weight:700;font-size:13.5px;margin-bottom:10px;">Análisis por período</div>
+        <div class="fila-2">
+          <div class="campo" style="margin-bottom:10px;">
+            <label>Desde</label>
+            <input type="date" id="admin-filtro-fecha-desde" onchange="actualizarAnalisisPeriodo()">
+          </div>
+          <div class="campo" style="margin-bottom:10px;">
+            <label>Hasta</label>
+            <input type="date" id="admin-filtro-fecha-hasta" onchange="actualizarAnalisisPeriodo()">
+          </div>
+        </div>
+        <button type="button" class="btn btn-texto" style="width:auto;justify-content:flex-start;padding:0 0 14px;" onclick="limpiarFiltroFechaAdmin()">Ver todo el historial</button>
+
+        <div style="font-weight:700;font-size:12.5px;margin-bottom:6px;color:var(--tinta-600);">Fallas por semana</div>
+        <div id="admin-grafico-tendencia" class="grafico-caja">Sin datos.</div>
+
+        <div style="font-weight:700;font-size:12.5px;margin:18px 0 6px;color:var(--tinta-600);">Fallas por criticidad</div>
+        <div id="admin-grafico-criticidad" class="grafico-caja">Sin datos.</div>
+
+        <div style="font-weight:700;font-size:12.5px;margin:18px 0 6px;color:var(--tinta-600);">Equipos con más fallas</div>
+        <div id="admin-top-equipos" class="subtexto">Sin datos.</div>
+
+        <div style="font-weight:700;font-size:12.5px;margin:18px 0 6px;color:var(--tinta-600);">Fallas atendidas por técnico</div>
+        <div id="admin-ranking-tecnicos" class="subtexto">Sin datos.</div>
+      </div>
+
+      <div class="campo">
+        <label>Filtrar por técnico</label>
+        <select id="admin-filtro-tecnico" onchange="renderizarListadoFallasAdmin()">
+          <option value="">Todos</option>
+        </select>
+      </div>
+      <div id="admin-lista-fallas"></div>
+    </div>
+  </section>
+
+  <!-- ================= PANTALLA: ADMIN - RESUMEN DE REQUERIMIENTOS ================= -->
+  <section class="pantalla" id="pantalla-admin-requerimientos">
+    <div class="barra-superior">
+      <button class="btn-volver" onclick="irA('pantalla-admin')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="titulo-lg">Resumen de Requerimientos</div>
+    </div>
+    <div class="contenido" style="padding-top:16px;">
+      <div style="display:flex;gap:10px;margin-bottom:14px;">
+        <div class="kpi-card" style="flex:1;"><div class="kpi-valor" id="admin-kpi-requerimientos">0</div><div class="kpi-etiqueta">Requerimientos</div></div>
+        <div class="kpi-card acento-azul" style="flex:1;"><div class="kpi-valor" id="admin-kpi-requerimientos-monto">S/ 0</div><div class="kpi-etiqueta">Monto total</div></div>
+      </div>
+      <div id="admin-requerimientos-lista" class="subtexto">Cargando...</div>
+    </div>
+  </section>
+
+  <!-- ================= PANTALLA: ADMIN - SOLICITUDES DE ÁREA ================= -->
+  <section class="pantalla" id="pantalla-admin-solicitudes">
+    <div class="barra-superior">
+      <button class="btn-volver" onclick="irA('pantalla-admin')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="titulo-lg">Solicitudes de Área</div>
+    </div>
+    <div class="contenido" style="padding-top:16px;">
+      <p class="subtexto" style="margin-bottom:10px;">Generadas por jefes/supervisores de área. La programación se coordina fuera de la app.</p>
+      <div id="admin-solicitudes-lista" class="subtexto">Cargando...</div>
+    </div>
+  </section>
+
+  <!-- ================= PANTALLA: ADMIN - DISPOSITIVOS ================= -->
+  <section class="pantalla" id="pantalla-admin-dispositivos">
+    <div class="barra-superior">
+      <button class="btn-volver" onclick="irA('pantalla-admin')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="titulo-lg">Dispositivos</div>
+    </div>
+    <div class="contenido" style="padding-top:16px;">
+      <p class="subtexto" style="margin-bottom:10px;">Por ahora cualquier cuenta puede iniciar sesión desde varios dispositivos sin bloqueo (restricción desactivada temporalmente). Aquí ves el último dispositivo usado por cada cuenta y puedes liberarlo si hace falta.</p>
+      <div id="admin-dispositivos-lista" class="subtexto">Cargando...</div>
     </div>
   </section>
 
@@ -1354,6 +1474,10 @@
 </div>
 
 <div id="toast"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg><span id="toast-txt"></span></div>
+
+<div id="modal-overlay" onclick="if(event.target===this) cerrarModal()">
+  <div id="modal-caja"></div>
+</div>
 
 <div id="loader-global">
   <div class="loader-caja">
@@ -1537,6 +1661,11 @@ const TABS_POR_PANTALLA = {
   "pantalla-form-fallas": "tab-registrar",
   "pantalla-form-requerimiento": "tab-registrar",
   "pantalla-admin": "tab-panel-admin",
+  "pantalla-admin-actividades": "tab-panel-admin",
+  "pantalla-admin-fallas": "tab-panel-admin",
+  "pantalla-admin-requerimientos": "tab-panel-admin",
+  "pantalla-admin-solicitudes": "tab-panel-admin",
+  "pantalla-admin-dispositivos": "tab-panel-admin",
   "pantalla-fallas-abiertas": "tab-alertas",
   "pantalla-resolver-falla": "tab-alertas",
   "pantalla-perfil": "tab-perfil",
@@ -1548,6 +1677,8 @@ function irA(idPantalla){
   if(idPantalla === "pantalla-lista-mtto") renderListaMtto();
   if(idPantalla === "pantalla-lista-fallas") renderListaFallas();
   if(idPantalla === "pantalla-fallas-abiertas") cargarFallasAbiertas();
+  if(idPantalla === "pantalla-admin-actividades") renderizarListadoActividadesAdmin();
+  if(idPantalla === "pantalla-admin-fallas"){ renderizarListadoFallasAdmin(); actualizarAnalisisPeriodo(); }
   if(idPantalla === "pantalla-menu") actualizarTextoPendientes();
   if(idPantalla === "pantalla-form-mtto" || idPantalla === "pantalla-form-fallas") cargarTecnicosResponsables();
   if(idPantalla === "pantalla-config") document.getElementById("config-url").value = localStorage.getItem("sync_url")||"";
@@ -2815,24 +2946,34 @@ async function abrirPanelAdmin(){
 
   actualizarKpisAdmin();
 
-  const nombres = new Set();
-  adminDatosCache.actividades.forEach(r=> r.USUARIO && nombres.add(r.USUARIO));
-  adminDatosCache.fallas.forEach(r=> r.TECNICO_RESPONSABLE && nombres.add(r.TECNICO_RESPONSABLE));
+  const nombresAct = new Set();
+  adminDatosCache.actividades.forEach(r=> r.USUARIO && nombresAct.add(r.USUARIO));
+  const selFiltroAct = document.getElementById("admin-filtro-tecnico-actividades");
+  if(selFiltroAct){
+    selFiltroAct.innerHTML = `<option value="">Todos</option>` +
+      [...nombresAct].sort().map(n=>`<option value="${n}">${n}</option>`).join("");
+  }
+
+  const nombresFallas = new Set();
+  adminDatosCache.fallas.forEach(r=> r.TECNICO_RESPONSABLE && nombresFallas.add(r.TECNICO_RESPONSABLE));
   const selFiltro = document.getElementById("admin-filtro-tecnico");
   selFiltro.innerHTML = `<option value="">Todos</option>` +
-    [...nombres].sort().map(n=>`<option value="${n}">${n}</option>`).join("");
+    [...nombresFallas].sort().map(n=>`<option value="${n}">${n}</option>`).join("");
 
   cargarDispositivosAdmin(sesion);
 
   document.getElementById("admin-filtro-fecha-desde").value = "";
   document.getElementById("admin-filtro-fecha-hasta").value = "";
 
-  document.getElementById("admin-cargando").style.display = "none";
-  document.getElementById("admin-contenido").style.display = "block";
-  renderizarListadoAdmin();
-  actualizarAnalisisPeriodo();
+  const abiertasBadge = adminDatosCache.fallas.filter(r => String(r.ESTADO||"Abierta")!=="Resuelta");
+  document.getElementById("admin-badge-actividades").textContent = `${adminDatosCache.actividades.length} registradas`;
+  document.getElementById("admin-badge-fallas").textContent = `${abiertasBadge.length} abiertas de ${adminDatosCache.fallas.length}`;
+
   cargarSolicitudesAdmin(sesion);
   cargarRequerimientosAdmin(sesion);
+
+  document.getElementById("admin-cargando").style.display = "none";
+  document.getElementById("admin-contenido").style.display = "block";
 }
 
 async function cargarRequerimientosAdmin(sesion){
@@ -2852,6 +2993,8 @@ async function cargarRequerimientosAdmin(sesion){
   const total = lista.reduce((s,r)=> s + (Number(r.TOTAL)||0), 0);
   document.getElementById("admin-kpi-requerimientos").textContent = lista.length;
   document.getElementById("admin-kpi-requerimientos-monto").textContent = `S/ ${total.toFixed(2)}`;
+  const badgeReq = document.getElementById("admin-badge-requerimientos");
+  if(badgeReq) badgeReq.textContent = `${lista.length} registrado(s)`;
 
   if(lista.length===0){
     cont.textContent = "Todavía no hay requerimientos registrados.";
@@ -2860,6 +3003,7 @@ async function cargarRequerimientosAdmin(sesion){
   const ordenados = [...lista].sort((a,b)=> new Date(b.FECHA) - new Date(a.FECHA));
   cont.innerHTML = ordenados.map(r=>{
     const items = r.ITEMS || [];
+    const corr = (r.CORRELATIVO || r.ID || "").toString().replace(/'/g,"\\'");
     return `
     <div class="registro-item">
       <div class="fila1">
@@ -2870,6 +3014,11 @@ async function cargarRequerimientosAdmin(sesion){
         <span class="badge">${(r.FECHA||'').toString().slice(0,10)}</span>
       </div>
       <div class="desc">${items.length} material(es) · Total S/ ${(Number(r.TOTAL)||0).toFixed(2)}</div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button type="button" class="btn btn-secundario" style="width:auto;flex:1;padding:9px 10px;font-size:12.5px;" onclick="verDetalleRequerimientoAdmin('${corr}')">Ver detalle</button>
+        <button type="button" class="btn btn-secundario" style="width:auto;flex:1;padding:9px 10px;font-size:12.5px;" onclick="editarRequerimientoAdmin('${corr}')">Editar</button>
+        <button type="button" class="btn btn-texto" style="width:auto;flex:1;padding:9px 10px;font-size:12.5px;color:var(--rojo-texto,#c0392b);" onclick="eliminarRequerimientoAdmin('${corr}')">Eliminar</button>
+      </div>
     </div>`;
   }).join("");
 }
@@ -2883,6 +3032,8 @@ async function cargarSolicitudesAdmin(sesion){
     return;
   }
   const pendientes = (resp.solicitudes||[]).filter(s => String(s.ESTADO||"Pendiente")==="Pendiente");
+  const badgeSol = document.getElementById("admin-badge-solicitudes");
+  if(badgeSol) badgeSol.textContent = `${pendientes.length} pendiente(s)`;
   if(pendientes.length===0){
     cont.textContent = "No hay solicitudes pendientes.";
     return;
@@ -3095,24 +3246,62 @@ function actualizarAnalisisPeriodo(){
   }
 }
 
-function renderizarListadoAdmin(){
-  const filtro = document.getElementById("admin-filtro-tecnico").value;
-  const cont = document.getElementById("admin-lista");
+function renderizarListadoActividadesAdmin(){
+  const selEl = document.getElementById("admin-filtro-tecnico-actividades");
+  const filtro = selEl ? selEl.value : "";
+  const cont = document.getElementById("admin-lista-actividades");
+  if(!cont) return;
 
   const actividades = adminDatosCache.actividades
-    .filter(r => !filtro || r.USUARIO === filtro)
-    .map(r => ({ tipo:"Actividad", tecnico:r.USUARIO, equipo:r.EQUIPO, fecha:r.FECHA, desc:r.DESCRIPCION, fotos:r.FOTOS, criticidad:r.CRITICIDAD, estado:"" }));
-  const fallas = adminDatosCache.fallas
-    .filter(r => !filtro || r.TECNICO_RESPONSABLE === filtro)
-    .map(r => ({ tipo:"Falla", tecnico:r.TECNICO_RESPONSABLE, equipo:r.EQUIPO, fecha:r.FECHA, desc:r.DESCRIPCION, fotos:r.FOTOS, criticidad:r.CRITICIDAD, estado:r.ESTADO||"Abierta" }));
+    .filter(r => !filtro || r.USUARIO === filtro);
 
-  const todos = actividades.concat(fallas);
-  if(todos.length===0){
-    cont.innerHTML = `<div class="vacio"><div class="subtexto">No hay registros para este filtro.</div></div>`;
+  if(actividades.length===0){
+    cont.innerHTML = `<div class="vacio"><div class="subtexto">No hay actividades para este filtro.</div></div>`;
     return;
   }
-  cont.innerHTML = todos.map(r=>{
-    const fotos = (r.fotos||"").split("|").map(f=>f.trim()).filter(f=>f && f!=="ERROR_SUBIENDO_FOTO");
+  cont.innerHTML = actividades.map(r=>{
+    const fotos = (r.FOTOS||"").split("|").map(f=>f.trim()).filter(f=>f && f!=="ERROR_SUBIENDO_FOTO");
+    const fotosHtml = fotos.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">${
+      fotos.map(f=>`<a href="${f}" target="_blank" rel="noopener"><img src="${f}" style="width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid var(--linea);"></a>`).join("")
+    }</div>` : "";
+    const idOt = (r.ID_OT||"").toString().replace(/'/g,"\\'");
+    return `
+    <div class="registro-item">
+      <div class="fila1">
+        <div>
+          <div style="font-weight:700;font-size:14px;">${r.EQUIPO||"—"}</div>
+          <div class="subtexto" style="margin-top:2px;">${r.USUARIO||"—"} · Actividad</div>
+        </div>
+        <span class="badge">${r.FECHA||""}</span>
+      </div>
+      <div class="badge-fila" style="margin-top:8px;">
+        ${r.CRITICIDAD?`<span class="badge ${claseCriticidad(r.CRITICIDAD)}">${r.CRITICIDAD}</span>`:''}
+      </div>
+      ${r.DESCRIPCION?`<div class="desc">${r.DESCRIPCION}</div>`:""}
+      ${fotosHtml}
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button type="button" class="btn btn-secundario" style="width:auto;flex:1;padding:9px 10px;font-size:12.5px;" onclick="verDetalleActividadAdmin('${idOt}')">Ver detalle</button>
+        <button type="button" class="btn btn-secundario" style="width:auto;flex:1;padding:9px 10px;font-size:12.5px;" onclick="editarActividadAdmin('${idOt}')">Editar</button>
+        <button type="button" class="btn btn-texto" style="width:auto;flex:1;padding:9px 10px;font-size:12.5px;color:var(--rojo-texto,#c0392b);" onclick="eliminarActividadAdmin('${idOt}')">Eliminar</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function renderizarListadoFallasAdmin(){
+  const filtro = document.getElementById("admin-filtro-tecnico").value;
+  const cont = document.getElementById("admin-lista-fallas");
+  if(!cont) return;
+
+  const fallas = adminDatosCache.fallas
+    .filter(r => !filtro || r.TECNICO_RESPONSABLE === filtro);
+
+  if(fallas.length===0){
+    cont.innerHTML = `<div class="vacio"><div class="subtexto">No hay fallas para este filtro.</div></div>`;
+    return;
+  }
+  cont.innerHTML = fallas.map(r=>{
+    const fotos = (r.FOTOS||"").split("|").map(f=>f.trim()).filter(f=>f && f!=="ERROR_SUBIENDO_FOTO");
     const fotosHtml = fotos.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">${
       fotos.map(f=>`<a href="${f}" target="_blank" rel="noopener"><img src="${f}" style="width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid var(--linea);"></a>`).join("")
     }</div>` : "";
@@ -3120,16 +3309,16 @@ function renderizarListadoAdmin(){
     <div class="registro-item">
       <div class="fila1">
         <div>
-          <div style="font-weight:700;font-size:14px;">${r.equipo||"—"}</div>
-          <div class="subtexto" style="margin-top:2px;">${r.tecnico||"—"} · ${r.tipo}</div>
+          <div style="font-weight:700;font-size:14px;">${r.EQUIPO||"—"}</div>
+          <div class="subtexto" style="margin-top:2px;">${r.TECNICO_RESPONSABLE||"—"} · Falla</div>
         </div>
-        <span class="badge">${r.fecha||""}</span>
+        <span class="badge">${r.FECHA||""}</span>
       </div>
       <div class="badge-fila" style="margin-top:8px;">
-        ${r.criticidad?`<span class="badge ${claseCriticidad(r.criticidad)}">${r.criticidad}</span>`:''}
-        ${r.tipo==="Falla"?`<span class="badge ${claseEstadoFalla(r.estado)}">${r.estado}</span>`:''}
+        ${r.CRITICIDAD?`<span class="badge ${claseCriticidad(r.CRITICIDAD)}">${r.CRITICIDAD}</span>`:''}
+        <span class="badge ${claseEstadoFalla(r.ESTADO||"Abierta")}">${r.ESTADO||"Abierta"}</span>
       </div>
-      ${r.desc?`<div class="desc">${r.desc}</div>`:""}
+      ${r.DESCRIPCION?`<div class="desc">${r.DESCRIPCION}</div>`:""}
       ${fotosHtml}
     </div>`;
   }).join("");
@@ -3208,6 +3397,8 @@ async function cargarDispositivosAdmin(sesion){
     return;
   }
   const usuarios = resp.usuarios||[];
+  const badgeDisp = document.getElementById("admin-badge-dispositivos");
+  if(badgeDisp) badgeDisp.textContent = `${usuarios.length} registrado(s)`;
   if(usuarios.length===0){
     cont.textContent = "Todavía no hay dispositivos registrados.";
     return;
@@ -3241,6 +3432,263 @@ async function liberarDispositivoUI(slotId, boton){
     cargarDispositivosAdmin(sesion);
   } else if(boton){
     boton.disabled = false; boton.textContent = "Liberar este dispositivo";
+  }
+}
+
+/* ============ MODAL GENÉRICO ============ */
+function abrirModal(html){
+  document.getElementById("modal-caja").innerHTML = html;
+  document.getElementById("modal-overlay").classList.add("mostrar");
+}
+function cerrarModal(){
+  document.getElementById("modal-overlay").classList.remove("mostrar");
+  document.getElementById("modal-caja").innerHTML = "";
+}
+
+/* ============ ADMIN: VER DETALLE / EDITAR / ELIMINAR ACTIVIDADES ============ */
+function verDetalleActividadAdmin(idOt){
+  const r = adminDatosCache.actividades.find(a => String(a.ID_OT)===String(idOt));
+  if(!r){ mostrarToast("No se encontró el registro.", false); return; }
+  const fotos = (r.FOTOS||"").split("|").map(f=>f.trim()).filter(f=>f && f!=="ERROR_SUBIENDO_FOTO");
+  const fotosHtml = fotos.length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;">${
+    fotos.map(f=>`<a href="${f}" target="_blank" rel="noopener"><img src="${f}" style="width:70px;height:70px;object-fit:cover;border-radius:8px;border:1px solid var(--linea);"></a>`).join("")
+  }</div>` : "<span style=\"opacity:.7;\">Sin fotos</span>";
+  abrirModal(`
+    <div class="modal-titulo"><span>Detalle de actividad</span><button class="modal-cerrar" onclick="cerrarModal()">×</button></div>
+    <div class="modal-fila"><b>ID OT</b>${r.ID_OT||"—"}</div>
+    <div class="modal-fila"><b>Fecha</b>${r.FECHA||"—"}</div>
+    <div class="modal-fila"><b>Técnico</b>${r.USUARIO||"—"}</div>
+    <div class="modal-fila"><b>Equipo</b>${r.EQUIPO||"—"}</div>
+    <div class="modal-fila"><b>Área</b>${r.AREA||"—"}</div>
+    <div class="modal-fila"><b>Criticidad</b>${r.CRITICIDAD||"—"}</div>
+    <div class="modal-fila"><b>Tipo de mantenimiento</b>${r.TIPO_MTTO||"—"}</div>
+    <div class="modal-fila"><b>Especialidad</b>${r.ESPECIALIDAD||"—"}</div>
+    <div class="modal-fila"><b>Descripción</b>${r.DESCRIPCION||"—"}</div>
+    <div class="modal-fila"><b>Técnico responsable</b>${r.TECNICO_RESPONSABLE||"—"}</div>
+    <div class="modal-fila"><b>Inicio</b>${r.FECHA_HORA_INICIO||"—"}</div>
+    <div class="modal-fila"><b>Fin</b>${r.FECHA_HORA_FIN||"—"}</div>
+    <div class="modal-fila"><b>Total horas</b>${r.TOTAL_HORAS||"—"}</div>
+    <div class="modal-fila"><b>Horómetro/Km</b>${r.HOROMETRO_KM||"—"}</div>
+    <div class="modal-fila"><b>Integrantes</b>${r.INTEGRANTES||"—"}</div>
+    <div class="modal-fila"><b>Comentarios</b>${r.COMENTARIOS||"—"}</div>
+    <div class="modal-fila" style="border-bottom:none;"><b>Fotos</b>${fotosHtml}</div>
+    <button class="btn btn-primario" style="margin-top:14px;" onclick="cerrarModal()">Cerrar</button>
+  `);
+}
+
+function editarActividadAdmin(idOt){
+  const r = adminDatosCache.actividades.find(a => String(a.ID_OT)===String(idOt));
+  if(!r){ mostrarToast("No se encontró el registro.", false); return; }
+  abrirModal(`
+    <div class="modal-titulo"><span>Editar actividad</span><button class="modal-cerrar" onclick="cerrarModal()">×</button></div>
+    <div class="campo"><label>Equipo</label><input type="text" id="edit-act-equipo" value="${(r.EQUIPO||"").replace(/"/g,'&quot;')}"></div>
+    <div class="campo"><label>Área</label><input type="text" id="edit-act-area" value="${(r.AREA||"").replace(/"/g,'&quot;')}"></div>
+    <div class="campo"><label>Criticidad</label>
+      <select id="edit-act-criticidad">
+        <option value="Alta" ${r.CRITICIDAD==="Alta"?"selected":""}>Alta</option>
+        <option value="Media" ${r.CRITICIDAD==="Media"?"selected":""}>Media</option>
+        <option value="Baja" ${r.CRITICIDAD==="Baja"?"selected":""}>Baja</option>
+      </select>
+    </div>
+    <div class="campo"><label>Descripción</label><textarea id="edit-act-descripcion" rows="3">${(r.DESCRIPCION||"")}</textarea></div>
+    <div class="campo"><label>Comentarios</label><textarea id="edit-act-comentarios" rows="2">${(r.COMENTARIOS||"")}</textarea></div>
+    <div style="display:flex;gap:8px;margin-top:6px;">
+      <button class="btn btn-secundario" style="flex:1;" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn btn-primario" style="flex:1;" id="btn-guardar-edit-act" onclick="guardarEdicionActividadAdmin('${idOt}')">Guardar</button>
+    </div>
+  `);
+}
+
+async function guardarEdicionActividadAdmin(idOt){
+  const boton = document.getElementById("btn-guardar-edit-act");
+  if(boton){ boton.disabled = true; boton.textContent = "Guardando..."; }
+  const sesion = JSON.parse(localStorage.getItem("sesion_activa")||"{}");
+  const resp = await llamarServidor({
+    tipo: "editar_actividad",
+    dni_admin: sesion.dni,
+    id_ot: idOt,
+    campos: {
+      EQUIPO: document.getElementById("edit-act-equipo").value.trim(),
+      AREA: document.getElementById("edit-act-area").value.trim(),
+      CRITICIDAD: document.getElementById("edit-act-criticidad").value,
+      DESCRIPCION: document.getElementById("edit-act-descripcion").value.trim(),
+      COMENTARIOS: document.getElementById("edit-act-comentarios").value.trim()
+    }
+  });
+  mostrarToast(resp.mensaje || (resp.ok? "Actividad actualizada":"No se pudo actualizar"), resp.ok);
+  if(resp.ok){
+    cerrarModal();
+    const sesion2 = JSON.parse(localStorage.getItem("sesion_activa")||"{}");
+    await abrirPanelAdmin();
+    irA("pantalla-admin-actividades");
+  } else if(boton){
+    boton.disabled = false; boton.textContent = "Guardar";
+  }
+}
+
+function eliminarActividadAdmin(idOt){
+  abrirModal(`
+    <div class="modal-titulo"><span>Eliminar actividad</span><button class="modal-cerrar" onclick="cerrarModal()">×</button></div>
+    <p class="subtexto">Esta acción borra la actividad de forma permanente de la base de datos. No se puede deshacer. ¿Deseas continuar?</p>
+    <div style="display:flex;gap:8px;margin-top:14px;">
+      <button class="btn btn-secundario" style="flex:1;" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn btn-primario" style="flex:1;background:var(--rojo-600,#c0392b);" id="btn-confirmar-elim-act" onclick="confirmarEliminarActividadAdmin('${idOt}')">Sí, eliminar</button>
+    </div>
+  `);
+}
+
+async function confirmarEliminarActividadAdmin(idOt){
+  const boton = document.getElementById("btn-confirmar-elim-act");
+  if(boton){ boton.disabled = true; boton.textContent = "Eliminando..."; }
+  const sesion = JSON.parse(localStorage.getItem("sesion_activa")||"{}");
+  const resp = await llamarServidor({ tipo:"eliminar_actividad", dni_admin: sesion.dni, id_ot: idOt });
+  mostrarToast(resp.mensaje || (resp.ok? "Actividad eliminada":"No se pudo eliminar"), resp.ok);
+  if(resp.ok){
+    cerrarModal();
+    await abrirPanelAdmin();
+    irA("pantalla-admin-actividades");
+  } else if(boton){
+    boton.disabled = false; boton.textContent = "Sí, eliminar";
+  }
+}
+
+/* ============ ADMIN: VER DETALLE / EDITAR / ELIMINAR REQUERIMIENTOS ============ */
+function verDetalleRequerimientoAdmin(correlativo){
+  const r = (adminDatosCache.requerimientos||[]).find(x => String(x.CORRELATIVO||x.ID)===String(correlativo));
+  if(!r){ mostrarToast("No se encontró el requerimiento.", false); return; }
+  const items = r.ITEMS || [];
+  const itemsHtml = items.length ? items.map((it,i)=>`
+    <div style="border:1px solid var(--linea);border-radius:10px;padding:10px;margin-top:8px;">
+      <div style="font-weight:700;font-size:13px;">${i+1}. ${it.nombre||"—"} ${it.codigo?`<span style="font-weight:400;color:var(--azul-600,#2563eb);">(${it.codigo})</span>`:""}</div>
+      <div class="subtexto" style="margin-top:4px;">Cantidad: ${it.cantidad||"—"} ${it.um||""} · P. Unit: S/ ${(Number(it.precio_unitario)||0).toFixed(2)} · Total: S/ ${(Number(it.precio_total)||0).toFixed(2)}</div>
+      ${it.especificaciones?`<div class="subtexto" style="margin-top:2px;">Especificaciones: ${it.especificaciones}</div>`:""}
+      <div class="subtexto" style="margin-top:2px;">Equipo: ${it.equipo||"—"} ${it.equipoCodigo?`· CECO: ${it.equipoCodigo}`:""}</div>
+      ${it.foto?`<div style="margin-top:6px;"><a href="${it.foto}" target="_blank" rel="noopener"><img src="${it.foto}" style="width:70px;height:70px;object-fit:cover;border-radius:8px;border:1px solid var(--linea);"></a></div>`:""}
+    </div>
+  `).join("") : "<p class=\"subtexto\">Sin materiales.</p>";
+  abrirModal(`
+    <div class="modal-titulo"><span>${r.CORRELATIVO||r.ID}</span><button class="modal-cerrar" onclick="cerrarModal()">×</button></div>
+    <div class="modal-fila"><b>Fecha</b>${(r.FECHA||'').toString().slice(0,10)}</div>
+    <div class="modal-fila"><b>Técnico</b>${r.TECNICO||"—"}</div>
+    <div class="modal-fila"><b>Motivo</b>${r.MOTIVO||"—"}</div>
+    <div class="modal-fila" style="border-bottom:none;"><b>Comentarios</b>${r.COMENTARIOS||"—"}</div>
+    <div style="font-weight:700;font-size:13.5px;margin-top:12px;">Materiales (${items.length})</div>
+    ${itemsHtml}
+    <button class="btn btn-primario" style="margin-top:14px;" onclick="cerrarModal()">Cerrar</button>
+  `);
+}
+
+let reqEditandoState = null;
+function editarRequerimientoAdmin(correlativo){
+  const r = (adminDatosCache.requerimientos||[]).find(x => String(x.CORRELATIVO||x.ID)===String(correlativo));
+  if(!r){ mostrarToast("No se encontró el requerimiento.", false); return; }
+  reqEditandoState = {
+    correlativo: r.CORRELATIVO || r.ID,
+    motivo: r.MOTIVO || "",
+    comentarios: r.COMENTARIOS || "",
+    items: (r.ITEMS||[]).map(it => Object.assign({}, it))
+  };
+  renderModalEdicionRequerimiento();
+}
+
+function renderModalEdicionRequerimiento(){
+  const st = reqEditandoState;
+  const itemsHtml = st.items.map((it,i)=>`
+    <div style="border:1px solid var(--linea);border-radius:10px;padding:10px;margin-top:8px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-weight:700;font-size:13px;">${i+1}. ${it.nombre||"—"} ${it.codigo?`(${it.codigo})`:""}</div>
+        <button type="button" class="modal-cerrar" style="font-size:14px;" onclick="quitarItemEdicionRequerimiento(${i})">Quitar</button>
+      </div>
+      <div class="fila-2" style="margin-top:6px;">
+        <div class="campo" style="margin-bottom:6px;"><label>Cantidad</label><input type="number" step="any" data-idx="${i}" data-campo="cantidad" class="edit-req-item-input" value="${it.cantidad||0}" onchange="actualizarItemEdicionRequerimiento(this)"></div>
+        <div class="campo" style="margin-bottom:6px;"><label>Precio unitario</label><input type="number" step="0.01" data-idx="${i}" data-campo="precio_unitario" class="edit-req-item-input" value="${it.precio_unitario||0}" onchange="actualizarItemEdicionRequerimiento(this)"></div>
+      </div>
+      <div class="campo" style="margin-bottom:6px;"><label>Especificaciones</label><input type="text" data-idx="${i}" data-campo="especificaciones" class="edit-req-item-input" value="${(it.especificaciones||"").replace(/"/g,'&quot;')}" onchange="actualizarItemEdicionRequerimiento(this)"></div>
+      <div class="fila-2">
+        <div class="campo" style="margin-bottom:0;"><label>Equipo</label><input type="text" data-idx="${i}" data-campo="equipo" class="edit-req-item-input" value="${(it.equipo||"").replace(/"/g,'&quot;')}" onchange="actualizarItemEdicionRequerimiento(this)"></div>
+        <div class="campo" style="margin-bottom:0;"><label>Código CECO</label><input type="text" data-idx="${i}" data-campo="equipoCodigo" class="edit-req-item-input" value="${(it.equipoCodigo||"").replace(/"/g,'&quot;')}" onchange="actualizarItemEdicionRequerimiento(this)"></div>
+      </div>
+      <div class="subtexto" style="margin-top:6px;">Total ítem: S/ ${(Number(it.cantidad||0)*Number(it.precio_unitario||0)).toFixed(2)}</div>
+    </div>
+  `).join("");
+  abrirModal(`
+    <div class="modal-titulo"><span>Editar ${st.correlativo}</span><button class="modal-cerrar" onclick="cerrarModal()">×</button></div>
+    <div class="campo"><label>Motivo</label><input type="text" id="edit-req-motivo" value="${st.motivo.replace(/"/g,'&quot;')}"></div>
+    <div class="campo"><label>Comentarios</label><textarea id="edit-req-comentarios" rows="2">${st.comentarios}</textarea></div>
+    <div style="font-weight:700;font-size:13.5px;margin-top:8px;">Materiales (${st.items.length})</div>
+    ${itemsHtml || "<p class=\"subtexto\">Sin materiales — agrega al menos uno antes de guardar.</p>"}
+    <div style="display:flex;gap:8px;margin-top:14px;">
+      <button class="btn btn-secundario" style="flex:1;" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn btn-primario" style="flex:1;" id="btn-guardar-edit-req" onclick="guardarEdicionRequerimientoAdmin()">Guardar</button>
+    </div>
+  `);
+}
+
+function actualizarItemEdicionRequerimiento(input){
+  const idx = Number(input.dataset.idx);
+  const campo = input.dataset.campo;
+  reqEditandoState.items[idx][campo] = (campo==="cantidad"||campo==="precio_unitario") ? Number(input.value)||0 : input.value;
+  reqEditandoState.items[idx].precio_total = Number(reqEditandoState.items[idx].cantidad||0) * Number(reqEditandoState.items[idx].precio_unitario||0);
+}
+
+function quitarItemEdicionRequerimiento(idx){
+  reqEditandoState.items.splice(idx,1);
+  renderModalEdicionRequerimiento();
+}
+
+async function guardarEdicionRequerimientoAdmin(){
+  if(reqEditandoState.items.length===0){
+    mostrarToast("Debe quedar al menos un material.", false);
+    return;
+  }
+  const boton = document.getElementById("btn-guardar-edit-req");
+  if(boton){ boton.disabled = true; boton.textContent = "Guardando..."; }
+  reqEditandoState.motivo = document.getElementById("edit-req-motivo").value.trim();
+  reqEditandoState.comentarios = document.getElementById("edit-req-comentarios").value.trim();
+  const sesion = JSON.parse(localStorage.getItem("sesion_activa")||"{}");
+  const resp = await llamarServidor({
+    tipo: "editar_requerimiento",
+    dni_admin: sesion.dni,
+    correlativo: reqEditandoState.correlativo,
+    motivo: reqEditandoState.motivo,
+    comentarios: reqEditandoState.comentarios,
+    items: reqEditandoState.items
+  });
+  mostrarToast(resp.mensaje || (resp.ok? "Requerimiento actualizado":"No se pudo actualizar"), resp.ok);
+  if(resp.ok){
+    cerrarModal();
+    reqEditandoState = null;
+    const sesion2 = JSON.parse(localStorage.getItem("sesion_activa")||"{}");
+    await cargarRequerimientosAdmin(sesion2);
+    irA("pantalla-admin-requerimientos");
+  } else if(boton){
+    boton.disabled = false; boton.textContent = "Guardar";
+  }
+}
+
+function eliminarRequerimientoAdmin(correlativo){
+  abrirModal(`
+    <div class="modal-titulo"><span>Eliminar ${correlativo}</span><button class="modal-cerrar" onclick="cerrarModal()">×</button></div>
+    <p class="subtexto">Esta acción borra el requerimiento de forma permanente (de la lista y del historial). El técnico deberá volver a llenarlo desde cero si lo necesita. No se puede deshacer. ¿Deseas continuar?</p>
+    <div style="display:flex;gap:8px;margin-top:14px;">
+      <button class="btn btn-secundario" style="flex:1;" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn btn-primario" style="flex:1;background:var(--rojo-600,#c0392b);" id="btn-confirmar-elim-req" onclick="confirmarEliminarRequerimientoAdmin('${correlativo}')">Sí, eliminar</button>
+    </div>
+  `);
+}
+
+async function confirmarEliminarRequerimientoAdmin(correlativo){
+  const boton = document.getElementById("btn-confirmar-elim-req");
+  if(boton){ boton.disabled = true; boton.textContent = "Eliminando..."; }
+  const sesion = JSON.parse(localStorage.getItem("sesion_activa")||"{}");
+  const resp = await llamarServidor({ tipo:"eliminar_requerimiento", dni_admin: sesion.dni, correlativo: correlativo });
+  mostrarToast(resp.mensaje || (resp.ok? "Requerimiento eliminado":"No se pudo eliminar"), resp.ok);
+  if(resp.ok){
+    cerrarModal();
+    await cargarRequerimientosAdmin(sesion);
+    irA("pantalla-admin-requerimientos");
+  } else if(boton){
+    boton.disabled = false; boton.textContent = "Sí, eliminar";
   }
 }
 
