@@ -700,6 +700,15 @@
         <textarea id="req-motivo" placeholder="¿Para qué es este requerimiento? Ej: Reparación de tractor de aplicación"></textarea>
       </div>
 
+      <div class="campo campo-obligatorio">
+        <label>Prioridad del requerimiento</label>
+        <select id="req-prioridad">
+          <option value="">Selecciona la prioridad</option>
+          <option value="Urgente">Urgente</option>
+          <option value="Convencional">Convencional</option>
+        </select>
+      </div>
+
       <div class="tarjeta" style="margin:14px 0;">
         <div style="font-weight:700;font-size:13.5px;margin-bottom:10px;">Agregar material</div>
 
@@ -1319,6 +1328,17 @@
           <div class="modulo-flecha"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>
         </button>
 
+        <button class="modulo-btn" onclick="abrirFormSolicitudAdmin()">
+          <div class="modulo-icono morado">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>
+          </div>
+          <div class="modulo-txt">
+            <div class="titulo-lg">Generar Solicitud de Trabajo</div>
+            <div class="subtexto">Crear una solicitud a nombre de un jefe de área</div>
+          </div>
+          <div class="modulo-flecha"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>
+        </button>
+
         <button class="modulo-btn" onclick="irA('pantalla-admin-dispositivos')">
           <div class="modulo-icono azul">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7V4h3M20 7V4h-3M4 17v3h3M20 17v3h-3M4 4l16 16"/></svg>
@@ -1432,6 +1452,85 @@
     <div class="contenido" style="padding-top:16px;">
       <p class="subtexto" style="margin-bottom:10px;">Generadas por jefes/supervisores de área. La programación se coordina fuera de la app.</p>
       <div id="admin-solicitudes-lista" class="subtexto">Cargando...</div>
+    </div>
+  </section>
+
+  <!-- ================= PANTALLA: ADMIN - GENERAR SOLICITUD DE TRABAJO ================= -->
+  <section class="pantalla" id="pantalla-admin-generar-solicitud">
+    <div class="barra-superior">
+      <button class="btn-volver" onclick="irA('pantalla-admin')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="titulo-lg">Generar Solicitud de Trabajo</div>
+    </div>
+    <div class="contenido" style="padding-top:16px;">
+      <p class="subtexto" style="margin-bottom:10px;">Úsalo cuando un jefe/supervisor de área te pida generar la solicitud por él. Queda registrada igual que las que ellos generan desde su cuenta.</p>
+
+      <div class="campo campo-obligatorio">
+        <label>Nombre del jefe / solicitante</label>
+        <input type="text" id="admsol-nombre" placeholder="Nombre de quien solicita">
+      </div>
+
+      <div class="campo campo-obligatorio">
+        <label>Equipo</label>
+        <input type="text" id="admsol-equipo" placeholder="Escribe código o nombre del equipo" autocomplete="off">
+        <div class="autocomplete-lista" id="admsol-equipo-lista"></div>
+      </div>
+
+      <div class="campo campo-obligatorio">
+        <label>Área</label>
+        <select id="admsol-area" onchange="mostrarOtro('admsol-area','admsol-area-otro')">
+          <option value="">Selecciona un área</option>
+          <option>Campo</option><option>SSGG</option><option>Packing 1</option><option>Packing 2</option>
+          <option>Mantenimiento</option><option>RRHH</option><option>Administrativos</option>
+          <option>Tópico</option><option>Operaciones</option><option>Almacén</option><option value="Otros">Otros (especificar)</option>
+        </select>
+        <input type="text" id="admsol-area-otro" data-otros placeholder="Especifica el área" style="display:none;">
+      </div>
+
+      <div class="campo campo-obligatorio">
+        <label>Prioridad</label>
+        <select id="admsol-prioridad">
+          <option value="">Selecciona la prioridad</option>
+          <option value="Alta">Alta</option>
+          <option value="Media">Media</option>
+          <option value="Baja">Baja</option>
+        </select>
+      </div>
+
+      <div class="campo campo-obligatorio">
+        <label>Fecha tentativa de culminación</label>
+        <input type="date" id="admsol-fecha-tentativa">
+      </div>
+
+      <div class="campo campo-obligatorio">
+        <label>Detalle de la solicitud</label>
+        <textarea id="admsol-detalle" placeholder="¿Qué se necesita?"></textarea>
+      </div>
+
+      <div class="campo">
+        <label>Comentarios adicionales (opcional)</label>
+        <textarea id="admsol-comentarios" placeholder="Información adicional"></textarea>
+      </div>
+
+      <div class="campo">
+        <label>Evidencia fotográfica (opcional)</label>
+        <div class="foto-zona">
+          <div class="foto-botones">
+            <label class="foto-btn" for="admsol-foto-camara">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8a2 2 0 0 1 2-2h1.5l1-1.5h7l1 1.5H18a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8z"/><circle cx="12" cy="13" r="3.5"/></svg>
+              Tomar foto
+            </label>
+            <label class="foto-btn foto-btn-secundario" for="admsol-foto-galeria">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 16l-5.5-5.5a2 2 0 0 0-2.8 0L3 20"/></svg>
+              Elegir de galería
+            </label>
+          </div>
+          <input type="file" id="admsol-foto-camara" accept="image/*" capture="environment" multiple>
+          <input type="file" id="admsol-foto-galeria" accept="image/*" multiple>
+          <div class="foto-previews" id="admsol-foto-previews"></div>
+        </div>
+      </div>
+
+      <button type="button" class="btn btn-primario" style="margin-top:8px;" onclick="guardarSolicitudAdmin()">Enviar solicitud</button>
     </div>
   </section>
 
@@ -1665,6 +1764,7 @@ const TABS_POR_PANTALLA = {
   "pantalla-admin-fallas": "tab-panel-admin",
   "pantalla-admin-requerimientos": "tab-panel-admin",
   "pantalla-admin-solicitudes": "tab-panel-admin",
+  "pantalla-admin-generar-solicitud": "tab-panel-admin",
   "pantalla-admin-dispositivos": "tab-panel-admin",
   "pantalla-fallas-abiertas": "tab-alertas",
   "pantalla-resolver-falla": "tab-alertas",
@@ -2179,7 +2279,7 @@ async function renderListaMtto(){
 }
 
 /* ============ EVIDENCIA FOTOGRÁFICA (reutilizable) ============ */
-const fotosTemp = { mtto: [], falla: [], falla_operador: [], solicitud: [] };
+const fotosTemp = { mtto: [], falla: [], falla_operador: [], solicitud: [], solicitud_admin: [] };
 
 function iniciarFotoInput(modulo, idInput, idPreviews){
   const input = document.getElementById(idInput);
@@ -2614,6 +2714,60 @@ async function guardarSolicitud(){
   irA("pantalla-menu");
 }
 
+/* ============ ADMIN: GENERAR SOLICITUD DE TRABAJO A NOMBRE DE UN JEFE DE ÁREA ============
+   Pantalla nueva del Panel de Administración: la usa el admin cuando un jefe
+   de área le pide generar la solicitud por él (por ejemplo, por teléfono).
+   Reusa el mismo endpoint "solicitar_actividad" (el servidor ya autoriza al
+   rol admin) pero envía el nombre real del solicitante en vez del nombre del
+   admin, y el servidor la etiqueta como generada por Admin. */
+function abrirFormSolicitudAdmin(){
+  ["admsol-nombre","admsol-equipo","admsol-detalle","admsol-comentarios","admsol-fecha-tentativa"].forEach(id=>{
+    document.getElementById(id).value="";
+  });
+  document.getElementById("admsol-area").value="";
+  document.getElementById("admsol-area-otro").value="";
+  document.getElementById("admsol-area-otro").style.display="none";
+  document.getElementById("admsol-prioridad").value="";
+  fotosTemp.solicitud_admin = [];
+  renderFotoPreviews("solicitud_admin","admsol-foto-previews");
+  irA("pantalla-admin-generar-solicitud");
+}
+
+async function guardarSolicitudAdmin(){
+  const nombreSolicitante = document.getElementById("admsol-nombre").value.trim();
+  const equipo = document.getElementById("admsol-equipo").value.trim();
+  const area = valorOtro("admsol-area","admsol-area-otro");
+  const prioridad = document.getElementById("admsol-prioridad").value;
+  const fechaTentativa = document.getElementById("admsol-fecha-tentativa").value;
+  const detalle = document.getElementById("admsol-detalle").value.trim();
+  const comentarios = document.getElementById("admsol-comentarios").value.trim();
+
+  if(!nombreSolicitante || !equipo || !area || !prioridad || !fechaTentativa || !detalle){
+    mostrarToast("Completa los campos obligatorios (*)", false);
+    return;
+  }
+
+  const sesion = JSON.parse(localStorage.getItem("sesion_activa")||"{}");
+  const resp = await llamarServidor({
+    tipo: "solicitar_actividad",
+    dni: sesion.dni,
+    registro: {
+      nombre_solicitante: nombreSolicitante,
+      area, equipo, prioridad,
+      fecha_tentativa: fechaTentativa,
+      detalle, comentarios,
+      fotos: [...fotosTemp.solicitud_admin]
+    }
+  });
+  if(!resp || !resp.ok){
+    mostrarToast((resp && resp.mensaje) || "No se pudo enviar la solicitud.", false);
+    return;
+  }
+  mostrarToast("Solicitud generada correctamente", true);
+  irA("pantalla-admin-solicitudes");
+  cargarSolicitudesAdmin(sesion);
+}
+
 /* ============ MÓDULO: REQUERIMIENTOS DE MATERIALES ============
    CATALOGO_MATERIALES: catálogo real de materiales (código, nombre, unidad
    de medida y precio de referencia = el precio más alto registrado en el
@@ -2771,6 +2925,7 @@ function abrirFormRequerimiento(){
   reqItemDraft = null;
   reqItemFotoBase64 = null;
   document.getElementById("req-motivo").value = "";
+  document.getElementById("req-prioridad").value = "";
   document.getElementById("req-material-buscar").value = "";
   document.getElementById("req-material-lista").innerHTML = "";
   document.getElementById("req-material-lista").classList.remove("activa");
@@ -2786,6 +2941,11 @@ async function guardarRequerimiento(){
     mostrarToast("Escribe el motivo del requerimiento.", false);
     return;
   }
+  const prioridad = document.getElementById("req-prioridad").value;
+  if(!prioridad){
+    mostrarToast("Selecciona si el requerimiento es Urgente o Convencional.", false);
+    return;
+  }
   if(reqItems.length===0){
     mostrarToast("Agrega al menos un material a la lista.", false);
     return;
@@ -2798,6 +2958,7 @@ async function guardarRequerimiento(){
     tecnico: sesion.nombre || "",
     dni: sesion.dni || "",
     motivo,
+    prioridad,
     items: [...reqItems],
     total,
     comentarios,
@@ -2832,7 +2993,7 @@ async function abrirMisRequerimientos(){
     <div class="registro-item">
       <div class="fila1">
         <div>
-          <div style="font-weight:700;font-size:14px;">${r.CORRELATIVO || r.ID}</div>
+          <div style="font-weight:700;font-size:14px;">${r.CORRELATIVO || r.ID} ${r.PRIORIDAD?`<span class="badge" style="background:${r.PRIORIDAD==='Urgente'?'var(--rojo-100,#fde2e2)':'var(--superficie)'};color:${r.PRIORIDAD==='Urgente'?'var(--rojo-texto,#c0392b)':'inherit'};margin-left:6px;">${r.PRIORIDAD}</span>`:''}</div>
           <div class="subtexto" style="margin-top:2px;">${r.MOTIVO || ''}</div>
         </div>
         <span class="badge">${(r.FECHA||'').toString().slice(0,10)}</span>
@@ -3008,7 +3169,7 @@ async function cargarRequerimientosAdmin(sesion){
     <div class="registro-item">
       <div class="fila1">
         <div>
-          <div style="font-weight:700;font-size:14px;">${r.CORRELATIVO || r.ID}</div>
+          <div style="font-weight:700;font-size:14px;">${r.CORRELATIVO || r.ID} ${r.PRIORIDAD?`<span class="badge" style="background:${r.PRIORIDAD==='Urgente'?'var(--rojo-100,#fde2e2)':'var(--superficie)'};color:${r.PRIORIDAD==='Urgente'?'var(--rojo-texto,#c0392b)':'inherit'};margin-left:6px;">${r.PRIORIDAD}</span>`:''}</div>
           <div class="subtexto" style="margin-top:2px;">${r.TECNICO||''} · ${r.MOTIVO||''}</div>
         </div>
         <span class="badge">${(r.FECHA||'').toString().slice(0,10)}</span>
@@ -3040,7 +3201,7 @@ async function cargarSolicitudesAdmin(sesion){
   }
   cont.innerHTML = pendientes.map(s=>`
     <div class="registro-item">
-      <div style="font-weight:700;font-size:14px;">${s.EQUIPO||''} · ${s.AREA||''}</div>
+      <div style="font-weight:700;font-size:14px;">${s.EQUIPO||''} · ${s.AREA||''} ${s.ORIGEN==='Admin'?'<span class="badge" style="margin-left:6px;">Generada por Admin</span>':''}</div>
       <div class="subtexto" style="margin-top:2px;">Pedido por ${s.SOLICITADO_POR||''} · Prioridad ${s.PRIORIDAD||''}</div>
       <div class="desc">${s.DETALLE||''}</div>
       ${s.COMENTARIOS?`<div class="subtexto" style="margin-top:4px;">${s.COMENTARIOS}</div>`:''}
@@ -3351,6 +3512,7 @@ function exportarExcel(){
       filasReq.push({
         CORRELATIVO: r.CORRELATIVO || r.ID,
         FECHA: soloFechaExcel(r.FECHA),
+        PRIORIDAD: r.PRIORIDAD || "",
         TECNICO: r.TECNICO,
         MOTIVO: r.MOTIVO,
         N_ITEM: it.numero || "",
@@ -3569,6 +3731,7 @@ function verDetalleRequerimientoAdmin(correlativo){
   abrirModal(`
     <div class="modal-titulo"><span>${r.CORRELATIVO||r.ID}</span><button class="modal-cerrar" onclick="cerrarModal()">×</button></div>
     <div class="modal-fila"><b>Fecha</b>${(r.FECHA||'').toString().slice(0,10)}</div>
+    <div class="modal-fila"><b>Prioridad</b>${r.PRIORIDAD||"—"}</div>
     <div class="modal-fila"><b>Técnico</b>${r.TECNICO||"—"}</div>
     <div class="modal-fila"><b>Motivo</b>${r.MOTIVO||"—"}</div>
     <div class="modal-fila" style="border-bottom:none;"><b>Comentarios</b>${r.COMENTARIOS||"—"}</div>
@@ -3585,6 +3748,7 @@ function editarRequerimientoAdmin(correlativo){
   reqEditandoState = {
     correlativo: r.CORRELATIVO || r.ID,
     motivo: r.MOTIVO || "",
+    prioridad: r.PRIORIDAD || "Convencional",
     comentarios: r.COMENTARIOS || "",
     items: (r.ITEMS||[]).map(it => Object.assign({}, it))
   };
@@ -3614,6 +3778,12 @@ function renderModalEdicionRequerimiento(){
   abrirModal(`
     <div class="modal-titulo"><span>Editar ${st.correlativo}</span><button class="modal-cerrar" onclick="cerrarModal()">×</button></div>
     <div class="campo"><label>Motivo</label><input type="text" id="edit-req-motivo" value="${st.motivo.replace(/"/g,'&quot;')}"></div>
+    <div class="campo"><label>Prioridad</label>
+      <select id="edit-req-prioridad">
+        <option value="Urgente" ${st.prioridad==='Urgente'?'selected':''}>Urgente</option>
+        <option value="Convencional" ${st.prioridad==='Convencional'?'selected':''}>Convencional</option>
+      </select>
+    </div>
     <div class="campo"><label>Comentarios</label><textarea id="edit-req-comentarios" rows="2">${st.comentarios}</textarea></div>
     <div style="font-weight:700;font-size:13.5px;margin-top:8px;">Materiales (${st.items.length})</div>
     ${itemsHtml || "<p class=\"subtexto\">Sin materiales — agrega al menos uno antes de guardar.</p>"}
@@ -3644,6 +3814,7 @@ async function guardarEdicionRequerimientoAdmin(){
   const boton = document.getElementById("btn-guardar-edit-req");
   if(boton){ boton.disabled = true; boton.textContent = "Guardando..."; }
   reqEditandoState.motivo = document.getElementById("edit-req-motivo").value.trim();
+  reqEditandoState.prioridad = document.getElementById("edit-req-prioridad").value;
   reqEditandoState.comentarios = document.getElementById("edit-req-comentarios").value.trim();
   const sesion = JSON.parse(localStorage.getItem("sesion_activa")||"{}");
   const resp = await llamarServidor({
@@ -3651,6 +3822,7 @@ async function guardarEdicionRequerimientoAdmin(){
     dni_admin: sesion.dni,
     correlativo: reqEditandoState.correlativo,
     motivo: reqEditandoState.motivo,
+    prioridad: reqEditandoState.prioridad,
     comentarios: reqEditandoState.comentarios,
     items: reqEditandoState.items
   });
@@ -3739,6 +3911,9 @@ window.addEventListener("offline", actualizarEstadoConexion);
     iniciarFotoInput("falla_operador","oper-falla-foto-galeria","oper-falla-foto-previews");
     iniciarFotoInput("solicitud","solicitud-foto-camara","solicitud-foto-previews");
     iniciarFotoInput("solicitud","solicitud-foto-galeria","solicitud-foto-previews");
+    iniciarFotoInput("solicitud_admin","admsol-foto-camara","admsol-foto-previews");
+    iniciarFotoInput("solicitud_admin","admsol-foto-galeria","admsol-foto-previews");
+    iniciarAutocompleteEquipo("admsol-equipo","admsol-equipo-lista");
     document.getElementById("resolver-hora-fin").addEventListener("change", actualizarDuracionResolver);
     document.getElementById("mtto-fechahora-inicio").addEventListener("change", actualizarDuracionMtto);
     document.getElementById("mtto-fechahora-fin").addEventListener("change", actualizarDuracionMtto);
