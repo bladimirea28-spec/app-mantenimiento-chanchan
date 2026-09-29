@@ -561,7 +561,7 @@
       </div>
 
       <div id="menu-tecnico-admin" style="display:none;">
-        <button class="modulo-btn" id="btn-registros-mtto" onclick="irA('pantalla-registros-mtto')">
+        <button class="modulo-btn" id="btn-registros-mtto" onclick="verificarPinRegistrosMtto()">
           <div class="modulo-icono verde">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14.7 6.3a4 4 0 1 1-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 1 1 5.4-5.4l3.6-3.6-3-3-3.6 3.6z"/></svg>
           </div>
@@ -697,12 +697,12 @@
 
       <div class="campo">
         <label>Motivo del requerimiento</label>
-        <textarea id="req-motivo" placeholder="¿Para qué es este requerimiento? Ej: Reparación de tractor de aplicación"></textarea>
+        <textarea id="req-motivo" placeholder="¿Para qué es este requerimiento? Ej: Reparación de tractor de aplicación" oninput="guardarBorradorRequerimiento()"></textarea>
       </div>
 
       <div class="campo campo-obligatorio">
         <label>Prioridad del requerimiento</label>
-        <select id="req-prioridad">
+        <select id="req-prioridad" onchange="guardarBorradorRequerimiento()">
           <option value="">Selecciona la prioridad</option>
           <option value="Urgente">Urgente</option>
           <option value="Convencional">Convencional</option>
@@ -720,12 +720,13 @@
 
         <div class="campo" id="req-material-seleccionado-caja" style="display:none;background:var(--superficie);border:1px solid var(--linea);border-radius:10px;padding:14px;">
           <div id="req-item-codigo-info" style="font-weight:700;font-size:13px;margin-bottom:10px;"></div><label>Especificaciones</label>
-          <textarea id="req-item-especificaciones" placeholder="Detalle o característica del material" style="margin-bottom:12px;"></textarea>
+          <textarea id="req-item-especificaciones" placeholder="Detalle o característica del material" style="margin-bottom:12px;" oninput="guardarBorradorRequerimiento()"></textarea>
 
-          <label>Equipo / Maquinaria / Activo</label>
-          <input type="text" id="req-item-equipo" placeholder="Buscar equipo..." autocomplete="off">
-          <div class="autocomplete-lista" id="req-item-equipo-lista"></div>
-          <div style="margin-bottom:12px;"></div>
+          <div class="campo" style="margin-bottom:12px;">
+            <label>Equipo / Maquinaria / Activo</label>
+            <input type="text" id="req-item-equipo" placeholder="Buscar equipo..." autocomplete="off">
+            <div class="autocomplete-lista" id="req-item-equipo-lista"></div>
+          </div>
 
           <div class="fila-2">
             <div class="campo" style="margin-bottom:12px;">
@@ -734,7 +735,7 @@
             </div>
             <div class="campo" style="margin-bottom:12px;">
               <label>Unidad</label>
-              <input type="text" id="req-item-um" placeholder="UND, MT, GAL...">
+              <input type="text" id="req-item-um" placeholder="UND, MT, GAL..." oninput="guardarBorradorRequerimiento()">
             </div>
           </div>
 
@@ -767,7 +768,7 @@
 
       <div class="campo">
         <label>Comentarios (opcional)</label>
-        <textarea id="req-comentarios" placeholder="Información adicional"></textarea>
+        <textarea id="req-comentarios" placeholder="Información adicional" oninput="guardarBorradorRequerimiento()"></textarea>
       </div>
 
       <button class="btn btn-primario" onclick="guardarRequerimiento()">Enviar requerimiento</button>
@@ -2065,6 +2066,7 @@ function iniciarAutocompleteEquipo(idInput, idLista){
   const lista = document.getElementById(idLista);
 
   input.addEventListener("input", ()=>{
+    input.dataset.codigoSel = "";
     const q = input.value.trim().toLowerCase();
     if(q.length < 2){ lista.classList.remove("activa"); lista.innerHTML=""; return; }
     const resultados = EQUIPOS.filter(e =>
@@ -2073,13 +2075,15 @@ function iniciarAutocompleteEquipo(idInput, idLista){
     if(resultados.length===0){ lista.classList.remove("activa"); lista.innerHTML=""; return; }
     lista.innerHTML = resultados.map(e=>{
       const descResaltada = resaltarCoincidencia(e.desc, q);
-      return `<div class="autocomplete-item" data-valor="${e.codigo} - ${e.desc.replace(/"/g,'&quot;')}">${e.codigo} — ${descResaltada}</div>`;
+      return `<div class="autocomplete-item" data-valor="${e.codigo} - ${e.desc.replace(/"/g,'&quot;')}" data-codigo="${e.codigo}">${e.codigo} — ${descResaltada}</div>`;
     }).join("");
     lista.classList.add("activa");
     lista.querySelectorAll(".autocomplete-item").forEach(item=>{
       item.addEventListener("click", ()=>{
         input.value = item.getAttribute("data-valor");
+        input.dataset.codigoSel = item.getAttribute("data-codigo") || "";
         lista.classList.remove("activa");
+        if(idInput === "req-item-equipo") guardarBorradorRequerimiento();
       });
     });
   });
@@ -2837,18 +2841,21 @@ function abrirCajaItemRequerimiento(nombre, um, precio, codigo){
 function seleccionarMaterialCatalogo(m){
   reqItemDraft = { codigo: m.codigo, nombre: m.nombre, deCatalogo: true };
   abrirCajaItemRequerimiento(m.nombre, m.um, m.precio, m.codigo);
+  guardarBorradorRequerimiento();
 }
 
 function seleccionarMaterialManual(nombre){
   if(!nombre) return;
   reqItemDraft = { codigo: "", nombre: nombre, deCatalogo: false };
   abrirCajaItemRequerimiento(nombre, "UND", 0, "");
+  guardarBorradorRequerimiento();
 }
 
 function actualizarPrecioTotalItem(){
   const cantidad = parseFloat(document.getElementById("req-material-cantidad").value) || 0;
   const precio = parseFloat(document.getElementById("req-item-precio").value) || 0;
   document.getElementById("req-item-precio-total").value = `S/ ${(cantidad*precio).toFixed(2)}`;
+  guardarBorradorRequerimiento();
 }
 
 function iniciarFotoItemRequerimiento(){
@@ -2859,6 +2866,7 @@ function iniciarFotoItemRequerimiento(){
       reqItemFotoBase64 = await archivoABase64(input.files[0]);
       document.getElementById("req-item-foto-preview").innerHTML =
         `<div class="foto-thumb"><img src="${reqItemFotoBase64}"><button class="quitar" onclick="quitarFotoItemRequerimiento()">×</button></div>`;
+      guardarBorradorRequerimiento();
     }
   });
 }
@@ -2867,6 +2875,7 @@ function quitarFotoItemRequerimiento(){
   reqItemFotoBase64 = null;
   document.getElementById("req-item-foto-preview").innerHTML = "";
   document.getElementById("req-item-foto-input").value = "";
+  guardarBorradorRequerimiento();
 }
 
 function agregarMaterialALista(){
@@ -2875,7 +2884,11 @@ function agregarMaterialALista(){
   const precio = Math.max(0, parseFloat(document.getElementById("req-item-precio").value) || 0);
   const um = document.getElementById("req-item-um").value.trim() || "UND";
   const especificaciones = document.getElementById("req-item-especificaciones").value.trim() || reqItemDraft.nombre;
-  const equipoTexto = document.getElementById("req-item-equipo").value.trim(); const matchEquipo = equipoTexto.match(/^(\d{4,6})\s*-\s*(.+)$/); const equipoCodigo = matchEquipo ? matchEquipo[1] : ""; const equipo = matchEquipo ? matchEquipo[2] : equipoTexto;
+  const equipoInput = document.getElementById("req-item-equipo");
+  const equipoTexto = equipoInput.value.trim();
+  const matchEquipo = equipoTexto.match(/^(\d{4,6})\s*-\s*(.+)$/);
+  const equipoCodigo = equipoInput.dataset.codigoSel || (matchEquipo ? matchEquipo[1] : "");
+  const equipo = matchEquipo ? matchEquipo[2] : equipoTexto;
 
   reqItems.push({
     codigo: reqItemDraft.codigo,
@@ -2891,11 +2904,13 @@ function agregarMaterialALista(){
   document.getElementById("req-item-foto-preview").innerHTML = "";
   document.getElementById("req-item-foto-input").value = "";
   renderReqItems();
+  guardarBorradorRequerimiento();
 }
 
 function quitarMaterialDeLista(idx){
   reqItems.splice(idx,1);
   renderReqItems();
+  guardarBorradorRequerimiento();
 }
 
 function renderReqItems(){
@@ -2920,17 +2935,93 @@ function renderReqItems(){
   document.getElementById("req-total").textContent = `S/ ${total.toFixed(2)}`;
 }
 
+/* ============ BORRADOR DE REQUERIMIENTO (persistencia local) ============
+   Guarda lo que el técnico va llenando (motivo, prioridad, comentarios y
+   materiales agregados) para que no se pierda si sale de la app, cambia
+   de pantalla o el navegador se recarga solo (por ejemplo al minimizar
+   para ver WhatsApp o un video). Se limpia solo cuando el requerimiento
+   se envía correctamente. */
+function guardarBorradorRequerimiento(){
+  try{
+    const cajaVisible = document.getElementById("req-material-seleccionado-caja").style.display !== "none";
+    let itemEnProgreso = null;
+    if(cajaVisible && reqItemDraft){
+      itemEnProgreso = {
+        draft: reqItemDraft,
+        buscar: document.getElementById("req-material-buscar").value,
+        especificaciones: document.getElementById("req-item-especificaciones").value,
+        equipo: document.getElementById("req-item-equipo").value,
+        equipoCodigoSel: document.getElementById("req-item-equipo").dataset.codigoSel || "",
+        cantidad: document.getElementById("req-material-cantidad").value,
+        um: document.getElementById("req-item-um").value,
+        precio: document.getElementById("req-item-precio").value,
+        foto: reqItemFotoBase64
+      };
+    }
+    const borrador = {
+      motivo: document.getElementById("req-motivo").value,
+      prioridad: document.getElementById("req-prioridad").value,
+      comentarios: document.getElementById("req-comentarios").value,
+      items: reqItems,
+      itemEnProgreso
+    };
+    localStorage.setItem("req_borrador", JSON.stringify(borrador));
+  }catch(e){ /* si falla el guardado local, no interrumpimos el llenado */ }
+}
+
+function cargarBorradorRequerimiento(){
+  try{
+    const raw = localStorage.getItem("req_borrador");
+    if(!raw) return false;
+    const borrador = JSON.parse(raw);
+    if(!borrador) return false;
+    reqItems = Array.isArray(borrador.items) ? borrador.items : [];
+    document.getElementById("req-motivo").value = borrador.motivo || "";
+    document.getElementById("req-prioridad").value = borrador.prioridad || "";
+    document.getElementById("req-comentarios").value = borrador.comentarios || "";
+    if(borrador.itemEnProgreso && borrador.itemEnProgreso.draft){
+      const ip = borrador.itemEnProgreso;
+      reqItemDraft = ip.draft;
+      document.getElementById("req-material-buscar").value = ip.buscar || "";
+      document.getElementById("req-material-seleccionado-caja").style.display = "block";
+      const infoCodigo = document.getElementById("req-item-codigo-info");
+      infoCodigo.innerHTML = ip.draft.codigo
+        ? `Código: <span style="font-weight:700;color:var(--azul-600,#2563eb);">${ip.draft.codigo}</span>`
+        : `<span style="opacity:.7;font-weight:400;font-style:italic;">Sin código de catálogo (material manual)</span>`;
+      document.getElementById("req-item-especificaciones").value = ip.especificaciones || "";
+      document.getElementById("req-item-equipo").value = ip.equipo || "";
+      document.getElementById("req-item-equipo").dataset.codigoSel = ip.equipoCodigoSel || "";
+      document.getElementById("req-material-cantidad").value = ip.cantidad || 1;
+      document.getElementById("req-item-um").value = ip.um || "UND";
+      document.getElementById("req-item-precio").value = ip.precio || 0;
+      reqItemFotoBase64 = ip.foto || null;
+      document.getElementById("req-item-foto-preview").innerHTML = reqItemFotoBase64
+        ? `<div class="foto-thumb"><img src="${reqItemFotoBase64}"><button class="quitar" onclick="quitarFotoItemRequerimiento()">×</button></div>`
+        : "";
+      actualizarPrecioTotalItem();
+    }
+    return true;
+  }catch(e){ return false; }
+}
+
+function limpiarBorradorRequerimiento(){
+  try{ localStorage.removeItem("req_borrador"); }catch(e){}
+}
+
 function abrirFormRequerimiento(){
-  reqItems = [];
   reqItemDraft = null;
   reqItemFotoBase64 = null;
-  document.getElementById("req-motivo").value = "";
-  document.getElementById("req-prioridad").value = "";
   document.getElementById("req-material-buscar").value = "";
   document.getElementById("req-material-lista").innerHTML = "";
   document.getElementById("req-material-lista").classList.remove("activa");
   document.getElementById("req-material-seleccionado-caja").style.display = "none";
-  document.getElementById("req-comentarios").value = "";
+  const habiaBorrador = cargarBorradorRequerimiento();
+  if(!habiaBorrador){
+    reqItems = [];
+    document.getElementById("req-motivo").value = "";
+    document.getElementById("req-prioridad").value = "";
+    document.getElementById("req-comentarios").value = "";
+  }
   renderReqItems();
   irA("pantalla-form-requerimiento");
 }
@@ -2966,6 +3057,7 @@ async function guardarRequerimiento(){
     sincronizado: false
   };
   await guardarEnStore("requerimientos", registro);
+  limpiarBorradorRequerimiento();
   mostrarToast("Requerimiento guardado" + (navigator.onLine ? "" : " (pendiente de sincronizar)"), true);
   irA("pantalla-menu");
 }
@@ -3495,6 +3587,23 @@ function soloFechaExcel(valor){
   return texto;
 }
 
+/* Calcula un ancho de columna (en caracteres) según el contenido más largo
+   de cada columna, para que el Excel exportado no salga con el texto
+   amontonado. FOTO usa un ancho fijo porque su valor visible es siempre
+   el texto corto "Ver foto" (el link va aparte, como hipervínculo). */
+function calcularAnchosColumnas(filas, columnas){
+  return columnas.map(col=>{
+    if(col === "FOTO") return { wch: 12 };
+    let max = String(col).length;
+    filas.forEach(fila=>{
+      const val = fila[col];
+      const len = (val===undefined || val===null) ? 0 : String(val).length;
+      if(len > max) max = len;
+    });
+    return { wch: Math.min(Math.max(max + 2, 10), 60) };
+  });
+}
+
 function exportarExcel(){
   const quitarFotos = (arr) => arr.map(r=>{
     const copia = Object.assign({}, r);
@@ -3502,8 +3611,10 @@ function exportarExcel(){
     return copia;
   });
   const libro = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(libro, XLSX.utils.json_to_sheet(quitarFotos(adminDatosCache.actividades)), "Actividades");
-  XLSX.utils.book_append_sheet(libro, XLSX.utils.json_to_sheet(quitarFotos(adminDatosCache.fallas)), "Fallas");
+  // Por ahora solo se exportan los Requerimientos (a pedido). Actividades y
+  // Fallas se dejan listas para re-habilitar más adelante:
+  // XLSX.utils.book_append_sheet(libro, XLSX.utils.json_to_sheet(quitarFotos(adminDatosCache.actividades)), "Actividades");
+  // XLSX.utils.book_append_sheet(libro, XLSX.utils.json_to_sheet(quitarFotos(adminDatosCache.fallas)), "Fallas");
 
   const filasReq = [];
   (adminDatosCache.requerimientos||[]).forEach(r=>{
@@ -3521,7 +3632,7 @@ function exportarExcel(){
         CODIGO_PRODUCTO: it.codigo || "",
         MATERIAL: it.nombre || "",
         ESPECIFICACIONES: it.especificaciones || "",
-        CODIGO_CECO: it.equipoCodigo || "",
+        CODIGO_ACTIVO: it.equipoCodigo || "",
         EQUIPO: it.equipo || "",
         PRECIO_UNITARIO: it.precio_unitario || "",
         PRECIO_TOTAL: it.precio_total || "",
@@ -3544,6 +3655,7 @@ function exportarExcel(){
       }
     });
   }
+  hojaReq['!cols'] = calcularAnchosColumnas(filasReq, columnasReq);
   XLSX.utils.book_append_sheet(libro, hojaReq, "Requerimientos");
 
   const fecha = new Date().toISOString().slice(0,10);
@@ -3605,6 +3717,38 @@ function abrirModal(html){
 function cerrarModal(){
   document.getElementById("modal-overlay").classList.remove("mostrar");
   document.getElementById("modal-caja").innerHTML = "";
+}
+
+/* ============ PIN DE ACCESO: REGISTROS DE MANTENIMIENTO ============
+   Pide el PIN cada vez que alguien intenta entrar a "Registros de
+   mantenimiento" (Nueva Actividad / Historial de Fallas). No queda
+   "desbloqueado": se vuelve a pedir en cada intento de ingreso. */
+const PIN_REGISTROS_MTTO = "123456";
+
+function verificarPinRegistrosMtto(){
+  abrirModal(`
+    <div class="modal-titulo"><span>Acceso restringido</span><button class="modal-cerrar" onclick="cerrarModal()">×</button></div>
+    <div class="campo" style="margin-top:6px;">
+      <label>Ingresa el PIN para continuar</label>
+      <input type="password" inputmode="numeric" maxlength="6" id="pin-registros-input" placeholder="••••••" onkeydown="if(event.key==='Enter') validarPinRegistrosMtto()">
+    </div>
+    <div id="pin-registros-error" style="display:none;color:var(--rojo-texto,#A6362D);font-size:12.5px;margin:-6px 0 12px;">PIN incorrecto. Intenta de nuevo.</div>
+    <button type="button" class="btn btn-primario" onclick="validarPinRegistrosMtto()">Ingresar</button>
+  `);
+  setTimeout(()=>{ const el = document.getElementById("pin-registros-input"); if(el) el.focus(); }, 100);
+}
+
+function validarPinRegistrosMtto(){
+  const input = document.getElementById("pin-registros-input");
+  if(!input) return;
+  if(input.value === PIN_REGISTROS_MTTO){
+    cerrarModal();
+    irA("pantalla-registros-mtto");
+  }else{
+    document.getElementById("pin-registros-error").style.display = "block";
+    input.value = "";
+    input.focus();
+  }
 }
 
 /* ============ ADMIN: VER DETALLE / EDITAR / ELIMINAR ACTIVIDADES ============ */
