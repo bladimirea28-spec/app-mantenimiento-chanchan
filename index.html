@@ -35,14 +35,15 @@
       </div>
       <div class="login-tarjeta">
         <div class="campo campo-obligatorio">
-          <label>Usuario</label>
+          <label>DNI</label>
           <input type="text" id="login-usuario" inputmode="numeric" maxlength="8" placeholder="Ingresa tu DNI">
         </div>
         <div class="campo campo-obligatorio">
-          <label>Contraseña</label>
-          <input type="password" id="login-clave" inputmode="numeric" maxlength="8" placeholder="Ingresa tu contraseña">
+          <label>PIN</label>
+          <input type="password" id="login-clave" inputmode="numeric" maxlength="6" placeholder="Tu PIN personal (4 a 6 números)" onkeydown="if(event.key==='Enter') intentarLogin()">
+          <div class="ayuda">¿Todavía no tienes PIN? Escribe solo tu DNI y toca Ingresar: te pediremos crearlo.</div>
         </div>
-        <div class="error-msg" id="login-error">Usuario o contraseña incorrectos. Intenta de nuevo.</div>
+        <div class="error-msg" id="login-error">DNI o PIN incorrectos. Intenta de nuevo.</div>
         <button class="btn btn-primario" id="btn-login" onclick="intentarLogin()">Ingresar</button>
         <p class="ayuda" style="text-align:center;margin-top:14px;">Solo pedimos esto la primera vez. Luego entrarás directo.</p>
         <button class="btn btn-texto" style="margin-top:2px;" onclick="mostrarAutoregistro()">¿Es tu primera vez y no tienes DNI cargado? Regístrate aquí</button>
@@ -69,6 +70,15 @@
         <div class="campo campo-obligatorio">
           <label>Tu N° de DNI</label>
           <input type="text" id="autoregistro-dni" inputmode="numeric" maxlength="8" placeholder="Ej. 45678912">
+        </div>
+        <div class="campo campo-obligatorio">
+          <label>Crea tu PIN (4 a 6 números)</label>
+          <input type="password" id="autoregistro-pin" inputmode="numeric" maxlength="6" placeholder="Tu PIN personal">
+        </div>
+        <div class="campo campo-obligatorio">
+          <label>Repite tu PIN</label>
+          <input type="password" id="autoregistro-pin2" inputmode="numeric" maxlength="6" placeholder="Escríbelo otra vez">
+          <div class="ayuda">Con tu DNI y este PIN entrarás a la app. No lo compartas con nadie.</div>
         </div>
         <div class="error-msg" id="autoregistro-error"></div>
         <button class="btn btn-primario" onclick="confirmarAutoregistro()">Activar mi usuario</button>
@@ -106,6 +116,15 @@
       <div class="campo campo-obligatorio">
         <label>N° de WhatsApp</label>
         <input type="text" id="oper-reg-whatsapp" inputmode="numeric" maxlength="9" placeholder="Ej. 987654321">
+      </div>
+      <div class="campo campo-obligatorio">
+        <label>Crea tu PIN (4 a 6 números)</label>
+        <input type="password" id="oper-reg-pin" inputmode="numeric" maxlength="6" placeholder="Tu PIN personal">
+      </div>
+      <div class="campo campo-obligatorio">
+        <label>Repite tu PIN</label>
+        <input type="password" id="oper-reg-pin2" inputmode="numeric" maxlength="6" placeholder="Escríbelo otra vez">
+        <div class="ayuda">Con tu DNI y este PIN entrarás a la app. No lo compartas con nadie.</div>
       </div>
 
       <div class="campo" style="display:flex;align-items:center;gap:10px;">

@@ -45,31 +45,88 @@ function irA(idPantalla){
   window.scrollTo(0,0);
 }
 
-/* ============ LOGIN ============ */
-async function intentarLogin(){
+/* ============ PIN PERSONAL ============
+   Mismas reglas que el servidor (Codigo.gs > errorPin): 4 a 6 números, ni
+   el mismo número repetido ni una secuencia. Devuelve "" si está bien. */
+function errorPin(pin){
+  if(!/^\d{4,6}$/.test(pin)) return "El PIN debe tener de 4 a 6 números.";
+  if(/^(\d)\1+$/.test(pin)) return "El PIN no puede ser el mismo número repetido (como 0000).";
+  if("0123456789".includes(pin) || "9876543210".includes(pin)) return "El PIN no puede ser una secuencia (como 1234). Elige otro.";
+  return "";
+}
+
+/* Revisa los dos campos "Crea tu PIN" / "Repite tu PIN". */
+function errorPinNuevo(pin, pin2){
+  return errorPin(pin) || (pin !== pin2 ? "Los dos PIN no coinciden. Escríbelos otra vez." : "");
+}
+
+/* La persona todavía no tiene PIN: se lo pedimos crear en una ventana y
+   volvemos a intentar el ingreso con ese PIN nuevo. */
+function pedirCrearPin(mensaje){
+  abrirModal(`
+    <div class="modal-titulo"><span>Crea tu PIN personal</span><button class="modal-cerrar" onclick="cerrarModal()">×</button></div>
+    <p class="subtexto" style="margin-bottom:12px;">Desde ahora entrarás con tu DNI y este PIN. Elige de 4 a 6 números fáciles de recordar para ti y no lo compartas.</p>
+    <div class="campo"><label>Nuevo PIN</label><input type="password" inputmode="numeric" maxlength="6" id="crear-pin-1" placeholder="4 a 6 números"></div>
+    <div class="campo"><label>Repite tu PIN</label><input type="password" inputmode="numeric" maxlength="6" id="crear-pin-2" placeholder="Escríbelo otra vez" onkeydown="if(event.key==='Enter') confirmarCrearPin()"></div>
+    <div class="error-msg ${mensaje ? "activo" : ""}" id="crear-pin-error">${esc(mensaje)}</div>
+    <button type="button" class="btn btn-primario" id="btn-crear-pin" onclick="confirmarCrearPin()">Guardar PIN y entrar</button>
+  `);
+  setTimeout(()=>{ const el = document.getElementById("crear-pin-1"); if(el) el.focus(); }, 100);
+}
+
+async function confirmarCrearPin(){
+  const pin = document.getElementById("crear-pin-1").value.trim();
+  const pin2 = document.getElementById("crear-pin-2").value.trim();
+  const errorEl = document.getElementById("crear-pin-error");
+  const error = errorPinNuevo(pin, pin2);
+  if(error){ errorEl.textContent = error; errorEl.classList.add("activo"); return; }
+  const boton = document.getElementById("btn-crear-pin");
+  boton.disabled = true; boton.textContent = "Guardando...";
+  await intentarLogin(pin);
+  const botonAun = document.getElementById("btn-crear-pin");
+  if(botonAun){ botonAun.disabled = false; botonAun.textContent = "Guardar PIN y entrar"; }
+}
+
+/* ============ LOGIN ============
+   pinNuevo: solo se pasa desde la ventana "Crea tu PIN personal". */
+async function intentarLogin(pinNuevo){
   const usuario = document.getElementById("login-usuario").value.trim();
-  const clave = document.getElementById("login-clave").value.trim();
+  const pin = document.getElementById("login-clave").value.trim();
   const errorEl = document.getElementById("login-error");
   const boton = document.getElementById("btn-login");
 
-  const dniValido = /^\d{8}$/.test(usuario);
-  if(!dniValido || usuario !== clave){
-    errorEl.textContent = "Ingresa tu usuario (8 dígitos) igual en ambos campos.";
+  if(!/^\d{8}$/.test(usuario)){
+    errorEl.textContent = "Ingresa tu DNI (8 dígitos).";
+    errorEl.classList.add("activo");
+    return;
+  }
+  if(pin && !/^\d{4,6}$/.test(pin)){
+    errorEl.textContent = "El PIN tiene de 4 a 6 números.";
     errorEl.classList.add("activo");
     return;
   }
   errorEl.classList.remove("activo");
   boton.disabled = true; boton.textContent = "Verificando...";
 
-  const resp = await llamarServidor({ tipo:"login", dni:usuario, dispositivo_id: obtenerDispositivoId(), dispositivo_info: obtenerInfoDispositivo() });
+  const datos = { tipo:"login", dni:usuario, pin, dispositivo_id: obtenerDispositivoId(), dispositivo_info: obtenerInfoDispositivo() };
+  if(typeof pinNuevo === "string") datos.pin_nuevo = pinNuevo;
+  const resp = await llamarServidor(datos);
 
   boton.disabled = false; boton.textContent = "Ingresar";
 
-  if(!resp.ok){
-    errorEl.textContent = resp.mensaje || "No se pudo iniciar sesión.";
-    errorEl.classList.add("activo");
+  if(resp && resp.crear_pin){
+    // Si ya estaba abierta la ventana, el mensaje explica por qué no sirvió el PIN.
+    pedirCrearPin(typeof pinNuevo === "string" ? resp.mensaje : "");
     return;
   }
+  if(!resp.ok){
+    cerrarModal();
+    errorEl.textContent = resp.mensaje || "No se pudo iniciar sesión.";
+    errorEl.classList.add("activo");
+    document.getElementById("login-clave").value = "";
+    return;
+  }
+  cerrarModal();
   guardarSesionYEntrar(resp.usuario, resp.token);
 }
 
@@ -157,6 +214,7 @@ function limpiarSesionLocal(){
   localStorage.removeItem("sesion_activa");
   document.getElementById("login-usuario").value="";
   document.getElementById("login-clave").value="";
+  cerrarModal();
   document.getElementById("tabbar-principal").classList.remove("visible");
   irA("pantalla-login");
 }
@@ -240,6 +298,8 @@ function elegirCupo(cupo){
   document.getElementById("autoregistro-nombre-elegido").textContent = cupo.nombre;
   document.getElementById("autoregistro-cargo-elegido").textContent = cupo.cargo;
   document.getElementById("autoregistro-dni").value = "";
+  document.getElementById("autoregistro-pin").value = "";
+  document.getElementById("autoregistro-pin2").value = "";
   document.getElementById("autoregistro-error").classList.remove("activo");
   document.getElementById("autoregistro-form").style.display = "block";
 }
@@ -253,12 +313,20 @@ async function confirmarAutoregistro(){
     errorEl.classList.add("activo");
     return;
   }
+  const pin = document.getElementById("autoregistro-pin").value.trim();
+  const errorDelPin = errorPinNuevo(pin, document.getElementById("autoregistro-pin2").value.trim());
+  if(errorDelPin){
+    errorEl.textContent = errorDelPin;
+    errorEl.classList.add("activo");
+    return;
+  }
   errorEl.classList.remove("activo");
 
   const resp = await llamarServidor({
     tipo:"autoregistro",
     slot_id: cupoElegido.slot_id,
     dni,
+    pin_nuevo: pin,
     dispositivo_id: obtenerDispositivoId()
   });
   if(!resp.ok){
@@ -272,7 +340,7 @@ async function confirmarAutoregistro(){
 
 /* ============ REGISTRO DE OPERADOR (campo, packing, etc.) ============ */
 function mostrarRegistroOperador(){
-  ["oper-reg-dni","oper-reg-nombre","oper-reg-whatsapp","oper-reg-correo"].forEach(id=>{
+  ["oper-reg-dni","oper-reg-nombre","oper-reg-whatsapp","oper-reg-correo","oper-reg-pin","oper-reg-pin2"].forEach(id=>{
     document.getElementById(id).value = "";
   });
   document.getElementById("oper-reg-area").value = "";
@@ -305,11 +373,19 @@ async function confirmarRegistroOperador(){
     errorEl.classList.add("activo");
     return;
   }
+  const pin = document.getElementById("oper-reg-pin").value.trim();
+  const errorDelPin = errorPinNuevo(pin, document.getElementById("oper-reg-pin2").value.trim());
+  if(errorDelPin){
+    errorEl.textContent = errorDelPin;
+    errorEl.classList.add("activo");
+    return;
+  }
   errorEl.classList.remove("activo");
 
   const resp = await llamarServidor({
     tipo: "registrar_operador",
     dni, nombre, area, whatsapp,
+    pin_nuevo: pin,
     correo: correo || "",
     es_jefe_area: esJefeArea,
     dispositivo_id: obtenerDispositivoId()

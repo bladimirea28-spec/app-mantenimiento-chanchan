@@ -505,8 +505,11 @@ async function cargarDispositivosAdmin(sesion){
         </div>
         <span class="badge">${esc(u.fecha_registro)}</span>
       </div>
-      <div class="desc">${esc(u.dispositivo_info || "Dispositivo desconocido")} · ID …${esc((u.dispositivo_id||"").slice(-6))}</div>
-      <button type="button" class="btn btn-secundario" style="margin-top:10px;width:auto;padding:9px 14px;font-size:12.5px;" onclick="liberarDispositivoUI(${jsArg(u.slot_id)}, this)">Liberar este dispositivo</button>
+      <div class="desc">${esc(u.dispositivo_info || "Dispositivo desconocido")} · ID …${esc((u.dispositivo_id||"").slice(-6))}${u.tiene_pin === false ? " · Sin PIN todavía" : ""}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+        <button type="button" class="btn btn-secundario" style="margin-top:0;width:auto;padding:9px 14px;font-size:12.5px;" onclick="liberarDispositivoUI(${jsArg(u.slot_id)}, this)">Liberar este dispositivo</button>
+        <button type="button" class="btn btn-secundario" style="margin-top:0;width:auto;padding:9px 14px;font-size:12.5px;" onclick="restablecerPinUI(${jsArg(u.slot_id)}, ${jsArg(u.nombre)})">Restablecer PIN</button>
+      </div>
     </div>
   `).join("");
 }
@@ -525,6 +528,32 @@ async function liberarDispositivoUI(slotId, boton){
     cargarDispositivosAdmin(sesion);
   } else if(boton){
     boton.disabled = false; boton.textContent = "Liberar este dispositivo";
+  }
+}
+
+/* Borra el PIN de alguien que lo olvidó: la próxima vez que entre con su
+   DNI, la app le pedirá crear uno nuevo. También cierra sus sesiones. */
+function restablecerPinUI(slotId, nombre){
+  abrirModal(`
+    <div class="modal-titulo"><span>Restablecer PIN</span><button class="modal-cerrar" onclick="cerrarModal()">×</button></div>
+    <p class="subtexto">Se borrará el PIN de <b>${esc(nombre)}</b> y se cerrará su sesión. La próxima vez que entre con su DNI tendrá que crear un PIN nuevo. Hazlo solo si esa persona te lo pidió.</p>
+    <div style="display:flex;gap:8px;margin-top:14px;">
+      <button class="btn btn-secundario" style="flex:1;" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn btn-primario" style="flex:1;" id="btn-confirmar-restablecer-pin" onclick="confirmarRestablecerPin(${jsArg(slotId)})">Sí, restablecer</button>
+    </div>
+  `);
+}
+
+async function confirmarRestablecerPin(slotId){
+  const boton = document.getElementById("btn-confirmar-restablecer-pin");
+  if(boton){ boton.disabled = true; boton.textContent = "Restableciendo..."; }
+  const resp = await llamarServidor({ tipo:"restablecer_pin", slot_id: slotId });
+  mostrarToast(resp.mensaje || (resp.ok ? "PIN restablecido" : "No se pudo restablecer"), resp.ok);
+  if(resp.ok){
+    cerrarModal();
+    cargarDispositivosAdmin(JSON.parse(localStorage.getItem("sesion_activa")||"{}"));
+  } else if(boton){
+    boton.disabled = false; boton.textContent = "Sí, restablecer";
   }
 }
 

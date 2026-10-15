@@ -60,6 +60,12 @@ js/inicio.js          → Toast, indicador de conexión y arranque de la app (in
   `token`; la app lo guarda en `sesion_activa.token` y lo manda en cada
   pedido. El servidor saca DNI/nombre/rol del token (hoja SESIONES guarda
   solo su SHA-256). Si responde `sesion_invalida`, la app vuelve al login.
+- PIN personal: se entra con DNI + PIN (4 a 6 números). Quien no tiene PIN
+  lo crea al entrar (`crear_pin` → ventana "Crea tu PIN personal"); en los
+  registros se pide junto con el DNI. USUARIOS guarda solo `PIN_SHA256` +
+  `PIN_SAL`. 5 errores bloquean 15 min. El admin puede "Restablecer PIN"
+  en Panel > Dispositivos. Las reglas del PIN están en `errorPin` (igual en
+  `js/navegacion-login.js` y en `Codigo.gs`).
 - Los números de OT (`OTM-`) y falla (`F-`) los asigna el servidor; la
   columna `ID_UNICO` evita duplicados cuando un registro llega dos veces.
 
