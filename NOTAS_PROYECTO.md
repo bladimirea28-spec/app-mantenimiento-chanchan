@@ -44,6 +44,11 @@ js/inicio.js          → Toast, indicador de conexión y arranque de la app (in
 4. Cada vez que publiques cambios, sube la versión en `sw.js`
    (`mantenimiento-chanchan-v2` → `v3`…) para que los celulares tomen la versión nueva.
 5. Para actualizar catálogos (equipos/materiales) solo se toca la carpeta `datos/`.
+6. **Todo dato que venga del usuario o del servidor y se pinte con `innerHTML`
+   pasa por `esc()`** (en `js/config.js`). Para pasar un valor a un `onclick`
+   usar `${jsArg(valor)}` sin comillas, y para links/imágenes `urlSegura()`.
+7. El PIN de "Registros de mantenimiento" se guarda como huella SHA-256
+   (`PIN_REGISTROS_MTTO_SHA256` en `js/admin.js`), nunca el número tal cual.
 
 ## Backend actual
 
@@ -67,3 +72,9 @@ js/inicio.js          → Toast, indicador de conexión y arranque de la app (in
 - 2026-10-04: index.html (466 KB, 4079 líneas) dividido en archivos separados
   (CSS, 10 módulos JS, catálogos de datos y logo como PNG). Funcionamiento verificado
   igual al original. index.html quedó en ~67 KB.
+- 2026-10-14: seguridad en la app: textos limpiados con esc()/jsArg()/urlSegura()
+  en todas las listas y en el panel admin (evita que un texto ejecute código),
+  PIN guardado como SHA-256, sw.js v3 y sin cachear los POST al servidor.
+  Pendiente en el Apps Script: validar de verdad al admin (hoy basta enviar
+  su DNI), revisar qué devuelve "cupos" y "listado_fallas_abiertas" sin login,
+  y evitar duplicados si un registro se reenvía.

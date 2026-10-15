@@ -127,13 +127,13 @@ function renderIntegrantesMtto(){
         <label>Nombre</label>
         <select onchange="actualizarIntegranteMtto(${i},'nombre',this.value)">
           <option value="">Selecciona un técnico</option>
-          ${listaTecnicosResponsables.map(n=>`<option${n===it.nombre?" selected":""}>${n}</option>`).join("")}
+          ${listaTecnicosResponsables.map(n=>`<option${n===it.nombre?" selected":""}>${esc(n)}</option>`).join("")}
         </select>
       </div>
       <div class="campo" style="margin-bottom:0;display:flex;gap:6px;align-items:flex-end;">
         <div style="flex:1;">
           <label>Horas</label>
-          <input type="number" step="0.1" min="0" value="${it.horas}" placeholder="Horas" oninput="actualizarIntegranteMtto(${i},'horas',this.value)">
+          <input type="number" step="0.1" min="0" value="${esc(it.horas)}" placeholder="Horas" oninput="actualizarIntegranteMtto(${i},'horas',this.value)">
         </div>
         <button type="button" class="btn btn-secundario" style="padding:10px 12px;" onclick="quitarIntegranteMtto(${i})">✕</button>
       </div>
@@ -209,13 +209,13 @@ async function renderListaMtto(){
     <div class="registro-item">
       <div class="fila1">
         <div>
-          <div style="font-weight:700;font-size:14px;">${r.equipo}</div>
-          <div class="subtexto" style="margin-top:2px;">${r.tipo} · ${r.especialidad}</div>
+          <div style="font-weight:700;font-size:14px;">${esc(r.equipo)}</div>
+          <div class="subtexto" style="margin-top:2px;">${esc(r.tipo)} · ${esc(r.especialidad)}</div>
         </div>
         <span class="badge ${r.sincronizado?'':'pendiente'}">${r.sincronizado?'Sincronizado':'Pendiente'}</span>
       </div>
-      ${r.descripcion?`<div class="desc">${r.descripcion}</div>`:""}
-      <div class="meta">${r.id_ot} · ${r.area} · Criticidad ${r.criticidad} · ${r.fecha}${r.fotos&&r.fotos.length?' · 📷 '+r.fotos.length:''}</div>
+      ${r.descripcion?`<div class="desc">${esc(r.descripcion)}</div>`:""}
+      <div class="meta">${esc(r.id_ot)} · ${esc(r.area)} · Criticidad ${esc(r.criticidad)} · ${esc(r.fecha)}${r.fotos&&r.fotos.length?' · 📷 '+r.fotos.length:''}</div>
     </div>
   `).join("");
 }
@@ -248,7 +248,7 @@ function renderFotoPreviews(modulo, idPreviews){
   const cont = document.getElementById(idPreviews);
   cont.innerHTML = fotosTemp[modulo].map((foto,i)=>`
     <div class="foto-thumb">
-      <img src="${foto}">
+      <img src="${urlSegura(foto)}">
       <button class="quitar" onclick="quitarFoto('${modulo}','${idPreviews}',${i})">×</button>
     </div>
   `).join("");

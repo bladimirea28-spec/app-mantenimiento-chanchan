@@ -21,14 +21,14 @@ async function abrirPanelAdmin(){
   const selFiltroAct = document.getElementById("admin-filtro-tecnico-actividades");
   if(selFiltroAct){
     selFiltroAct.innerHTML = `<option value="">Todos</option>` +
-      [...nombresAct].sort().map(n=>`<option value="${n}">${n}</option>`).join("");
+      [...nombresAct].sort().map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join("");
   }
 
   const nombresFallas = new Set();
   adminDatosCache.fallas.forEach(r=> r.TECNICO_RESPONSABLE && nombresFallas.add(r.TECNICO_RESPONSABLE));
   const selFiltro = document.getElementById("admin-filtro-tecnico");
   selFiltro.innerHTML = `<option value="">Todos</option>` +
-    [...nombresFallas].sort().map(n=>`<option value="${n}">${n}</option>`).join("");
+    [...nombresFallas].sort().map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join("");
 
   cargarDispositivosAdmin(sesion);
 
@@ -73,21 +73,21 @@ async function cargarRequerimientosAdmin(sesion){
   const ordenados = [...lista].sort((a,b)=> new Date(b.FECHA) - new Date(a.FECHA));
   cont.innerHTML = ordenados.map(r=>{
     const items = r.ITEMS || [];
-    const corr = (r.CORRELATIVO || r.ID || "").toString().replace(/'/g,"\\'");
+    const corr = jsArg(r.CORRELATIVO || r.ID || "");
     return `
     <div class="registro-item">
       <div class="fila1">
         <div>
-          <div style="font-weight:700;font-size:14px;">${r.CORRELATIVO || r.ID} ${r.PRIORIDAD?`<span class="badge" style="background:${r.PRIORIDAD==='Urgente'?'var(--rojo-100,#fde2e2)':'var(--superficie)'};color:${r.PRIORIDAD==='Urgente'?'var(--rojo-texto,#c0392b)':'inherit'};margin-left:6px;">${r.PRIORIDAD}</span>`:''}</div>
-          <div class="subtexto" style="margin-top:2px;">${r.TECNICO||''} · ${r.MOTIVO||''}</div>
+          <div style="font-weight:700;font-size:14px;">${esc(r.CORRELATIVO || r.ID)} ${r.PRIORIDAD?`<span class="badge" style="background:${r.PRIORIDAD==='Urgente'?'var(--rojo-100,#fde2e2)':'var(--superficie)'};color:${r.PRIORIDAD==='Urgente'?'var(--rojo-texto,#c0392b)':'inherit'};margin-left:6px;">${esc(r.PRIORIDAD)}</span>`:''}</div>
+          <div class="subtexto" style="margin-top:2px;">${esc(r.TECNICO)} · ${esc(r.MOTIVO)}</div>
         </div>
-        <span class="badge">${(r.FECHA||'').toString().slice(0,10)}</span>
+        <span class="badge">${esc((r.FECHA||'').toString().slice(0,10))}</span>
       </div>
       <div class="desc">${items.length} material(es) · Total S/ ${(Number(r.TOTAL)||0).toFixed(2)}</div>
       <div style="display:flex;gap:8px;margin-top:10px;">
-        <button type="button" class="btn btn-secundario" style="width:auto;flex:1;padding:9px 10px;font-size:12.5px;" onclick="verDetalleRequerimientoAdmin('${corr}')">Ver detalle</button>
-        <button type="button" class="btn btn-secundario" style="width:auto;flex:1;padding:9px 10px;font-size:12.5px;" onclick="editarRequerimientoAdmin('${corr}')">Editar</button>
-        <button type="button" class="btn btn-texto" style="width:auto;flex:1;padding:9px 10px;font-size:12.5px;color:var(--rojo-texto,#c0392b);" onclick="eliminarRequerimientoAdmin('${corr}')">Eliminar</button>
+        <button type="button" class="btn btn-secundario" style="width:auto;flex:1;padding:9px 10px;font-size:12.5px;" onclick="verDetalleRequerimientoAdmin(${corr})">Ver detalle</button>
+        <button type="button" class="btn btn-secundario" style="width:auto;flex:1;padding:9px 10px;font-size:12.5px;" onclick="editarRequerimientoAdmin(${corr})">Editar</button>
+        <button type="button" class="btn btn-texto" style="width:auto;flex:1;padding:9px 10px;font-size:12.5px;color:var(--rojo-texto,#c0392b);" onclick="eliminarRequerimientoAdmin(${corr})">Eliminar</button>
       </div>
     </div>`;
   }).join("");
@@ -110,11 +110,11 @@ async function cargarSolicitudesAdmin(sesion){
   }
   cont.innerHTML = pendientes.map(s=>`
     <div class="registro-item">
-      <div style="font-weight:700;font-size:14px;">${s.EQUIPO||''} · ${s.AREA||''} ${s.ORIGEN==='Admin'?'<span class="badge" style="margin-left:6px;">Generada por Admin</span>':''}</div>
-      <div class="subtexto" style="margin-top:2px;">Pedido por ${s.SOLICITADO_POR||''} · Prioridad ${s.PRIORIDAD||''}</div>
-      <div class="desc">${s.DETALLE||''}</div>
-      ${s.COMENTARIOS?`<div class="subtexto" style="margin-top:4px;">${s.COMENTARIOS}</div>`:''}
-      <div class="meta">${s.ID_SOLICITUD||''} · culminar antes de ${s.FECHA_TENTATIVA||'—'} · pedido el ${s.FECHA||''}</div>
+      <div style="font-weight:700;font-size:14px;">${esc(s.EQUIPO)} · ${esc(s.AREA)} ${s.ORIGEN==='Admin'?'<span class="badge" style="margin-left:6px;">Generada por Admin</span>':''}</div>
+      <div class="subtexto" style="margin-top:2px;">Pedido por ${esc(s.SOLICITADO_POR)} · Prioridad ${esc(s.PRIORIDAD)}</div>
+      <div class="desc">${esc(s.DETALLE)}</div>
+      ${s.COMENTARIOS?`<div class="subtexto" style="margin-top:4px;">${esc(s.COMENTARIOS)}</div>`:''}
+      <div class="meta">${esc(s.ID_SOLICITUD)} · culminar antes de ${esc(s.FECHA_TENTATIVA||'—')} · pedido el ${esc(s.FECHA)}</div>
     </div>
   `).join("");
 }
@@ -131,7 +131,7 @@ function topPorConteo(lista, campo, top){
 
 function renderRankingHtml(pares){
   if(!pares.length) return "Sin datos.";
-  return pares.map(([nombre,n])=>`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--linea);"><span>${nombre}</span><b>${n}</b></div>`).join("");
+  return pares.map(([nombre,n])=>`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--linea);"><span>${esc(nombre)}</span><b>${n}</b></div>`).join("");
 }
 
 function minutosParadaDelMes(fallas){
@@ -316,6 +316,16 @@ function actualizarAnalisisPeriodo(){
   }
 }
 
+/* Miniaturas de las fotos guardadas en la hoja (columna FOTOS, separadas
+   por "|"). Solo muestra links seguros; devuelve "" si no hay fotos. */
+function fotosHtmlAdmin(fotosTexto, tamano){
+  const fotos = String(fotosTexto||"").split("|").map(f=>urlSegura(f)).filter(Boolean);
+  if(!fotos.length) return "";
+  return `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">${
+    fotos.map(f=>`<a href="${f}" target="_blank" rel="noopener"><img src="${f}" style="width:${tamano}px;height:${tamano}px;object-fit:cover;border-radius:8px;border:1px solid var(--linea);"></a>`).join("")
+  }</div>`;
+}
+
 function renderizarListadoActividadesAdmin(){
   const selEl = document.getElementById("admin-filtro-tecnico-actividades");
   const filtro = selEl ? selEl.value : "";
@@ -330,29 +340,25 @@ function renderizarListadoActividadesAdmin(){
     return;
   }
   cont.innerHTML = actividades.map(r=>{
-    const fotos = (r.FOTOS||"").split("|").map(f=>f.trim()).filter(f=>f && f!=="ERROR_SUBIENDO_FOTO");
-    const fotosHtml = fotos.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">${
-      fotos.map(f=>`<a href="${f}" target="_blank" rel="noopener"><img src="${f}" style="width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid var(--linea);"></a>`).join("")
-    }</div>` : "";
-    const idOt = (r.ID_OT||"").toString().replace(/'/g,"\\'");
+    const idOt = jsArg(r.ID_OT||"");
     return `
     <div class="registro-item">
       <div class="fila1">
         <div>
-          <div style="font-weight:700;font-size:14px;">${r.EQUIPO||"—"}</div>
-          <div class="subtexto" style="margin-top:2px;">${r.USUARIO||"—"} · Actividad</div>
+          <div style="font-weight:700;font-size:14px;">${esc(r.EQUIPO||"—")}</div>
+          <div class="subtexto" style="margin-top:2px;">${esc(r.USUARIO||"—")} · Actividad</div>
         </div>
-        <span class="badge">${r.FECHA||""}</span>
+        <span class="badge">${esc(r.FECHA)}</span>
       </div>
       <div class="badge-fila" style="margin-top:8px;">
-        ${r.CRITICIDAD?`<span class="badge ${claseCriticidad(r.CRITICIDAD)}">${r.CRITICIDAD}</span>`:''}
+        ${r.CRITICIDAD?`<span class="badge ${claseCriticidad(r.CRITICIDAD)}">${esc(r.CRITICIDAD)}</span>`:''}
       </div>
-      ${r.DESCRIPCION?`<div class="desc">${r.DESCRIPCION}</div>`:""}
-      ${fotosHtml}
+      ${r.DESCRIPCION?`<div class="desc">${esc(r.DESCRIPCION)}</div>`:""}
+      ${fotosHtmlAdmin(r.FOTOS, 56)}
       <div style="display:flex;gap:8px;margin-top:10px;">
-        <button type="button" class="btn btn-secundario" style="width:auto;flex:1;padding:9px 10px;font-size:12.5px;" onclick="verDetalleActividadAdmin('${idOt}')">Ver detalle</button>
-        <button type="button" class="btn btn-secundario" style="width:auto;flex:1;padding:9px 10px;font-size:12.5px;" onclick="editarActividadAdmin('${idOt}')">Editar</button>
-        <button type="button" class="btn btn-texto" style="width:auto;flex:1;padding:9px 10px;font-size:12.5px;color:var(--rojo-texto,#c0392b);" onclick="eliminarActividadAdmin('${idOt}')">Eliminar</button>
+        <button type="button" class="btn btn-secundario" style="width:auto;flex:1;padding:9px 10px;font-size:12.5px;" onclick="verDetalleActividadAdmin(${idOt})">Ver detalle</button>
+        <button type="button" class="btn btn-secundario" style="width:auto;flex:1;padding:9px 10px;font-size:12.5px;" onclick="editarActividadAdmin(${idOt})">Editar</button>
+        <button type="button" class="btn btn-texto" style="width:auto;flex:1;padding:9px 10px;font-size:12.5px;color:var(--rojo-texto,#c0392b);" onclick="eliminarActividadAdmin(${idOt})">Eliminar</button>
       </div>
     </div>`;
   }).join("");
@@ -371,25 +377,21 @@ function renderizarListadoFallasAdmin(){
     return;
   }
   cont.innerHTML = fallas.map(r=>{
-    const fotos = (r.FOTOS||"").split("|").map(f=>f.trim()).filter(f=>f && f!=="ERROR_SUBIENDO_FOTO");
-    const fotosHtml = fotos.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">${
-      fotos.map(f=>`<a href="${f}" target="_blank" rel="noopener"><img src="${f}" style="width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid var(--linea);"></a>`).join("")
-    }</div>` : "";
     return `
     <div class="registro-item">
       <div class="fila1">
         <div>
-          <div style="font-weight:700;font-size:14px;">${r.EQUIPO||"—"}</div>
-          <div class="subtexto" style="margin-top:2px;">${r.TECNICO_RESPONSABLE||"—"} · Falla</div>
+          <div style="font-weight:700;font-size:14px;">${esc(r.EQUIPO||"—")}</div>
+          <div class="subtexto" style="margin-top:2px;">${esc(r.TECNICO_RESPONSABLE||"—")} · Falla</div>
         </div>
-        <span class="badge">${r.FECHA||""}</span>
+        <span class="badge">${esc(r.FECHA)}</span>
       </div>
       <div class="badge-fila" style="margin-top:8px;">
-        ${r.CRITICIDAD?`<span class="badge ${claseCriticidad(r.CRITICIDAD)}">${r.CRITICIDAD}</span>`:''}
-        <span class="badge ${claseEstadoFalla(r.ESTADO||"Abierta")}">${r.ESTADO||"Abierta"}</span>
+        ${r.CRITICIDAD?`<span class="badge ${claseCriticidad(r.CRITICIDAD)}">${esc(r.CRITICIDAD)}</span>`:''}
+        <span class="badge ${claseEstadoFalla(r.ESTADO||"Abierta")}">${esc(r.ESTADO||"Abierta")}</span>
       </div>
-      ${r.DESCRIPCION?`<div class="desc">${r.DESCRIPCION}</div>`:""}
-      ${fotosHtml}
+      ${r.DESCRIPCION?`<div class="desc">${esc(r.DESCRIPCION)}</div>`:""}
+      ${fotosHtmlAdmin(r.FOTOS, 56)}
     </div>`;
   }).join("");
 }
@@ -498,13 +500,13 @@ async function cargarDispositivosAdmin(sesion){
     <div class="registro-item">
       <div class="fila1">
         <div>
-          <div style="font-weight:700;font-size:14px;">${u.nombre||"—"}</div>
-          <div class="subtexto" style="margin-top:2px;">${u.cargo||u.rol||""}</div>
+          <div style="font-weight:700;font-size:14px;">${esc(u.nombre||"—")}</div>
+          <div class="subtexto" style="margin-top:2px;">${esc(u.cargo||u.rol)}</div>
         </div>
-        <span class="badge">${u.fecha_registro||""}</span>
+        <span class="badge">${esc(u.fecha_registro)}</span>
       </div>
-      <div class="desc">${u.dispositivo_info || "Dispositivo desconocido"} · ID …${(u.dispositivo_id||"").slice(-6)}</div>
-      <button type="button" class="btn btn-secundario" style="margin-top:10px;width:auto;padding:9px 14px;font-size:12.5px;" onclick="liberarDispositivoUI('${u.slot_id}', this)">Liberar este dispositivo</button>
+      <div class="desc">${esc(u.dispositivo_info || "Dispositivo desconocido")} · ID …${esc((u.dispositivo_id||"").slice(-6))}</div>
+      <button type="button" class="btn btn-secundario" style="margin-top:10px;width:auto;padding:9px 14px;font-size:12.5px;" onclick="liberarDispositivoUI(${jsArg(u.slot_id)}, this)">Liberar este dispositivo</button>
     </div>
   `).join("");
 }
@@ -539,8 +541,21 @@ function cerrarModal(){
 /* ============ PIN DE ACCESO: REGISTROS DE MANTENIMIENTO ============
    Pide el PIN cada vez que alguien intenta entrar a "Registros de
    mantenimiento" (Nueva Actividad / Historial de Fallas). No queda
-   "desbloqueado": se vuelve a pedir en cada intento de ingreso. */
-const PIN_REGISTROS_MTTO = "123456";
+   "desbloqueado": se vuelve a pedir en cada intento de ingreso.
+
+   El PIN ya no se guarda tal cual: solo su huella SHA-256, para que no se
+   pueda leer abriendo el código de la página. Para cambiar el PIN, calcula
+   la huella del nuevo (por ejemplo en PowerShell o en cualquier generador
+   SHA-256) y reemplaza el valor de abajo. Ojo: esto es solo un candado de
+   cortesía; un PIN de 6 números se puede adivinar probando, la protección
+   real de los datos está en el servidor (Apps Script). */
+const PIN_REGISTROS_MTTO_SHA256 = "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92";
+
+async function sha256Hex(texto){
+  const bytes = new TextEncoder().encode(texto);
+  const hash = await crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(hash)].map(b=>b.toString(16).padStart(2,"0")).join("");
+}
 
 function verificarPinRegistrosMtto(){
   abrirModal(`
@@ -555,10 +570,10 @@ function verificarPinRegistrosMtto(){
   setTimeout(()=>{ const el = document.getElementById("pin-registros-input"); if(el) el.focus(); }, 100);
 }
 
-function validarPinRegistrosMtto(){
+async function validarPinRegistrosMtto(){
   const input = document.getElementById("pin-registros-input");
   if(!input) return;
-  if(input.value === PIN_REGISTROS_MTTO){
+  if(await sha256Hex(input.value) === PIN_REGISTROS_MTTO_SHA256){
     cerrarModal();
     irA("pantalla-registros-mtto");
   }else{
@@ -572,28 +587,25 @@ function validarPinRegistrosMtto(){
 function verDetalleActividadAdmin(idOt){
   const r = adminDatosCache.actividades.find(a => String(a.ID_OT)===String(idOt));
   if(!r){ mostrarToast("No se encontró el registro.", false); return; }
-  const fotos = (r.FOTOS||"").split("|").map(f=>f.trim()).filter(f=>f && f!=="ERROR_SUBIENDO_FOTO");
-  const fotosHtml = fotos.length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;">${
-    fotos.map(f=>`<a href="${f}" target="_blank" rel="noopener"><img src="${f}" style="width:70px;height:70px;object-fit:cover;border-radius:8px;border:1px solid var(--linea);"></a>`).join("")
-  }</div>` : "<span style=\"opacity:.7;\">Sin fotos</span>";
+  const fotosHtml = fotosHtmlAdmin(r.FOTOS, 70) || "<span style=\"opacity:.7;\">Sin fotos</span>";
   abrirModal(`
     <div class="modal-titulo"><span>Detalle de actividad</span><button class="modal-cerrar" onclick="cerrarModal()">×</button></div>
-    <div class="modal-fila"><b>ID OT</b>${r.ID_OT||"—"}</div>
-    <div class="modal-fila"><b>Fecha</b>${r.FECHA||"—"}</div>
-    <div class="modal-fila"><b>Técnico</b>${r.USUARIO||"—"}</div>
-    <div class="modal-fila"><b>Equipo</b>${r.EQUIPO||"—"}</div>
-    <div class="modal-fila"><b>Área</b>${r.AREA||"—"}</div>
-    <div class="modal-fila"><b>Criticidad</b>${r.CRITICIDAD||"—"}</div>
-    <div class="modal-fila"><b>Tipo de mantenimiento</b>${r.TIPO_MTTO||"—"}</div>
-    <div class="modal-fila"><b>Especialidad</b>${r.ESPECIALIDAD||"—"}</div>
-    <div class="modal-fila"><b>Descripción</b>${r.DESCRIPCION||"—"}</div>
-    <div class="modal-fila"><b>Técnico responsable</b>${r.TECNICO_RESPONSABLE||"—"}</div>
-    <div class="modal-fila"><b>Inicio</b>${r.FECHA_HORA_INICIO||"—"}</div>
-    <div class="modal-fila"><b>Fin</b>${r.FECHA_HORA_FIN||"—"}</div>
-    <div class="modal-fila"><b>Total horas</b>${r.TOTAL_HORAS||"—"}</div>
-    <div class="modal-fila"><b>Horómetro/Km</b>${r.HOROMETRO_KM||"—"}</div>
-    <div class="modal-fila"><b>Integrantes</b>${r.INTEGRANTES||"—"}</div>
-    <div class="modal-fila"><b>Comentarios</b>${r.COMENTARIOS||"—"}</div>
+    <div class="modal-fila"><b>ID OT</b>${esc(r.ID_OT||"—")}</div>
+    <div class="modal-fila"><b>Fecha</b>${esc(r.FECHA||"—")}</div>
+    <div class="modal-fila"><b>Técnico</b>${esc(r.USUARIO||"—")}</div>
+    <div class="modal-fila"><b>Equipo</b>${esc(r.EQUIPO||"—")}</div>
+    <div class="modal-fila"><b>Área</b>${esc(r.AREA||"—")}</div>
+    <div class="modal-fila"><b>Criticidad</b>${esc(r.CRITICIDAD||"—")}</div>
+    <div class="modal-fila"><b>Tipo de mantenimiento</b>${esc(r.TIPO_MTTO||"—")}</div>
+    <div class="modal-fila"><b>Especialidad</b>${esc(r.ESPECIALIDAD||"—")}</div>
+    <div class="modal-fila"><b>Descripción</b>${esc(r.DESCRIPCION||"—")}</div>
+    <div class="modal-fila"><b>Técnico responsable</b>${esc(r.TECNICO_RESPONSABLE||"—")}</div>
+    <div class="modal-fila"><b>Inicio</b>${esc(r.FECHA_HORA_INICIO||"—")}</div>
+    <div class="modal-fila"><b>Fin</b>${esc(r.FECHA_HORA_FIN||"—")}</div>
+    <div class="modal-fila"><b>Total horas</b>${esc(r.TOTAL_HORAS||"—")}</div>
+    <div class="modal-fila"><b>Horómetro/Km</b>${esc(r.HOROMETRO_KM||"—")}</div>
+    <div class="modal-fila"><b>Integrantes</b>${esc(r.INTEGRANTES||"—")}</div>
+    <div class="modal-fila"><b>Comentarios</b>${esc(r.COMENTARIOS||"—")}</div>
     <div class="modal-fila" style="border-bottom:none;"><b>Fotos</b>${fotosHtml}</div>
     <button class="btn btn-primario" style="margin-top:14px;" onclick="cerrarModal()">Cerrar</button>
   `);
@@ -604,8 +616,8 @@ function editarActividadAdmin(idOt){
   if(!r){ mostrarToast("No se encontró el registro.", false); return; }
   abrirModal(`
     <div class="modal-titulo"><span>Editar actividad</span><button class="modal-cerrar" onclick="cerrarModal()">×</button></div>
-    <div class="campo"><label>Equipo</label><input type="text" id="edit-act-equipo" value="${(r.EQUIPO||"").replace(/"/g,'&quot;')}"></div>
-    <div class="campo"><label>Área</label><input type="text" id="edit-act-area" value="${(r.AREA||"").replace(/"/g,'&quot;')}"></div>
+    <div class="campo"><label>Equipo</label><input type="text" id="edit-act-equipo" value="${esc(r.EQUIPO)}"></div>
+    <div class="campo"><label>Área</label><input type="text" id="edit-act-area" value="${esc(r.AREA)}"></div>
     <div class="campo"><label>Criticidad</label>
       <select id="edit-act-criticidad">
         <option value="Alta" ${r.CRITICIDAD==="Alta"?"selected":""}>Alta</option>
@@ -613,11 +625,11 @@ function editarActividadAdmin(idOt){
         <option value="Baja" ${r.CRITICIDAD==="Baja"?"selected":""}>Baja</option>
       </select>
     </div>
-    <div class="campo"><label>Descripción</label><textarea id="edit-act-descripcion" rows="3">${(r.DESCRIPCION||"")}</textarea></div>
-    <div class="campo"><label>Comentarios</label><textarea id="edit-act-comentarios" rows="2">${(r.COMENTARIOS||"")}</textarea></div>
+    <div class="campo"><label>Descripción</label><textarea id="edit-act-descripcion" rows="3">${esc(r.DESCRIPCION)}</textarea></div>
+    <div class="campo"><label>Comentarios</label><textarea id="edit-act-comentarios" rows="2">${esc(r.COMENTARIOS)}</textarea></div>
     <div style="display:flex;gap:8px;margin-top:6px;">
       <button class="btn btn-secundario" style="flex:1;" onclick="cerrarModal()">Cancelar</button>
-      <button class="btn btn-primario" style="flex:1;" id="btn-guardar-edit-act" onclick="guardarEdicionActividadAdmin('${idOt}')">Guardar</button>
+      <button class="btn btn-primario" style="flex:1;" id="btn-guardar-edit-act" onclick="guardarEdicionActividadAdmin(${jsArg(idOt)})">Guardar</button>
     </div>
   `);
 }
@@ -655,7 +667,7 @@ function eliminarActividadAdmin(idOt){
     <p class="subtexto">Esta acción borra la actividad de forma permanente de la base de datos. No se puede deshacer. ¿Deseas continuar?</p>
     <div style="display:flex;gap:8px;margin-top:14px;">
       <button class="btn btn-secundario" style="flex:1;" onclick="cerrarModal()">Cancelar</button>
-      <button class="btn btn-primario" style="flex:1;background:var(--rojo-600,#c0392b);" id="btn-confirmar-elim-act" onclick="confirmarEliminarActividadAdmin('${idOt}')">Sí, eliminar</button>
+      <button class="btn btn-primario" style="flex:1;background:var(--rojo-600,#c0392b);" id="btn-confirmar-elim-act" onclick="confirmarEliminarActividadAdmin(${jsArg(idOt)})">Sí, eliminar</button>
     </div>
   `);
 }
@@ -682,20 +694,20 @@ function verDetalleRequerimientoAdmin(correlativo){
   const items = r.ITEMS || [];
   const itemsHtml = items.length ? items.map((it,i)=>`
     <div style="border:1px solid var(--linea);border-radius:10px;padding:10px;margin-top:8px;">
-      <div style="font-weight:700;font-size:13px;">${i+1}. ${it.nombre||"—"} ${it.codigo?`<span style="font-weight:400;color:var(--azul-600,#2563eb);">(${it.codigo})</span>`:""}</div>
-      <div class="subtexto" style="margin-top:4px;">Cantidad: ${it.cantidad||"—"} ${it.um||""} · P. Unit: S/ ${(Number(it.precio_unitario)||0).toFixed(2)} · Total: S/ ${(Number(it.precio_total)||0).toFixed(2)}</div>
-      ${it.especificaciones?`<div class="subtexto" style="margin-top:2px;">Especificaciones: ${it.especificaciones}</div>`:""}
-      <div class="subtexto" style="margin-top:2px;">Equipo: ${it.equipo||"—"} ${it.equipoCodigo?`· CECO: ${it.equipoCodigo}`:""}</div>
-      ${it.foto?`<div style="margin-top:6px;"><a href="${it.foto}" target="_blank" rel="noopener"><img src="${it.foto}" style="width:70px;height:70px;object-fit:cover;border-radius:8px;border:1px solid var(--linea);"></a></div>`:""}
+      <div style="font-weight:700;font-size:13px;">${i+1}. ${esc(it.nombre||"—")} ${it.codigo?`<span style="font-weight:400;color:var(--azul-600,#2563eb);">(${esc(it.codigo)})</span>`:""}</div>
+      <div class="subtexto" style="margin-top:4px;">Cantidad: ${esc(it.cantidad||"—")} ${esc(it.um)} · P. Unit: S/ ${(Number(it.precio_unitario)||0).toFixed(2)} · Total: S/ ${(Number(it.precio_total)||0).toFixed(2)}</div>
+      ${it.especificaciones?`<div class="subtexto" style="margin-top:2px;">Especificaciones: ${esc(it.especificaciones)}</div>`:""}
+      <div class="subtexto" style="margin-top:2px;">Equipo: ${esc(it.equipo||"—")} ${it.equipoCodigo?`· CECO: ${esc(it.equipoCodigo)}`:""}</div>
+      ${urlSegura(it.foto)?`<div style="margin-top:6px;"><a href="${urlSegura(it.foto)}" target="_blank" rel="noopener"><img src="${urlSegura(it.foto)}" style="width:70px;height:70px;object-fit:cover;border-radius:8px;border:1px solid var(--linea);"></a></div>`:""}
     </div>
   `).join("") : "<p class=\"subtexto\">Sin materiales.</p>";
   abrirModal(`
-    <div class="modal-titulo"><span>${r.CORRELATIVO||r.ID}</span><button class="modal-cerrar" onclick="cerrarModal()">×</button></div>
-    <div class="modal-fila"><b>Fecha</b>${(r.FECHA||'').toString().slice(0,10)}</div>
-    <div class="modal-fila"><b>Prioridad</b>${r.PRIORIDAD||"—"}</div>
-    <div class="modal-fila"><b>Técnico</b>${r.TECNICO||"—"}</div>
-    <div class="modal-fila"><b>Motivo</b>${r.MOTIVO||"—"}</div>
-    <div class="modal-fila" style="border-bottom:none;"><b>Comentarios</b>${r.COMENTARIOS||"—"}</div>
+    <div class="modal-titulo"><span>${esc(r.CORRELATIVO||r.ID)}</span><button class="modal-cerrar" onclick="cerrarModal()">×</button></div>
+    <div class="modal-fila"><b>Fecha</b>${esc((r.FECHA||'').toString().slice(0,10))}</div>
+    <div class="modal-fila"><b>Prioridad</b>${esc(r.PRIORIDAD||"—")}</div>
+    <div class="modal-fila"><b>Técnico</b>${esc(r.TECNICO||"—")}</div>
+    <div class="modal-fila"><b>Motivo</b>${esc(r.MOTIVO||"—")}</div>
+    <div class="modal-fila" style="border-bottom:none;"><b>Comentarios</b>${esc(r.COMENTARIOS||"—")}</div>
     <div style="font-weight:700;font-size:13.5px;margin-top:12px;">Materiales (${items.length})</div>
     ${itemsHtml}
     <button class="btn btn-primario" style="margin-top:14px;" onclick="cerrarModal()">Cerrar</button>
@@ -721,31 +733,31 @@ function renderModalEdicionRequerimiento(){
   const itemsHtml = st.items.map((it,i)=>`
     <div style="border:1px solid var(--linea);border-radius:10px;padding:10px;margin-top:8px;">
       <div style="display:flex;justify-content:space-between;align-items:center;">
-        <div style="font-weight:700;font-size:13px;">${i+1}. ${it.nombre||"—"} ${it.codigo?`(${it.codigo})`:""}</div>
+        <div style="font-weight:700;font-size:13px;">${i+1}. ${esc(it.nombre||"—")} ${it.codigo?`(${esc(it.codigo)})`:""}</div>
         <button type="button" class="modal-cerrar" style="font-size:14px;" onclick="quitarItemEdicionRequerimiento(${i})">Quitar</button>
       </div>
       <div class="fila-2" style="margin-top:6px;">
-        <div class="campo" style="margin-bottom:6px;"><label>Cantidad</label><input type="number" step="any" data-idx="${i}" data-campo="cantidad" class="edit-req-item-input" value="${it.cantidad||0}" onchange="actualizarItemEdicionRequerimiento(this)"></div>
-        <div class="campo" style="margin-bottom:6px;"><label>Precio unitario</label><input type="number" step="0.01" data-idx="${i}" data-campo="precio_unitario" class="edit-req-item-input" value="${it.precio_unitario||0}" onchange="actualizarItemEdicionRequerimiento(this)"></div>
+        <div class="campo" style="margin-bottom:6px;"><label>Cantidad</label><input type="number" step="any" data-idx="${i}" data-campo="cantidad" class="edit-req-item-input" value="${esc(it.cantidad||0)}" onchange="actualizarItemEdicionRequerimiento(this)"></div>
+        <div class="campo" style="margin-bottom:6px;"><label>Precio unitario</label><input type="number" step="0.01" data-idx="${i}" data-campo="precio_unitario" class="edit-req-item-input" value="${esc(it.precio_unitario||0)}" onchange="actualizarItemEdicionRequerimiento(this)"></div>
       </div>
-      <div class="campo" style="margin-bottom:6px;"><label>Especificaciones</label><input type="text" data-idx="${i}" data-campo="especificaciones" class="edit-req-item-input" value="${(it.especificaciones||"").replace(/"/g,'&quot;')}" onchange="actualizarItemEdicionRequerimiento(this)"></div>
+      <div class="campo" style="margin-bottom:6px;"><label>Especificaciones</label><input type="text" data-idx="${i}" data-campo="especificaciones" class="edit-req-item-input" value="${esc(it.especificaciones)}" onchange="actualizarItemEdicionRequerimiento(this)"></div>
       <div class="fila-2">
-        <div class="campo" style="margin-bottom:0;"><label>Equipo</label><input type="text" data-idx="${i}" data-campo="equipo" class="edit-req-item-input" value="${(it.equipo||"").replace(/"/g,'&quot;')}" onchange="actualizarItemEdicionRequerimiento(this)"></div>
-        <div class="campo" style="margin-bottom:0;"><label>Código CECO</label><input type="text" data-idx="${i}" data-campo="equipoCodigo" class="edit-req-item-input" value="${(it.equipoCodigo||"").replace(/"/g,'&quot;')}" onchange="actualizarItemEdicionRequerimiento(this)"></div>
+        <div class="campo" style="margin-bottom:0;"><label>Equipo</label><input type="text" data-idx="${i}" data-campo="equipo" class="edit-req-item-input" value="${esc(it.equipo)}" onchange="actualizarItemEdicionRequerimiento(this)"></div>
+        <div class="campo" style="margin-bottom:0;"><label>Código CECO</label><input type="text" data-idx="${i}" data-campo="equipoCodigo" class="edit-req-item-input" value="${esc(it.equipoCodigo)}" onchange="actualizarItemEdicionRequerimiento(this)"></div>
       </div>
       <div class="subtexto" style="margin-top:6px;">Total ítem: S/ ${(Number(it.cantidad||0)*Number(it.precio_unitario||0)).toFixed(2)}</div>
     </div>
   `).join("");
   abrirModal(`
-    <div class="modal-titulo"><span>Editar ${st.correlativo}</span><button class="modal-cerrar" onclick="cerrarModal()">×</button></div>
-    <div class="campo"><label>Motivo</label><input type="text" id="edit-req-motivo" value="${st.motivo.replace(/"/g,'&quot;')}"></div>
+    <div class="modal-titulo"><span>Editar ${esc(st.correlativo)}</span><button class="modal-cerrar" onclick="cerrarModal()">×</button></div>
+    <div class="campo"><label>Motivo</label><input type="text" id="edit-req-motivo" value="${esc(st.motivo)}"></div>
     <div class="campo"><label>Prioridad</label>
       <select id="edit-req-prioridad">
         <option value="Urgente" ${st.prioridad==='Urgente'?'selected':''}>Urgente</option>
         <option value="Convencional" ${st.prioridad==='Convencional'?'selected':''}>Convencional</option>
       </select>
     </div>
-    <div class="campo"><label>Comentarios</label><textarea id="edit-req-comentarios" rows="2">${st.comentarios}</textarea></div>
+    <div class="campo"><label>Comentarios</label><textarea id="edit-req-comentarios" rows="2">${esc(st.comentarios)}</textarea></div>
     <div style="font-weight:700;font-size:13.5px;margin-top:8px;">Materiales (${st.items.length})</div>
     ${itemsHtml || "<p class=\"subtexto\">Sin materiales — agrega al menos uno antes de guardar.</p>"}
     <div style="display:flex;gap:8px;margin-top:14px;">
@@ -801,11 +813,11 @@ async function guardarEdicionRequerimientoAdmin(){
 
 function eliminarRequerimientoAdmin(correlativo){
   abrirModal(`
-    <div class="modal-titulo"><span>Eliminar ${correlativo}</span><button class="modal-cerrar" onclick="cerrarModal()">×</button></div>
+    <div class="modal-titulo"><span>Eliminar ${esc(correlativo)}</span><button class="modal-cerrar" onclick="cerrarModal()">×</button></div>
     <p class="subtexto">Esta acción borra el requerimiento de forma permanente (de la lista y del historial). El técnico deberá volver a llenarlo desde cero si lo necesita. No se puede deshacer. ¿Deseas continuar?</p>
     <div style="display:flex;gap:8px;margin-top:14px;">
       <button class="btn btn-secundario" style="flex:1;" onclick="cerrarModal()">Cancelar</button>
-      <button class="btn btn-primario" style="flex:1;background:var(--rojo-600,#c0392b);" id="btn-confirmar-elim-req" onclick="confirmarEliminarRequerimientoAdmin('${correlativo}')">Sí, eliminar</button>
+      <button class="btn btn-primario" style="flex:1;background:var(--rojo-600,#c0392b);" id="btn-confirmar-elim-req" onclick="confirmarEliminarRequerimientoAdmin(${jsArg(correlativo)})">Sí, eliminar</button>
     </div>
   `);
 }

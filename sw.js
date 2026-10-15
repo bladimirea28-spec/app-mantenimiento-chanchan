@@ -1,4 +1,4 @@
-const CACHE_NAME = "mantenimiento-chanchan-v2";
+const CACHE_NAME = "mantenimiento-chanchan-v3";
 const ARCHIVOS_BASE = [
   "./",
   "./index.html",
@@ -40,6 +40,10 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
+  // Los envíos al servidor (POST al Apps Script) no se guardan en caché:
+  // pasan directo a internet como siempre.
+  if (event.request.method !== "GET") return;
+
   // Estrategia: intenta la red primero (para no quedarte con versión vieja
   // si hay internet), y si falla (sin señal), usa lo que haya en caché.
   event.respondWith(

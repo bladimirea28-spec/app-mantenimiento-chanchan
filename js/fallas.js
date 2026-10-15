@@ -175,17 +175,17 @@ async function renderListaFallas(){
     <div class="registro-item">
       <div class="fila1">
         <div>
-          <div style="font-weight:700;font-size:14px;">${r.equipo}</div>
-          <div class="subtexto" style="margin-top:2px;">${r.tipo}${r.minutos_parada!=null?' · '+r.minutos_parada+" min parada":""}</div>
+          <div style="font-weight:700;font-size:14px;">${esc(r.equipo)}</div>
+          <div class="subtexto" style="margin-top:2px;">${esc(r.tipo)}${r.minutos_parada!=null?' · '+esc(r.minutos_parada)+" min parada":""}</div>
         </div>
         <span class="badge ${r.sincronizado?'':'pendiente'}">${r.sincronizado?'Sincronizado':'Pendiente'}</span>
       </div>
       <div class="badge-fila" style="margin-top:8px;">
-        ${r.criticidad?`<span class="badge ${claseCriticidad(r.criticidad)}">${r.criticidad}</span>`:''}
-        <span class="badge ${claseEstadoFalla(r.estado)}">${r.estado||'Abierta'}</span>
+        ${r.criticidad?`<span class="badge ${claseCriticidad(r.criticidad)}">${esc(r.criticidad)}</span>`:''}
+        <span class="badge ${claseEstadoFalla(r.estado)}">${esc(r.estado||'Abierta')}</span>
       </div>
-      <div class="desc">${r.descripcion}</div>
-      <div class="meta">${r.id_falla} · ${r.area} · ${r.turno}${r.tipo_atencion?' · '+r.tipo_atencion:''} · ${r.fecha}${r.fotos&&r.fotos.length?' · 📷 '+r.fotos.length:''}</div>
+      <div class="desc">${esc(r.descripcion)}</div>
+      <div class="meta">${esc(r.id_falla)} · ${esc(r.area)} · ${esc(r.turno)}${r.tipo_atencion?' · '+esc(r.tipo_atencion):''} · ${esc(r.fecha)}${r.fotos&&r.fotos.length?' · 📷 '+r.fotos.length:''}</div>
     </div>
   `).join("");
 }
@@ -206,7 +206,7 @@ async function cargarFallasAbiertas(){
   const sesion = JSON.parse(localStorage.getItem("sesion_activa")||"{}");
   const resp = await llamarServidor({ tipo:"listado_fallas_abiertas", dni: sesion.dni, nombre: sesion.nombre, rol: sesion.rol });
   if(!resp || !resp.ok){
-    cont.innerHTML = `<div class="vacio"><div class="subtexto">${(resp && resp.mensaje) || "No se pudo cargar. Revisa tu conexión."}</div></div>`;
+    cont.innerHTML = `<div class="vacio"><div class="subtexto">${esc((resp && resp.mensaje) || "No se pudo cargar. Revisa tu conexión.")}</div></div>`;
     return;
   }
   fallasAbiertasCache = resp.fallas || [];
@@ -255,19 +255,19 @@ function renderFallasAbiertas(){
     <div class="registro-item">
       <div class="fila1">
         <div>
-          <div style="font-weight:700;font-size:14px;">${r.EQUIPO||''}</div>
-          <div class="subtexto" style="margin-top:2px;">${r.TIPO_FALLA||''} · ${r.TECNICO_RESPONSABLE||''}</div>
+          <div style="font-weight:700;font-size:14px;">${esc(r.EQUIPO)}</div>
+          <div class="subtexto" style="margin-top:2px;">${esc(r.TIPO_FALLA)} · ${esc(r.TECNICO_RESPONSABLE)}</div>
         </div>
       </div>
       <div class="badge-fila" style="margin-top:8px;">
-        ${r.CRITICIDAD?`<span class="badge ${claseCriticidad(r.CRITICIDAD)}">${r.CRITICIDAD}</span>`:''}
-        <span class="badge ${claseEstadoFalla(r.ESTADO)}">${r.ESTADO||'Abierta'}</span>
+        ${r.CRITICIDAD?`<span class="badge ${claseCriticidad(r.CRITICIDAD)}">${esc(r.CRITICIDAD)}</span>`:''}
+        <span class="badge ${claseEstadoFalla(r.ESTADO)}">${esc(r.ESTADO||'Abierta')}</span>
       </div>
-      <div class="desc">${r.DESCRIPCION||''}</div>
-      <div class="meta">${r.ID_FALLA} · ${r.AREA||''} · ${r.FECHA||''} · desde ${r.HORA_INICIO||'—'}</div>
+      <div class="desc">${esc(r.DESCRIPCION)}</div>
+      <div class="meta">${esc(r.ID_FALLA)} · ${esc(r.AREA)} · ${esc(r.FECHA)} · desde ${esc(r.HORA_INICIO||'—')}</div>
       <div style="display:flex;gap:8px;margin-top:12px;">
-        ${String(r.ESTADO||'Abierta').toLowerCase()!=='en atención' ? `<button class="btn btn-secundario" style="margin-top:0;flex:1;" onclick="marcarEnAtencionFalla('${r.ID_FALLA}')">En atención</button>` : ''}
-        <button class="btn btn-primario" style="margin-top:0;flex:1;" onclick="abrirResolverFalla('${r.ID_FALLA}')">Resolver</button>
+        ${String(r.ESTADO||'Abierta').toLowerCase()!=='en atención' ? `<button class="btn btn-secundario" style="margin-top:0;flex:1;" onclick="marcarEnAtencionFalla(${jsArg(r.ID_FALLA)})">En atención</button>` : ''}
+        <button class="btn btn-primario" style="margin-top:0;flex:1;" onclick="abrirResolverFalla(${jsArg(r.ID_FALLA)})">Resolver</button>
       </div>
     </div>
   `).join("");
@@ -289,10 +289,10 @@ function abrirResolverFalla(idFalla){
   if(!falla) return;
   fallaEnResolucion = falla;
   document.getElementById("resolver-resumen").innerHTML = `
-    <div style="font-weight:700;font-size:14px;">${falla.EQUIPO||''}</div>
-    <div class="subtexto" style="margin-top:2px;">${falla.TIPO_FALLA||''} · ${falla.AREA||''}</div>
-    <div class="desc" style="margin-top:8px;">${falla.DESCRIPCION||''}</div>
-    <div class="meta">${falla.ID_FALLA} · inicio ${falla.HORA_INICIO||'—'} · ${falla.TURNO||''}</div>
+    <div style="font-weight:700;font-size:14px;">${esc(falla.EQUIPO)}</div>
+    <div class="subtexto" style="margin-top:2px;">${esc(falla.TIPO_FALLA)} · ${esc(falla.AREA)}</div>
+    <div class="desc" style="margin-top:8px;">${esc(falla.DESCRIPCION)}</div>
+    <div class="meta">${esc(falla.ID_FALLA)} · inicio ${esc(falla.HORA_INICIO||'—')} · ${esc(falla.TURNO)}</div>
   `;
   document.getElementById("resolver-causa").value = "";
   document.getElementById("resolver-accion").value = "";

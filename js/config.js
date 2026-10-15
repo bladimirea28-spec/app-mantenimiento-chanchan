@@ -95,6 +95,30 @@ async function llamarServidor(payload){
   }
 }
 
+/* ============ LIMPIEZA DE TEXTOS PARA MOSTRAR EN PANTALLA ============
+   Todo lo que escribe un usuario (descripciones, nombres, comentarios...) y
+   luego se pinta con innerHTML debe pasar por esc(). Así, si alguien escribe
+   algo como <script> o <img onerror=...>, se ve como texto y no se ejecuta
+   en el celular de otra persona (por ejemplo, en el panel del admin). */
+function esc(valor){
+  return String(valor == null ? "" : valor).replace(/[&<>"']/g, c => ({
+    "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
+  }[c]));
+}
+
+/* Para pasar un valor como argumento dentro de onclick="...": lo convierte
+   en un texto de JavaScript entre comillas y luego lo limpia para HTML.
+   Uso: onclick="abrirResolverFalla(${jsArg(r.ID_FALLA)})" (sin comillas). */
+function jsArg(valor){
+  return esc(JSON.stringify(String(valor == null ? "" : valor)));
+}
+
+/* Solo deja pasar links de fotos seguros (https o imagen en base64). */
+function urlSegura(url){
+  const u = String(url || "").trim();
+  return /^(https:\/\/|data:image\/)/i.test(u) ? esc(u) : "";
+}
+
 function primerNombre(nombreCompleto){
   return (nombreCompleto||"").trim().split(/\s+/)[0] || nombreCompleto;
 }

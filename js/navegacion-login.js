@@ -175,7 +175,7 @@ function poblarSelectTecnico(idSelect){
   if(!sel) return;
   const valorPrevio = sel.value;
   sel.innerHTML = '<option value="">Selecciona un técnico</option>' +
-    listaTecnicosResponsables.map(n => `<option${n===valorPrevio?" selected":""}>${n}</option>`).join("");
+    listaTecnicosResponsables.map(n => `<option${n===valorPrevio?" selected":""}>${esc(n)}</option>`).join("");
   if(!sel.value){
     const sesion = JSON.parse(localStorage.getItem("sesion_activa")||"{}");
     if(sesion.nombre && listaTecnicosResponsables.includes(sesion.nombre)) sel.value = sesion.nombre;
@@ -194,7 +194,7 @@ async function mostrarAutoregistro(){
 
   const resp = await llamarServidor({ tipo:"cupos" });
   if(!resp.ok){
-    cont.innerHTML = `<div class="error-msg activo">${resp.mensaje || "No se pudo cargar la lista."}</div>`;
+    cont.innerHTML = `<div class="error-msg activo">${esc(resp.mensaje || "No se pudo cargar la lista.")}</div>`;
     return;
   }
   const pendientes = resp.cupos.filter(c=>c.disponible);
@@ -203,10 +203,10 @@ async function mostrarAutoregistro(){
     return;
   }
   cont.innerHTML = pendientes.map(c=>`
-    <button class="modulo-btn" style="margin-bottom:10px;" onclick='elegirCupo(${JSON.stringify(c).replace(/'/g,"&#39;")})'>
+    <button class="modulo-btn" style="margin-bottom:10px;" onclick="elegirCupo(${esc(JSON.stringify(c))})">
       <div class="modulo-txt">
-        <div class="titulo-lg">${c.nombre}</div>
-        <div class="subtexto">${c.cargo}</div>
+        <div class="titulo-lg">${esc(c.nombre)}</div>
+        <div class="subtexto">${esc(c.cargo)}</div>
       </div>
       <div class="modulo-flecha"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>
     </button>

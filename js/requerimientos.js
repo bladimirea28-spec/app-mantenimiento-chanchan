@@ -51,7 +51,7 @@ function iniciarAutocompleteMaterial(){
 
 function abrirCajaItemRequerimiento(nombre, um, precio, codigo){
   document.getElementById("req-material-buscar").value = nombre;
-  document.getElementById("req-material-seleccionado-caja").style.display = "block"; const infoCodigo = document.getElementById("req-item-codigo-info"); infoCodigo.innerHTML = codigo ? `Código: <span style="font-weight:700;color:var(--azul-600,#2563eb);">${codigo}</span>` : `<span style="opacity:.7;font-weight:400;font-style:italic;">Sin código de catálogo (material manual)</span>`;
+  document.getElementById("req-material-seleccionado-caja").style.display = "block"; const infoCodigo = document.getElementById("req-item-codigo-info"); infoCodigo.innerHTML = codigo ? `Código: <span style="font-weight:700;color:var(--azul-600,#2563eb);">${esc(codigo)}</span>` : `<span style="opacity:.7;font-weight:400;font-style:italic;">Sin código de catálogo (material manual)</span>`;
   document.getElementById("req-item-especificaciones").value = nombre;
   document.getElementById("req-item-equipo").value = "";
   document.getElementById("req-material-cantidad").value = 1;
@@ -90,7 +90,7 @@ function iniciarFotoItemRequerimiento(){
     if(input.files && input.files[0]){
       reqItemFotoBase64 = await archivoABase64(input.files[0]);
       document.getElementById("req-item-foto-preview").innerHTML =
-        `<div class="foto-thumb"><img src="${reqItemFotoBase64}"><button class="quitar" onclick="quitarFotoItemRequerimiento()">×</button></div>`;
+        `<div class="foto-thumb"><img src="${urlSegura(reqItemFotoBase64)}"><button class="quitar" onclick="quitarFotoItemRequerimiento()">×</button></div>`;
       guardarBorradorRequerimiento();
     }
   });
@@ -146,8 +146,8 @@ function renderReqItems(){
     cont.innerHTML = reqItems.map((it,i)=>`
       <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--linea);">
         <div>
-          <div style="font-weight:700;font-size:13.5px;">${i+1}. ${it.nombre}${it.codigo?` <span style="font-weight:400;color:var(--azul-600,#2563eb);">(Cód: ${it.codigo})</span>`:''}</div>
-          <div class="subtexto" style="margin-top:2px;">${it.cantidad} ${it.um} x S/ ${it.precio.toFixed(2)}${it.equipo?` · ${it.equipo}`:''}</div>
+          <div style="font-weight:700;font-size:13.5px;">${i+1}. ${esc(it.nombre)}${it.codigo?` <span style="font-weight:400;color:var(--azul-600,#2563eb);">(Cód: ${esc(it.codigo)})</span>`:''}</div>
+          <div class="subtexto" style="margin-top:2px;">${esc(it.cantidad)} ${esc(it.um)} x S/ ${it.precio.toFixed(2)}${it.equipo?` · ${esc(it.equipo)}`:''}</div>
         </div>
         <div style="display:flex;align-items:center;gap:10px;">
           <b>S/ ${(it.cantidad*it.precio).toFixed(2)}</b>
@@ -211,7 +211,7 @@ function cargarBorradorRequerimiento(){
       document.getElementById("req-material-seleccionado-caja").style.display = "block";
       const infoCodigo = document.getElementById("req-item-codigo-info");
       infoCodigo.innerHTML = ip.draft.codigo
-        ? `Código: <span style="font-weight:700;color:var(--azul-600,#2563eb);">${ip.draft.codigo}</span>`
+        ? `Código: <span style="font-weight:700;color:var(--azul-600,#2563eb);">${esc(ip.draft.codigo)}</span>`
         : `<span style="opacity:.7;font-weight:400;font-style:italic;">Sin código de catálogo (material manual)</span>`;
       document.getElementById("req-item-especificaciones").value = ip.especificaciones || "";
       document.getElementById("req-item-equipo").value = ip.equipo || "";
@@ -221,7 +221,7 @@ function cargarBorradorRequerimiento(){
       document.getElementById("req-item-precio").value = ip.precio || 0;
       reqItemFotoBase64 = ip.foto || null;
       document.getElementById("req-item-foto-preview").innerHTML = reqItemFotoBase64
-        ? `<div class="foto-thumb"><img src="${reqItemFotoBase64}"><button class="quitar" onclick="quitarFotoItemRequerimiento()">×</button></div>`
+        ? `<div class="foto-thumb"><img src="${urlSegura(reqItemFotoBase64)}"><button class="quitar" onclick="quitarFotoItemRequerimiento()">×</button></div>`
         : "";
       actualizarPrecioTotalItem();
     }
@@ -295,7 +295,7 @@ async function abrirMisRequerimientos(){
   const sesion = JSON.parse(localStorage.getItem("sesion_activa")||"{}");
   const resp = await llamarServidor({ tipo:"listado_requerimientos", dni: sesion.dni });
   if(!resp || !resp.ok){
-    cont.innerHTML = `<div class="subtexto">${(resp && resp.mensaje) || "No se pudo cargar."}</div>`;
+    cont.innerHTML = `<div class="subtexto">${esc((resp && resp.mensaje) || "No se pudo cargar.")}</div>`;
     return;
   }
   const lista = resp.requerimientos || [];
@@ -310,10 +310,10 @@ async function abrirMisRequerimientos(){
     <div class="registro-item">
       <div class="fila1">
         <div>
-          <div style="font-weight:700;font-size:14px;">${r.CORRELATIVO || r.ID} ${r.PRIORIDAD?`<span class="badge" style="background:${r.PRIORIDAD==='Urgente'?'var(--rojo-100,#fde2e2)':'var(--superficie)'};color:${r.PRIORIDAD==='Urgente'?'var(--rojo-texto,#c0392b)':'inherit'};margin-left:6px;">${r.PRIORIDAD}</span>`:''}</div>
-          <div class="subtexto" style="margin-top:2px;">${r.MOTIVO || ''}</div>
+          <div style="font-weight:700;font-size:14px;">${esc(r.CORRELATIVO || r.ID)} ${r.PRIORIDAD?`<span class="badge" style="background:${r.PRIORIDAD==='Urgente'?'var(--rojo-100,#fde2e2)':'var(--superficie)'};color:${r.PRIORIDAD==='Urgente'?'var(--rojo-texto,#c0392b)':'inherit'};margin-left:6px;">${esc(r.PRIORIDAD)}</span>`:''}</div>
+          <div class="subtexto" style="margin-top:2px;">${esc(r.MOTIVO)}</div>
         </div>
-        <span class="badge">${(r.FECHA||'').toString().slice(0,10)}</span>
+        <span class="badge">${esc((r.FECHA||'').toString().slice(0,10))}</span>
       </div>
       <div class="desc">${items.length} material(es) · Total S/ ${(Number(r.TOTAL)||0).toFixed(2)}</div>
     </div>`;
