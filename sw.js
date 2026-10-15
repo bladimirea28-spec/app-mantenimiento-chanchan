@@ -1,10 +1,24 @@
-const CACHE_NAME = "mantenimiento-chanchan-v1";
+const CACHE_NAME = "mantenimiento-chanchan-v2";
 const ARCHIVOS_BASE = [
   "./",
   "./index.html",
   "./manifest.json",
   "./icon-192.png",
-  "./icon-512.png"
+  "./icon-512.png",
+  "./css/estilos.css",
+  "./img/logo.png",
+  "./datos/equipos.js",
+  "./datos/materiales.js",
+  "./js/config.js",
+  "./js/almacenamiento.js",
+  "./js/navegacion-login.js",
+  "./js/actividades.js",
+  "./js/fallas.js",
+  "./js/solicitudes.js",
+  "./js/requerimientos.js",
+  "./js/sincronizacion.js",
+  "./js/admin.js",
+  "./js/inicio.js"
 ];
 
 self.addEventListener("install", (event) => {
