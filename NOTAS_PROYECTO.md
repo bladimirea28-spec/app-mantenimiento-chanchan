@@ -50,6 +50,19 @@ js/inicio.js          → Toast, indicador de conexión y arranque de la app (in
 7. El PIN de "Registros de mantenimiento" se guarda como huella SHA-256
    (`PIN_REGISTROS_MTTO_SHA256` en `js/admin.js`), nunca el número tal cual.
 
+## Servidor (Apps Script)
+
+- El código está en `apps-script/Codigo.gs`, **solo en esta PC** (`.gitignore`):
+  tiene DNI reales y el ID de la hoja, y el repositorio es público.
+- Para probar cambios sin tocar la hoja real: abrir la app en un servidor
+  local y cargar `apps-script/simulador-prueba.js` (instrucciones dentro).
+- Sesiones: `login`, `autoregistro` y `registrar_operador` devuelven un
+  `token`; la app lo guarda en `sesion_activa.token` y lo manda en cada
+  pedido. El servidor saca DNI/nombre/rol del token (hoja SESIONES guarda
+  solo su SHA-256). Si responde `sesion_invalida`, la app vuelve al login.
+- Los números de OT (`OTM-`) y falla (`F-`) los asigna el servidor; la
+  columna `ID_UNICO` evita duplicados cuando un registro llega dos veces.
+
 ## Backend actual
 
 - Google Sheet **BD_Mantenimiento_ChanChan** + Apps Script desplegado como aplicación web.

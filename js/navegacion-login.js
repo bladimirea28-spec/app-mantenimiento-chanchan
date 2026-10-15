@@ -70,10 +70,10 @@ async function intentarLogin(){
     errorEl.classList.add("activo");
     return;
   }
-  guardarSesionYEntrar(resp.usuario);
+  guardarSesionYEntrar(resp.usuario, resp.token);
 }
 
-function guardarSesionYEntrar(usuario){
+function guardarSesionYEntrar(usuario, token){
   const sesion = {
     dni: usuario.dni,
     nombre: usuario.nombre,
@@ -83,7 +83,8 @@ function guardarSesionYEntrar(usuario){
     whatsapp: usuario.whatsapp || "",
     correo: usuario.correo || "",
     es_jefe_area: !!usuario.es_jefe_area,
-    dispositivo_id: obtenerDispositivoId()
+    dispositivo_id: obtenerDispositivoId(),
+    token: token || ""
   };
   localStorage.setItem("sesion_activa", JSON.stringify(sesion));
   entrarAMenu(sesion);
@@ -132,6 +133,27 @@ async function guardarCorreoAdmin(){
 }
 
 function cerrarSesion(){
+  // Avisa al servidor para que esa llave deje de servir (si no hay
+  // internet no pasa nada: igual se cierra la sesión en el celular).
+  if(tokenSesion() && navigator.onLine){
+    fetch(obtenerSyncUrl(), {
+      method:"POST",
+      headers:{"Content-Type":"text/plain;charset=utf-8"},
+      body: JSON.stringify({ tipo:"cerrar_sesion", token: tokenSesion() })
+    }).catch(()=>{});
+  }
+  limpiarSesionLocal();
+}
+
+/* El servidor avisó que la sesión ya no vale (venció, la cerró un admin o
+   es una sesión de antes de esta versión). Se vuelve a pedir el DNI. */
+function manejarSesionVencida(){
+  if(!localStorage.getItem("sesion_activa")) return;
+  limpiarSesionLocal();
+  mostrarToast("Por seguridad, vuelve a ingresar con tu DNI", false);
+}
+
+function limpiarSesionLocal(){
   localStorage.removeItem("sesion_activa");
   document.getElementById("login-usuario").value="";
   document.getElementById("login-clave").value="";
@@ -245,7 +267,7 @@ async function confirmarAutoregistro(){
     return;
   }
   mostrarToast("¡Usuario activado!", true);
-  guardarSesionYEntrar(resp.usuario);
+  guardarSesionYEntrar(resp.usuario, resp.token);
 }
 
 /* ============ REGISTRO DE OPERADOR (campo, packing, etc.) ============ */
@@ -298,7 +320,7 @@ async function confirmarRegistroOperador(){
     return;
   }
   mostrarToast("¡Registro completado!", true);
-  guardarSesionYEntrar(resp.usuario);
+  guardarSesionYEntrar(resp.usuario, resp.token);
 }
 
 /* ============ CAMPOS "OTROS (ESPECIFICAR)" ============ */

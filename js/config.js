@@ -69,8 +69,18 @@ function obtenerSyncUrl(){
   return localStorage.getItem("sync_url") || DEFAULT_SYNC_URL;
 }
 
+/* Llave de la sesión (token) que entregó el servidor al iniciar sesión.
+   Va en cada pedido: el servidor saca de ahí quién es el usuario y qué rol
+   tiene, en vez de creer lo que diga el celular. */
+function tokenSesion(){
+  try{ return (JSON.parse(localStorage.getItem("sesion_activa")||"{}")).token || ""; }
+  catch(e){ return ""; }
+}
+
 /* Envía una acción al Apps Script (login, autoregistro, cupos, listado, etc.)
-   Devuelve siempre un objeto con al menos {ok:boolean, mensaje}. */
+   Devuelve siempre un objeto con al menos {ok:boolean, mensaje}.
+   Si el servidor dice que la sesión ya no vale, vuelve a la pantalla de
+   ingreso (los registros sin sincronizar se quedan guardados en el celular). */
 async function llamarServidor(payload){
   const url = obtenerSyncUrl();
   if(!url){
@@ -84,9 +94,11 @@ async function llamarServidor(payload){
     const resp = await fetch(url, {
       method:"POST",
       headers:{"Content-Type":"text/plain;charset=utf-8"},
-      body: JSON.stringify(payload)
+      body: JSON.stringify(Object.assign({ token: tokenSesion() }, payload))
     });
-    return await resp.json();
+    const data = await resp.json();
+    if(data && data.sesion_invalida) manejarSesionVencida();
+    return data;
   }catch(err){
     console.error("Error llamando al servidor:", err);
     return {ok:false, mensaje:"No se pudo conectar. Revisa tu internet e intenta de nuevo."};

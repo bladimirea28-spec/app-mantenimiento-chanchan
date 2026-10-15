@@ -44,17 +44,22 @@ async function sincronizarTodo(){
   const reqs = (await leerStore("requerimientos")).filter(r=>!r.sincronizado);
   let exitos = 0, fallos = 0;
 
+  // El número definitivo de OT / falla lo asigna el servidor (es único para
+  // todos los celulares); el del celular era solo provisional.
   for(const r of acts){
     const res = await enviarRegistro(url, "actividad", r);
-    if(res.ok){ r.sincronizado = true; await guardarEnStore("actividades", r); exitos++; } else fallos++;
+    if(res.sesion_invalida){ manejarSesionVencida(); return; }
+    if(res.ok){ r.sincronizado = true; if(res.id_ot) r.id_ot = res.id_ot; await guardarEnStore("actividades", r); exitos++; } else fallos++;
   }
   for(const r of falls){
     const res = await enviarRegistro(url, "falla", r);
-    if(res.ok){ r.sincronizado = true; await guardarEnStore("fallas", r); exitos++; } else fallos++;
+    if(res.sesion_invalida){ manejarSesionVencida(); return; }
+    if(res.ok){ r.sincronizado = true; if(res.id_falla) r.id_falla = res.id_falla; await guardarEnStore("fallas", r); exitos++; } else fallos++;
   }
   const correlativosNuevos = [];
   for(const r of reqs){
     const res = await enviarRegistro(url, "requerimiento", r);
+    if(res.sesion_invalida){ manejarSesionVencida(); return; }
     if(res.ok){
       r.sincronizado = true;
       if(res.correlativo){ r.correlativo = res.correlativo; correlativosNuevos.push(res.correlativo); }
@@ -74,7 +79,7 @@ async function enviarRegistro(url, tipo, registro){
     const resp = await fetch(url, {
       method: "POST",
       headers: {"Content-Type":"text/plain;charset=utf-8"}, // evita preflight CORS en Apps Script
-      body: JSON.stringify({ tipo, registro })
+      body: JSON.stringify({ tipo, registro, token: tokenSesion() })
     });
     const data = await resp.json();
     return data || { ok:false };

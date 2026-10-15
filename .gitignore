@@ -1,0 +1,3 @@
+# Código del servidor (Apps Script): tiene DNI reales y el ID de la hoja.
+# Se guarda solo en esta PC, nunca en GitHub (el repositorio es público).
+apps-script/
