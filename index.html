@@ -1058,6 +1058,17 @@
           <div class="modulo-flecha"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>
         </button>
 
+        <button class="modulo-btn" onclick="irA('pantalla-admin-checklists')">
+          <div class="modulo-icono morado">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 3h6v3H9zM6 6h12v15H6z"/><path d="M9 12l2 2 4-4"/></svg>
+          </div>
+          <div class="modulo-txt">
+            <div class="titulo-lg">Checklists</div>
+            <div class="subtexto" id="admin-badge-checklists">Cargando...</div>
+          </div>
+          <div class="modulo-flecha"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>
+        </button>
+
         <button class="modulo-btn" onclick="irA('pantalla-admin-solicitudes')">
           <div class="modulo-icono morado">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 3h6v3H9zM6 6h12v15H6z"/><path d="M9 12l2 2 4-4"/></svg>
@@ -1094,6 +1105,35 @@
         <button class="btn btn-secundario" style="margin-top:14px;" onclick="exportarExcel()">⬇️ Exportar todo a Excel</button>
         <button class="btn btn-texto" style="margin-top:2px;" onclick="abrirPanelAdmin()">🔄 Actualizar datos</button>
       </div>
+    </div>
+  </section>
+
+  <!-- ================= PANTALLA: ADMIN - CHECKLISTS ================= -->
+  <section class="pantalla" id="pantalla-admin-checklists">
+    <div class="barra-superior">
+      <button class="btn-volver" onclick="irA('pantalla-admin')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="titulo-lg">Checklists</div>
+    </div>
+    <div class="contenido" style="padding-top:16px;">
+      <div class="fila-2">
+        <div class="campo">
+          <label>Formato</label>
+          <select id="admin-filtro-chk-formato" onchange="renderizarChecklistsAdmin()"></select>
+        </div>
+        <div class="campo">
+          <label>Mostrar</label>
+          <select id="admin-filtro-chk-estado" onchange="renderizarChecklistsAdmin()">
+            <option value="">Todos</option>
+            <option value="nc">Solo con NC u observados</option>
+            <option value="no">Solo "no se puede utilizar"</option>
+          </select>
+        </div>
+      </div>
+      <div class="campo">
+        <label>Equipo</label>
+        <select id="admin-filtro-chk-equipo" onchange="renderizarChecklistsAdmin()"></select>
+      </div>
+      <div id="admin-lista-checklists"></div>
     </div>
   </section>
 

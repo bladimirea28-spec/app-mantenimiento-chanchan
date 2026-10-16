@@ -41,6 +41,7 @@ async function abrirPanelAdmin(){
 
   cargarSolicitudesAdmin(sesion);
   cargarRequerimientosAdmin(sesion);
+  cargarChecklistsAdmin();
 
   document.getElementById("admin-cargando").style.display = "none";
   document.getElementById("admin-contenido").style.display = "block";
@@ -712,6 +713,217 @@ async function confirmarEliminarActividadAdmin(idOt){
     await abrirPanelAdmin();
     irA("pantalla-admin-actividades");
   } else if(boton){
+    boton.disabled = false; boton.textContent = "Sí, eliminar";
+  }
+}
+
+/* ============ ADMIN: CHECKLISTS (ver, editar, eliminar) ============
+   Solo para admin: el servidor rechaza editar/eliminar si la sesión no es
+   de un admin, y el panel solo se muestra a admins. */
+let checklistsAdminCache = [];
+let chkEditando = null;
+
+async function cargarChecklistsAdmin(){
+  const badge = document.getElementById("admin-badge-checklists");
+  const resp = await llamarServidor({ tipo:"listado_checklists" });
+  if(!resp || !resp.ok){
+    checklistsAdminCache = [];
+    if(badge) badge.textContent = (resp && resp.mensaje) || "No se pudo cargar.";
+    return;
+  }
+  checklistsAdminCache = (resp.checklists || []).map(checklistDesdeServidor)
+    .sort((a, b) => (parsearFechaPE(b.fecha) || 0) - (parsearFechaPE(a.fecha) || 0));
+  const conNc = checklistsAdminCache.filter(c => (c.respuestas || []).some(r => r.marca === "NC")).length;
+  if(badge) badge.textContent = `${checklistsAdminCache.length} registrado(s) · ${conNc} con NC`;
+
+  const selFormato = document.getElementById("admin-filtro-chk-formato");
+  const previoFormato = selFormato.value;
+  selFormato.innerHTML = `<option value="">Todos</option>` +
+    CHECKLISTS.map(p => `<option value="${esc(p.id)}">${esc(p.nombre)}</option>`).join("");
+  selFormato.value = previoFormato;
+
+  const selEquipo = document.getElementById("admin-filtro-chk-equipo");
+  const previoEquipo = selEquipo.value;
+  const equipos = [];
+  checklistsAdminCache.forEach(c => { if(!equipos.some(e => e.clave === c.equipo_clave)) equipos.push({ clave:c.equipo_clave, texto:c.equipo }); });
+  selEquipo.innerHTML = `<option value="">Todos</option>` +
+    equipos.sort((a, b) => a.texto.localeCompare(b.texto)).map(e => `<option value="${esc(e.clave)}">${esc(e.texto)}</option>`).join("");
+  selEquipo.value = previoEquipo;
+
+  if(document.getElementById("pantalla-admin-checklists").classList.contains("activa")) renderizarChecklistsAdmin();
+}
+
+function renderizarChecklistsAdmin(){
+  const cont = document.getElementById("admin-lista-checklists");
+  if(!cont) return;
+  const formato = document.getElementById("admin-filtro-chk-formato").value;
+  const equipo = document.getElementById("admin-filtro-chk-equipo").value;
+  const estado = document.getElementById("admin-filtro-chk-estado").value;
+  const lista = checklistsAdminCache.filter(c => {
+    if(formato && c.plantilla !== formato) return false;
+    if(equipo && c.equipo_clave !== equipo) return false;
+    const nc = (c.respuestas || []).filter(r => r.marca === "NC").length;
+    const obs = (c.respuestas || []).filter(r => r.marca === "O").length;
+    if(estado === "nc" && !(nc || obs)) return false;
+    if(estado === "no" && c.puede_utilizar !== "NO") return false;
+    return true;
+  });
+  if(lista.length === 0){
+    cont.innerHTML = `<div class="vacio"><div class="subtexto">No hay checklists para este filtro.</div></div>`;
+    return;
+  }
+  cont.innerHTML = lista.map(c => {
+    const p = plantillaPorId(c.plantilla);
+    const nc = (c.respuestas || []).filter(r => r.marca === "NC").length;
+    const obs = (c.respuestas || []).filter(r => r.marca === "O").length;
+    const id = jsArg(c.id);
+    return `
+    <div class="registro-item">
+      <div class="fila1">
+        <div>
+          <div style="font-weight:700;font-size:14px;">${esc(p ? p.nombre : c.plantilla)} · ${esc(c.equipo)}</div>
+          <div class="subtexto" style="margin-top:2px;">${esc(c.usuario || "—")} · ${esc(c.lectura)} ${esc(c.lectura_unidad)}${c.turno ? " · " + esc(c.turno) : ""}</div>
+        </div>
+        <span class="badge">${esc(c.dia || "")} ${esc(c.fecha)}</span>
+      </div>
+      <div class="badge-fila" style="margin-top:8px;">
+        ${nc ? `<span class="badge criticidad-alta">${nc} NC</span>` : `<span class="badge criticidad-baja">Sin NC</span>`}
+        ${obs ? `<span class="badge criticidad-media">${obs} observado(s)</span>` : ""}
+        ${c.puede_utilizar === "NO" ? `<span class="badge criticidad-alta">No se puede utilizar</span>` : ""}
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button type="button" class="btn btn-secundario" style="width:auto;flex:1;padding:9px 10px;font-size:12.5px;" onclick="verDetalleChecklistAdmin(${id})">Ver detalle</button>
+        <button type="button" class="btn btn-secundario" style="width:auto;flex:1;padding:9px 10px;font-size:12.5px;" onclick="editarChecklistAdmin(${id})">Editar</button>
+        <button type="button" class="btn btn-texto" style="width:auto;flex:1;padding:9px 10px;font-size:12.5px;color:var(--rojo-texto,#c0392b);" onclick="eliminarChecklistAdmin(${id})">Eliminar</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function verDetalleChecklistAdmin(id){
+  const c = checklistsAdminCache.find(x => x.id === id);
+  if(!c){ mostrarToast("No se encontró el checklist.", false); return; }
+  const p = plantillaPorId(c.plantilla);
+  let seccionActual = null;
+  const puntos = (c.respuestas || []).map(r => {
+    let cabecera = "";
+    if(r.seccion && r.seccion !== seccionActual){ seccionActual = r.seccion; cabecera = `<div class="chk-seccion" style="margin-top:12px;">${esc(r.seccion)}</div>`; }
+    return `${cabecera}<div class="modal-fila" style="display:flex;gap:8px;align-items:flex-start;">
+      <span class="chk-pill marca-${esc(r.marca)}">${esc(r.marca || "—")}</span>
+      <div style="flex:1;">${esc(r.item)}${r.obs ? `<div class="subtexto">${esc(r.obs)}</div>` : ""}</div></div>`;
+  }).join("");
+  abrirModal(`
+    <div class="modal-titulo"><span>${esc(p ? p.nombre : c.plantilla)}</span><button class="modal-cerrar" onclick="cerrarModal()">×</button></div>
+    <div class="modal-fila"><b>Formato</b>${esc(p ? p.codigo : "—")}</div>
+    <div class="modal-fila"><b>Equipo</b>${esc(c.equipo)}</div>
+    <div class="modal-fila"><b>Fecha</b>${esc(c.dia || "")} ${esc(c.fecha)}</div>
+    <div class="modal-fila"><b>${esc(p ? p.lectura.etiqueta : "Horómetro / km")}</b>${esc(c.lectura)} ${esc(c.lectura_unidad)}</div>
+    ${c.turno ? `<div class="modal-fila"><b>Turno</b>${esc(c.turno)}</div>` : ""}
+    ${c.tractor ? `<div class="modal-fila"><b>Tractor</b>${esc(c.tractor)}</div>` : ""}
+    <div class="modal-fila"><b>Responsable</b>${esc(c.usuario || "—")} · DNI ${esc(c.dni || "—")}</div>
+    <div class="modal-fila"><b>¿Se puede utilizar?</b>${esc(c.puede_utilizar)}</div>
+    ${c.observaciones ? `<div class="modal-fila"><b>Observaciones</b>${esc(c.observaciones)}</div>` : ""}
+    <div style="font-weight:700;font-size:13.5px;margin-top:12px;">Puntos revisados</div>
+    ${puntos}
+    ${(c.fotos || []).length ? `<div style="font-weight:700;font-size:13.5px;margin-top:12px;">Fotos</div>${fotosHtmlAdmin(c.fotos.join("|"), 70)}` : ""}
+    <button class="btn btn-primario" style="margin-top:14px;" onclick="cerrarModal()">Cerrar</button>
+  `);
+}
+
+function editarChecklistAdmin(id){
+  const c = checklistsAdminCache.find(x => x.id === id);
+  if(!c){ mostrarToast("No se encontró el checklist.", false); return; }
+  const p = plantillaPorId(c.plantilla);
+  const marcas = p ? p.marcas : ["C", "NC", "O", "NA"];
+  chkEditando = { id, respuestas:(c.respuestas || []).map(r => Object.assign({}, r)) };
+  let seccionActual = null;
+  const puntos = chkEditando.respuestas.map((r, i) => {
+    let cabecera = "";
+    if(r.seccion && r.seccion !== seccionActual){ seccionActual = r.seccion; cabecera = `<div class="chk-seccion">${esc(r.seccion)}</div>`; }
+    return `${cabecera}<div class="campo" style="margin-bottom:10px;">
+      <label>${esc(r.item)}</label>
+      <div style="display:flex;gap:6px;">
+        <select style="width:96px;flex-shrink:0;" onchange="chkEditando.respuestas[${i}].marca = this.value">
+          ${marcas.map(m => `<option value="${m}" ${r.marca === m ? "selected" : ""}>${m}</option>`).join("")}
+        </select>
+        <input type="text" placeholder="Observación" value="${esc(r.obs)}" oninput="chkEditando.respuestas[${i}].obs = this.value">
+      </div>
+    </div>`;
+  }).join("");
+  abrirModal(`
+    <div class="modal-titulo"><span>Editar checklist</span><button class="modal-cerrar" onclick="cerrarModal()">×</button></div>
+    <p class="subtexto" style="margin-bottom:10px;">${esc(p ? p.nombre : c.plantilla)} · ${esc(c.equipo)} · ${esc(c.fecha)}</p>
+    <div class="fila-2">
+      <div class="campo"><label>${esc(p ? p.lectura.etiqueta : "Horómetro / km")} (${esc(c.lectura_unidad)})</label><input type="number" step="0.1" min="0" id="edit-chk-lectura" value="${esc(c.lectura)}"></div>
+      <div class="campo"><label>¿Se puede utilizar?</label>
+        <select id="edit-chk-utilizar"><option value="SI" ${c.puede_utilizar !== "NO" ? "selected" : ""}>SÍ</option><option value="NO" ${c.puede_utilizar === "NO" ? "selected" : ""}>NO</option></select>
+      </div>
+    </div>
+    ${p && p.pideTurno ? `<div class="campo"><label>Turno</label><select id="edit-chk-turno">
+      ${["", "Día", "Noche"].map(t => `<option value="${t}" ${c.turno === t ? "selected" : ""}>${t || "—"}</option>`).join("")}</select></div>` : ""}
+    <div class="campo"><label>Observaciones generales</label><textarea id="edit-chk-observaciones" rows="2">${esc(c.observaciones)}</textarea></div>
+    <div style="font-weight:700;font-size:13.5px;margin:6px 0 8px;">Puntos revisados</div>
+    ${puntos}
+    <div style="display:flex;gap:8px;margin-top:10px;">
+      <button class="btn btn-secundario" style="flex:1;" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn btn-primario" style="flex:1;" id="btn-guardar-edit-chk" onclick="guardarEdicionChecklistAdmin()">Guardar</button>
+    </div>
+  `);
+}
+
+async function guardarEdicionChecklistAdmin(){
+  if(!chkEditando) return;
+  const lectura = parseFloat(document.getElementById("edit-chk-lectura").value);
+  if(isNaN(lectura) || lectura < 0){ mostrarToast("El horómetro / km no es válido.", false); return; }
+  if(chkEditando.respuestas.some(r => r.marca === "NC" && !String(r.obs || "").trim())){
+    mostrarToast("Cada punto NC necesita una observación.", false); return;
+  }
+  const cambios = {
+    lectura,
+    puede_utilizar: document.getElementById("edit-chk-utilizar").value,
+    observaciones: document.getElementById("edit-chk-observaciones").value.trim(),
+    respuestas: chkEditando.respuestas.map(r => ({ seccion:r.seccion, item:r.item, marca:r.marca, obs:String(r.obs || "").trim() }))
+  };
+  const turno = document.getElementById("edit-chk-turno");
+  if(turno) cambios.turno = turno.value;
+
+  const boton = document.getElementById("btn-guardar-edit-chk");
+  if(boton){ boton.disabled = true; boton.textContent = "Guardando..."; }
+  const resp = await llamarServidor({ tipo:"editar_checklist", id:chkEditando.id, cambios });
+  mostrarToast((resp && resp.mensaje) || "No se pudo actualizar", !!(resp && resp.ok));
+  if(resp && resp.ok){
+    cerrarModal();
+    chkEditando = null;
+    await cargarChecklistsAdmin();
+    renderizarChecklistsAdmin();
+  }else if(boton){
+    boton.disabled = false; boton.textContent = "Guardar";
+  }
+}
+
+function eliminarChecklistAdmin(id){
+  const c = checklistsAdminCache.find(x => x.id === id);
+  if(!c) return;
+  abrirModal(`
+    <div class="modal-titulo"><span>Eliminar checklist</span><button class="modal-cerrar" onclick="cerrarModal()">×</button></div>
+    <p class="subtexto">Se borrará de forma permanente el checklist de <b>${esc(c.equipo)}</b> del ${esc(c.fecha)} (${esc(c.usuario || "—")}). No se puede deshacer. ¿Deseas continuar?</p>
+    <div style="display:flex;gap:8px;margin-top:14px;">
+      <button class="btn btn-secundario" style="flex:1;" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn btn-primario" style="flex:1;background:var(--rojo-600,#c0392b);" id="btn-confirmar-elim-chk" onclick="confirmarEliminarChecklistAdmin(${jsArg(id)})">Sí, eliminar</button>
+    </div>
+  `);
+}
+
+async function confirmarEliminarChecklistAdmin(id){
+  const boton = document.getElementById("btn-confirmar-elim-chk");
+  if(boton){ boton.disabled = true; boton.textContent = "Eliminando..."; }
+  const resp = await llamarServidor({ tipo:"eliminar_checklist", id });
+  mostrarToast((resp && resp.mensaje) || "No se pudo eliminar", !!(resp && resp.ok));
+  if(resp && resp.ok){
+    cerrarModal();
+    await cargarChecklistsAdmin();
+    renderizarChecklistsAdmin();
+  }else if(boton){
     boton.disabled = false; boton.textContent = "Sí, eliminar";
   }
 }

@@ -14,6 +14,7 @@ const TABS_POR_PANTALLA = {
   "pantalla-admin-actividades": "tab-panel-admin",
   "pantalla-admin-fallas": "tab-panel-admin",
   "pantalla-admin-requerimientos": "tab-panel-admin",
+  "pantalla-admin-checklists": "tab-panel-admin",
   "pantalla-admin-solicitudes": "tab-panel-admin",
   "pantalla-admin-generar-solicitud": "tab-panel-admin",
   "pantalla-admin-dispositivos": "tab-panel-admin",
@@ -29,6 +30,7 @@ function irA(idPantalla){
   if(idPantalla === "pantalla-lista-fallas") renderListaFallas();
   if(idPantalla === "pantalla-fallas-abiertas") cargarFallasAbiertas();
   if(idPantalla === "pantalla-admin-actividades") renderizarListadoActividadesAdmin();
+  if(idPantalla === "pantalla-admin-checklists") renderizarChecklistsAdmin();
   if(idPantalla === "pantalla-admin-fallas"){ renderizarListadoFallasAdmin(); actualizarAnalisisPeriodo(); }
   if(idPantalla === "pantalla-menu") actualizarTextoPendientes();
   if(idPantalla === "pantalla-form-mtto" || idPantalla === "pantalla-form-fallas") cargarTecnicosResponsables();
