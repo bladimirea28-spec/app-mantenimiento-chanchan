@@ -14,7 +14,8 @@ async function contarPendientes(){
   const acts = await leerStore("actividades");
   const falls = await leerStore("fallas");
   const reqs = await leerStore("requerimientos");
-  return acts.filter(r=>!r.sincronizado).length + falls.filter(r=>!r.sincronizado).length + reqs.filter(r=>!r.sincronizado).length;
+  const chks = await leerStore("checklists");
+  return [acts, falls, reqs, chks].reduce((n, lista) => n + lista.filter(r=>!r.sincronizado).length, 0);
 }
 
 async function actualizarTextoPendientes(){
@@ -66,6 +67,13 @@ async function sincronizarTodo(){
       await guardarEnStore("requerimientos", r);
       exitos++;
     } else fallos++;
+  }
+
+  const chks = (await leerStore("checklists")).filter(r=>!r.sincronizado);
+  for(const r of chks){
+    const res = await enviarRegistro(url, "checklist", r);
+    if(res.sesion_invalida){ manejarSesionVencida(); return; }
+    if(res.ok){ r.sincronizado = true; await guardarEnStore("checklists", r); exitos++; } else fallos++;
   }
 
   let mensajeFinal = fallos===0 ? `${exitos} registro(s) sincronizado(s)` : `${exitos} listo(s), ${fallos} con error`;

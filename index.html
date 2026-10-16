@@ -194,13 +194,13 @@
           <div class="modulo-flecha"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>
         </button>
 
-        <button class="modulo-btn proximamente" onclick="mostrarToast('Esta función todavía está en desarrollo. Pronto la activamos.', true)">
+        <button class="modulo-btn" id="btn-checklist" onclick="abrirChecklists()">
           <div class="modulo-icono morado">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 3h6v3H9zM6 6h12v15H6z"/><path d="M9 12l2 2 4-4"/></svg>
           </div>
           <div class="modulo-txt">
-            <div class="titulo-lg">Checklist<span class="pill-proximo">Próximamente</span></div>
-            <div class="subtexto">Revisión y llenado de formatos de máquinas</div>
+            <div class="titulo-lg">Checklist</div>
+            <div class="subtexto">Revisión diaria de equipos y horómetro / km</div>
           </div>
           <div class="modulo-flecha"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>
         </button>
@@ -224,6 +224,17 @@
         <div class="modulo-txt">
           <div class="titulo-lg">Reportar falla</div>
           <div class="subtexto">Avisa a mantenimiento de una falla o avería</div>
+        </div>
+        <div class="modulo-flecha"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>
+      </button>
+
+      <button class="modulo-btn" id="btn-checklist-operador" style="display:none;" onclick="abrirChecklists()">
+        <div class="modulo-icono morado">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 3h6v3H9zM6 6h12v15H6z"/><path d="M9 12l2 2 4-4"/></svg>
+        </div>
+        <div class="modulo-txt">
+          <div class="titulo-lg">Checklist diario</div>
+          <div class="subtexto">Revisa tu equipo antes de usarlo</div>
         </div>
         <div class="modulo-flecha"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>
       </button>
@@ -263,6 +274,124 @@
 
         <button class="btn btn-texto" onclick="cerrarSesion()" style="margin-top:2px;">Cerrar sesión</button>
       </div>
+    </div>
+  </section>
+
+  <!-- ================= PANTALLA: CHECKLIST (elegir formato) ================= -->
+  <section class="pantalla" id="pantalla-checklists">
+    <div class="barra-superior">
+      <button class="btn-volver" onclick="irA('pantalla-menu')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="titulo-lg">Checklist diario</div>
+    </div>
+    <div class="contenido">
+      <p class="subtexto" style="margin-bottom:14px;">Elige el equipo que vas a revisar. Se guarda en el celular aunque no tengas señal.</p>
+      <div id="checklist-plantillas"></div>
+      <button class="btn btn-secundario" id="btn-checklist-semanal" style="display:none;margin:4px 0 18px;" onclick="abrirChecklistSemanal()">📅 Vista semanal, visto bueno y Excel</button>
+      <div style="font-weight:700;font-size:13.5px;margin:6px 0 10px;">Mis últimos checklists</div>
+      <div id="checklist-recientes"></div>
+    </div>
+  </section>
+
+  <!-- ================= PANTALLA: LLENAR CHECKLIST ================= -->
+  <section class="pantalla" id="pantalla-form-checklist">
+    <div class="barra-superior">
+      <button class="btn-volver" onclick="abrirChecklists()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="titulo-lg" id="chk-titulo">Checklist</div>
+    </div>
+    <div class="contenido">
+      <div class="tarjeta chk-cabecera" id="chk-formato-info"></div>
+
+      <div class="campo campo-obligatorio">
+        <label>Equipo</label>
+        <select id="chk-equipo" onchange="cambioEquipoChecklist()"></select>
+        <input type="text" id="chk-equipo-otro" placeholder="Escribe el código y nombre del equipo" style="display:none;margin-top:8px;" oninput="cambioEquipoChecklist()">
+      </div>
+
+      <div class="fila-2">
+        <div class="campo campo-obligatorio" id="chk-campo-turno">
+          <label>Turno</label>
+          <select id="chk-turno"><option value="">Elige</option><option>Día</option><option>Noche</option></select>
+        </div>
+        <div class="campo campo-obligatorio">
+          <label id="chk-lectura-label">Horómetro</label>
+          <input type="number" id="chk-lectura" inputmode="decimal" step="0.1" min="0" placeholder="Ej. 1250" oninput="revisarLecturaChecklist()">
+        </div>
+      </div>
+      <div class="ayuda" id="chk-lectura-ayuda" style="margin:-8px 0 12px;"></div>
+      <label class="chk-confirmar" id="chk-confirmar-lectura" style="display:none;">
+        <input type="checkbox" id="chk-confirmar-lectura-check"> Sí, el valor es correcto (por ejemplo, se cambió el tablero o el horómetro)
+      </label>
+
+      <div class="campo campo-obligatorio" id="chk-campo-tractor">
+        <label>Tractor con el que trabaja</label>
+        <select id="chk-tractor" onchange="document.getElementById('chk-tractor-otro').style.display = this.value==='__otro' ? 'block' : 'none';"></select>
+        <input type="text" id="chk-tractor-otro" placeholder="Escribe el tractor" style="display:none;margin-top:8px;">
+      </div>
+
+      <div class="chk-leyenda" id="chk-leyenda"></div>
+      <button type="button" class="btn btn-secundario" style="margin-bottom:14px;" onclick="marcarRestoConforme()">✓ Marcar todo lo que falta como Conforme</button>
+      <div id="chk-items"></div>
+
+      <div class="campo" style="margin-top:6px;">
+        <label>Fotos (opcional)</label>
+        <div class="foto-zona">
+          <div class="foto-botones">
+            <label class="foto-btn" for="chk-foto-camara">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8a2 2 0 0 1 2-2h1.5l1-1.5h7l1 1.5H18a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8z"/><circle cx="12" cy="13" r="3.5"/></svg>
+              Tomar foto
+            </label>
+            <label class="foto-btn foto-btn-secundario" for="chk-foto-galeria">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 16l-5.5-5.5a2 2 0 0 0-2.8 0L3 20"/></svg>
+              Elegir de galería
+            </label>
+          </div>
+          <input type="file" id="chk-foto-camara" accept="image/*" capture="environment" multiple>
+          <input type="file" id="chk-foto-galeria" accept="image/*" multiple>
+          <div class="foto-previews" id="chk-foto-previews"></div>
+        </div>
+      </div>
+
+      <div class="campo">
+        <label>Observaciones generales (opcional)</label>
+        <textarea id="chk-observaciones" placeholder="Algo más que mantenimiento deba saber"></textarea>
+      </div>
+
+      <div class="campo campo-obligatorio">
+        <label>¿El equipo se puede utilizar?</label>
+        <div class="chk-marcas chk-utilizar">
+          <button type="button" data-valor="SI" onclick="elegirUtilizarChecklist('SI')">SÍ</button>
+          <button type="button" data-valor="NO" onclick="elegirUtilizarChecklist('NO')">NO</button>
+        </div>
+      </div>
+
+      <div class="error-msg" id="chk-error"></div>
+      <button class="btn btn-primario" id="btn-guardar-checklist" onclick="guardarChecklist()">Guardar checklist</button>
+    </div>
+  </section>
+
+  <!-- ================= PANTALLA: CHECKLIST — VISTA SEMANAL ================= -->
+  <section class="pantalla" id="pantalla-checklist-semanal">
+    <div class="barra-superior">
+      <button class="btn-volver" onclick="abrirChecklists()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="titulo-lg">Checklist — semana</div>
+    </div>
+    <div class="contenido">
+      <div class="campo">
+        <label>Formato</label>
+        <select id="sem-plantilla" onchange="llenarEquiposSemanal()"></select>
+      </div>
+      <div class="fila-2">
+        <div class="campo">
+          <label>Equipo</label>
+          <select id="sem-equipo"></select>
+        </div>
+        <div class="campo">
+          <label>Semana (elige cualquier día)</label>
+          <input type="date" id="sem-fecha">
+        </div>
+      </div>
+      <button class="btn btn-primario" onclick="verSemanaChecklist()">Ver semana</button>
+      <div id="sem-resultado" style="margin-top:16px;"></div>
     </div>
   </section>
 
@@ -1202,6 +1331,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="datos/equipos.js"></script>
 <script src="datos/materiales.js"></script>
+<script src="datos/checklists.js"></script>
 <script src="js/config.js"></script>
 <script src="js/almacenamiento.js"></script>
 <script src="js/navegacion-login.js"></script>
@@ -1209,6 +1339,7 @@
 <script src="js/fallas.js"></script>
 <script src="js/solicitudes.js"></script>
 <script src="js/requerimientos.js"></script>
+<script src="js/checklists.js"></script>
 <script src="js/sincronizacion.js"></script>
 <script src="js/admin.js"></script>
 <script src="js/inicio.js"></script>

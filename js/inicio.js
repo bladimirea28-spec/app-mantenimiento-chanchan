@@ -48,6 +48,8 @@ window.addEventListener("offline", actualizarEstadoConexion);
     iniciarFotoInput("solicitud_admin","admsol-foto-camara","admsol-foto-previews");
     iniciarFotoInput("solicitud_admin","admsol-foto-galeria","admsol-foto-previews");
     iniciarAutocompleteEquipo("admsol-equipo","admsol-equipo-lista");
+    iniciarFotoInput("checklist","chk-foto-camara","chk-foto-previews");
+    iniciarFotoInput("checklist","chk-foto-galeria","chk-foto-previews");
     document.getElementById("resolver-hora-fin").addEventListener("change", actualizarDuracionResolver);
     document.getElementById("mtto-fechahora-inicio").addEventListener("change", actualizarDuracionMtto);
     document.getElementById("mtto-fechahora-fin").addEventListener("change", actualizarDuracionMtto);

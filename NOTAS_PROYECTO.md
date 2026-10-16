@@ -31,6 +31,10 @@ js/sincronizacion.js  → Envío de registros a Google Sheets
 js/admin.js           → Panel de administración, análisis por período y gráficos,
                         modal, PIN, ver/editar/eliminar actividades y requerimientos
 js/inicio.js          → Toast, indicador de conexión y arranque de la app (iniciar())
+datos/checklists.js   → Formatos de checklist diario (CHECKLISTS): puntos, equipos,
+                        horómetro/km. Agregar un formato = copiar un bloque.
+js/checklists.js      → Checklist diario: llenar, NC → reportar falla, vista
+                        semanal, visto bueno y Excel
 ```
 
 ## Reglas importantes al editar
@@ -66,6 +70,11 @@ js/inicio.js          → Toast, indicador de conexión y arranque de la app (in
   `PIN_SAL`. 5 errores bloquean 15 min. El admin puede "Restablecer PIN"
   en Panel > Dispositivos. Las reglas del PIN están en `errorPin` (igual en
   `js/navegacion-login.js` y en `Codigo.gs`).
+- Checklist diario (2026-10-15): trimotos (MTTO 024 6 02, km), tractor
+  agrícola (MTTO 026 9 01, horómetro) e implemento Jacto (MTTO 026 8 02,
+  horómetro). Hojas CHECKLISTS, CHECKLIST_DETALLE y CHECKLIST_VISTO_BUENO.
+  Visto bueno semanal: "area" (jefe de área o admin) y "mantenimiento"
+  (admin). El Jacto aún no está en datos/equipos.js: se escribe a mano.
 - Los números de OT (`OTM-`) y falla (`F-`) los asigna el servidor; la
   columna `ID_UNICO` evita duplicados cuando un registro llega dos veces.
 

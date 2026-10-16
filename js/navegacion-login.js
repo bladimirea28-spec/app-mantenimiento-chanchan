@@ -7,6 +7,9 @@ const TABS_POR_PANTALLA = {
   "pantalla-lista-fallas": "tab-registrar",
   "pantalla-form-fallas": "tab-registrar",
   "pantalla-form-requerimiento": "tab-registrar",
+  "pantalla-checklists": "tab-inicio",
+  "pantalla-form-checklist": "tab-inicio",
+  "pantalla-checklist-semanal": "tab-inicio",
   "pantalla-admin": "tab-panel-admin",
   "pantalla-admin-actividades": "tab-panel-admin",
   "pantalla-admin-fallas": "tab-panel-admin",
@@ -160,6 +163,7 @@ function entrarAMenu(usuario){
   document.getElementById("menu-tecnico-admin").style.display = esTecnicoOAdmin ? "block" : "none";
   document.getElementById("bloque-perfil-inline").style.display = esOperador ? "block" : "none";
   document.getElementById("btn-reportar-falla-operador").style.display = esOperador ? "flex" : "none";
+  document.getElementById("btn-checklist-operador").style.display = esOperador ? "flex" : "none";
   document.getElementById("btn-solicitar-actividad").style.display = (esOperador && usuario.es_jefe_area) ? "flex" : "none";
   document.getElementById("tarjeta-pedir-correo").style.display = (esAdmin && !usuario.correo) ? "block" : "none";
 

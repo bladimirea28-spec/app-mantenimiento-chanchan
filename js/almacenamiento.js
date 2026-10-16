@@ -1,7 +1,7 @@
 /* ============ ALMACENAMIENTO LOCAL (IndexedDB) ============ */
 let db;
 const DB_NAME = "mantenimiento_chanchan";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 function abrirDB(){
   return new Promise((resolve,reject)=>{
@@ -16,6 +16,9 @@ function abrirDB(){
       }
       if(!d.objectStoreNames.contains("requerimientos")){
         d.createObjectStore("requerimientos",{keyPath:"id"});
+      }
+      if(!d.objectStoreNames.contains("checklists")){
+        d.createObjectStore("checklists",{keyPath:"id"});
       }
     };
     req.onsuccess = (e)=>{ db = e.target.result; resolve(db); };
