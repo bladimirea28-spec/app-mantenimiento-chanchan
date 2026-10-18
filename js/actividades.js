@@ -171,7 +171,7 @@ async function guardarMtto(){
   const registro = {
     id: idOT + "_" + Date.now(),
     id_ot: idOT,
-    fecha: ahora.toLocaleDateString("es-PE"),
+    fecha: fechaPE(ahora),
     anio: ahora.getFullYear(),
     usuario: sesion.nombre || "—",
     dni: sesion.dni || "—",

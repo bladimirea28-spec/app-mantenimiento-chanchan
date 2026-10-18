@@ -164,6 +164,8 @@
         <span>Elige qué vas a registrar. Tus datos se guardan aunque no tengas señal, y se suben solos cuando vuelva la conexión.</span>
       </div>
 
+      <button class="alerta-mtto" id="alerta-mantenimiento" style="display:none;" onclick="abrirControlUnidades()"></button>
+
       <div id="resumen-inicio" class="resumen-grid" style="display:none;">
         <div class="resumen-tile rojo" style="cursor:pointer;" onclick="abrirFallasAbiertas()"><div class="num" id="resumen-fallas-abiertas">0</div><div class="lbl">Fallas abiertas</div></div>
         <div class="resumen-tile ambar" style="cursor:pointer;" onclick="abrirFallasAbiertas()"><div class="num" id="resumen-criticas">0</div><div class="lbl">Críticas sin resolver</div></div>
@@ -179,6 +181,17 @@
           <div class="modulo-txt">
             <div class="titulo-lg">Registros de mantenimiento</div>
             <div class="subtexto">Actividades y fallas</div>
+          </div>
+          <div class="modulo-flecha"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>
+        </button>
+
+        <button class="modulo-btn" id="btn-control-mtto" onclick="abrirControlUnidades()">
+          <div class="modulo-icono azul">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg>
+          </div>
+          <div class="modulo-txt">
+            <div class="titulo-lg">Control de mantenimiento</div>
+            <div class="subtexto" id="menu-subtexto-control">Preventivos por horómetro / km y correctivos</div>
           </div>
           <div class="modulo-flecha"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>
         </button>
@@ -392,6 +405,141 @@
       </div>
       <button class="btn btn-primario" onclick="verSemanaChecklist()">Ver semana</button>
       <div id="sem-resultado" style="margin-top:16px;"></div>
+    </div>
+  </section>
+
+  <!-- ================= PANTALLA: CONTROL DE MANTENIMIENTO — ESTADO DE UNIDADES ================= -->
+  <section class="pantalla" id="pantalla-control-unidades">
+    <div class="barra-superior">
+      <button class="btn-volver" onclick="irA('pantalla-menu')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="titulo-lg">Control de mantenimiento</div>
+    </div>
+    <div class="contenido">
+      <div class="mtto-resumen" id="mtto-resumen"></div>
+      <div class="fila-2">
+        <button class="btn btn-primario" id="btn-mtto-registrar" style="margin-top:0;" onclick="abrirFormMantenimiento()">+ Registrar mantenimiento</button>
+        <button class="btn btn-secundario" style="margin-top:0;" onclick="exportarControlExcel()">⬇ Excel de control</button>
+      </div>
+      <button class="btn btn-texto" id="btn-mtto-partida" style="display:none;margin-top:4px;" onclick="abrirPuntoPartida()">⚙️ Punto de partida de las unidades (admin)</button>
+      <div class="campo" style="margin-top:12px;">
+        <label>Mostrar</label>
+        <select id="mtto-filtro" onchange="renderControlUnidades()">
+          <option value="">Todas las unidades</option>
+          <option value="alerta">Solo vencidas y próximas</option>
+          <option value="SIN REGISTRO">Sin registro (falta punto de partida)</option>
+        </select>
+      </div>
+      <div id="mtto-aviso"></div>
+      <div id="mtto-lista-unidades"><div class="subtexto">Cargando...</div></div>
+    </div>
+  </section>
+
+  <!-- ================= PANTALLA: REGISTRAR MANTENIMIENTO (preventivo / correctivo) ================= -->
+  <section class="pantalla" id="pantalla-form-mantenimiento">
+    <div class="barra-superior">
+      <button class="btn-volver" onclick="abrirControlUnidades()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="titulo-lg">Registrar mantenimiento</div>
+    </div>
+    <div class="contenido">
+      <div class="campo campo-obligatorio">
+        <label>Tipo de mantenimiento</label>
+        <div class="chk-marcas mtto-tipo">
+          <button type="button" data-valor="Preventivo" onclick="elegirTipoMantenimiento('Preventivo')">Preventivo</button>
+          <button type="button" data-valor="Correctivo" onclick="elegirTipoMantenimiento('Correctivo')">Correctivo</button>
+        </div>
+      </div>
+
+      <div class="campo campo-obligatorio">
+        <label>Unidad</label>
+        <select id="mto-equipo" onchange="cambioEquipoMantenimiento()"></select>
+      </div>
+      <div class="tarjeta mtto-info-unidad" id="mto-info-unidad" style="display:none;"></div>
+
+      <div class="campo campo-obligatorio" id="mto-campo-pm">
+        <label>Mantenimiento realizado</label>
+        <select id="mto-pm" onchange="renderPlanMantenimiento()"></select>
+        <div class="ayuda" id="mto-pm-ayuda"></div>
+      </div>
+
+      <div class="fila-2">
+        <div class="campo campo-obligatorio">
+          <label>Fecha</label>
+          <input type="date" id="mto-fecha">
+        </div>
+        <div class="campo campo-obligatorio">
+          <label id="mto-lectura-label">KM / horómetro real</label>
+          <input type="number" id="mto-lectura" inputmode="decimal" step="0.1" min="0">
+        </div>
+      </div>
+      <div class="fila-2">
+        <div class="campo"><label>Hora inicio</label><input type="time" id="mto-hora-inicio"></div>
+        <div class="campo"><label>Hora fin</label><input type="time" id="mto-hora-fin"></div>
+      </div>
+
+      <div id="mto-bloque-correctivo" style="display:none;">
+        <div class="campo">
+          <label>Falla que se corrige (opcional)</label>
+          <select id="mto-falla"></select>
+          <label class="chk-confirmar" style="color:var(--tinta-600);margin-top:8px;"><input type="checkbox" id="mto-cerrar-falla" checked> Marcar esa falla como resuelta</label>
+        </div>
+        <div class="campo campo-obligatorio">
+          <label>Trabajo realizado</label>
+          <textarea id="mto-trabajo" placeholder="¿Qué se reparó o cambió?"></textarea>
+        </div>
+      </div>
+
+      <div class="tarjeta" style="margin-bottom:14px;">
+        <div style="font-weight:800;font-size:14px;margin-bottom:8px;" id="mto-titulo-materiales">Materiales a cambiar</div>
+        <div id="mto-materiales"></div>
+        <div id="mto-agregar-material" style="margin-top:10px;">
+          <input type="text" id="mto-material-nuevo" list="mto-lista-materiales" placeholder="+ Agregar material (busca o escribe)" onchange="agregarMaterialMantenimiento()">
+          <datalist id="mto-lista-materiales"></datalist>
+        </div>
+        <div class="mtto-total">Costo de materiales: <b id="mto-costo">S/ 0.00</b></div>
+      </div>
+
+      <div class="tarjeta" style="margin-bottom:14px;" id="mto-bloque-inspeccion">
+        <div style="font-weight:800;font-size:14px;margin-bottom:8px;">Check list de inspección</div>
+        <button type="button" class="btn btn-secundario" style="margin:0 0 10px;" onclick="marcarInspeccionOk()">✓ Marcar lo que falta como OK</button>
+        <div id="mto-inspeccion"></div>
+      </div>
+
+      <div class="campo">
+        <label>Cambios fuera del plan</label>
+        <textarea id="mto-cambios" placeholder="Repuestos o trabajos que no estaban en el plan"></textarea>
+      </div>
+      <div class="campo">
+        <label>Observaciones</label>
+        <textarea id="mto-observaciones"></textarea>
+      </div>
+
+      <div class="campo">
+        <label>Fotos (opcional)</label>
+        <div class="foto-zona">
+          <div class="foto-botones">
+            <label class="foto-btn" for="mto-foto-camara">Tomar foto</label>
+            <label class="foto-btn foto-btn-secundario" for="mto-foto-galeria">Elegir de galería</label>
+          </div>
+          <input type="file" id="mto-foto-camara" accept="image/*" capture="environment" multiple>
+          <input type="file" id="mto-foto-galeria" accept="image/*" multiple>
+          <div class="foto-previews" id="mto-foto-previews"></div>
+        </div>
+      </div>
+
+      <div class="error-msg" id="mto-error"></div>
+      <button class="btn btn-primario" onclick="guardarMantenimiento()">Guardar mantenimiento</button>
+    </div>
+  </section>
+
+  <!-- ================= PANTALLA: PUNTO DE PARTIDA (admin) ================= -->
+  <section class="pantalla" id="pantalla-punto-partida">
+    <div class="barra-superior">
+      <button class="btn-volver" onclick="abrirControlUnidades()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="titulo-lg">Punto de partida</div>
+    </div>
+    <div class="contenido">
+      <p class="subtexto" style="margin-bottom:14px;">Carga una sola vez, por cada unidad, su km / horómetro actual y el último mantenimiento preventivo que se le hizo. Desde aquí la app empieza a llevar el control y a avisar.</p>
+      <div id="partida-lista"></div>
     </div>
   </section>
 
@@ -1372,6 +1520,8 @@
 <script src="datos/equipos.js"></script>
 <script src="datos/materiales.js"></script>
 <script src="datos/checklists.js"></script>
+<script src="datos/planes-mantenimiento.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="js/config.js"></script>
 <script src="js/almacenamiento.js"></script>
 <script src="js/navegacion-login.js"></script>
@@ -1380,6 +1530,8 @@
 <script src="js/solicitudes.js"></script>
 <script src="js/requerimientos.js"></script>
 <script src="js/checklists.js"></script>
+<script src="js/control-mantenimiento.js"></script>
+<script src="js/excel-control.js"></script>
 <script src="js/sincronizacion.js"></script>
 <script src="js/admin.js"></script>
 <script src="js/inicio.js"></script>

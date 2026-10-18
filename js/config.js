@@ -131,6 +131,20 @@ function urlSegura(url){
   return /^(https:\/\/|data:image\/)/i.test(u) ? esc(u) : "";
 }
 
+/* Fecha como "01/09/2026" (siempre con dos dígitos). Así coincide con lo que
+   devuelve el servidor (dd/MM/yyyy). toLocaleDateString("es-PE") da
+   "1/9/2026" en los días y meses de un dígito, por eso no se usa directo. */
+function fechaPE(fecha){
+  const d = fecha || new Date();
+  return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+}
+
+/* Compara dos fechas en texto aunque una venga "1/9/2026" y otra "01/09/2026". */
+function mismaFechaPE(a, b){
+  const norm = t => String(t || "").split(" ")[0].split("/").map(n => String(+n)).join("/");
+  return norm(a) === norm(b);
+}
+
 function primerNombre(nombreCompleto){
   return (nombreCompleto||"").trim().split(/\s+/)[0] || nombreCompleto;
 }

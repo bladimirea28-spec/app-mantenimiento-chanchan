@@ -1,4 +1,4 @@
-const CACHE_NAME = "mantenimiento-chanchan-v7";
+const CACHE_NAME = "mantenimiento-chanchan-v8";
 const ARCHIVOS_BASE = [
   "./",
   "./index.html",
@@ -10,6 +10,8 @@ const ARCHIVOS_BASE = [
   "./datos/equipos.js",
   "./datos/materiales.js",
   "./datos/checklists.js",
+  "./datos/planes-mantenimiento.js",
+  "./plantillas/CONTROL_MANTENIMIENTO.xlsx",
   "./js/config.js",
   "./js/almacenamiento.js",
   "./js/navegacion-login.js",
@@ -18,6 +20,8 @@ const ARCHIVOS_BASE = [
   "./js/solicitudes.js",
   "./js/requerimientos.js",
   "./js/checklists.js",
+  "./js/control-mantenimiento.js",
+  "./js/excel-control.js",
   "./js/sincronizacion.js",
   "./js/admin.js",
   "./js/inicio.js"

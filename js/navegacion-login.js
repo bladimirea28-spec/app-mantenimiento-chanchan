@@ -10,6 +10,9 @@ const TABS_POR_PANTALLA = {
   "pantalla-checklists": "tab-inicio",
   "pantalla-form-checklist": "tab-inicio",
   "pantalla-checklist-semanal": "tab-inicio",
+  "pantalla-control-unidades": "tab-inicio",
+  "pantalla-form-mantenimiento": "tab-registrar",
+  "pantalla-punto-partida": "tab-inicio",
   "pantalla-admin": "tab-panel-admin",
   "pantalla-admin-actividades": "tab-panel-admin",
   "pantalla-admin-fallas": "tab-panel-admin",
@@ -178,6 +181,7 @@ function entrarAMenu(usuario){
   if(esTecnicoOAdmin){
     actualizarResumenInicio();
   }
+  actualizarAlertaMantenimiento(true);
 }
 
 async function guardarCorreoAdmin(){

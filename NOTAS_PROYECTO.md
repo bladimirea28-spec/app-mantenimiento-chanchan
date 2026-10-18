@@ -33,8 +33,16 @@ js/admin.js           → Panel de administración, análisis por período y gr�
 js/inicio.js          → Toast, indicador de conexión y arranque de la app (iniciar())
 datos/checklists.js   → Formatos de checklist diario (CHECKLISTS): puntos, equipos,
                         horómetro/km. Agregar un formato = copiar un bloque.
-js/checklists.js      → Checklist diario: llenar, NC → reportar falla, vista
-                        semanal, visto bueno y Excel
+js/checklists.js      → Checklist diario: llenar, vista semanal, visto bueno y
+                        Excel (las NC crean falla sola en el servidor)
+datos/planes-mantenimiento.js → GENERADO desde el Excel de control con
+                        herramientas/generar_planes_mtto.py (no editar a mano)
+plantillas/CONTROL_MANTENIMIENTO.xlsx → copia exacta del Excel de control,
+                        usada como plantilla para exportar
+js/control-mantenimiento.js → Estado de unidades (semáforo), alertas en el
+                        inicio, registrar preventivo/correctivo, punto de partida
+js/excel-control.js   → Llena la plantilla (REGISTRO, EQUIPOS, CONSULTA,
+                        FORMATO) escribiendo en el XML, sin tocar el diseño
 ```
 
 ## Reglas importantes al editar
@@ -75,6 +83,16 @@ js/checklists.js      → Checklist diario: llenar, NC → reportar falla, vista
   horómetro). Hojas CHECKLISTS, CHECKLIST_DETALLE y CHECKLIST_VISTO_BUENO.
   Visto bueno semanal: "area" (jefe de área o admin) y "mantenimiento"
   (admin). El Jacto aún no está en datos/equipos.js: se escribe a mano.
+- Control de mantenimiento (2026-10-18): planes del Excel "CONTROL DE
+  MANTENIMIENTO" (16 unidades, 13 planes). Lectura actual = la mayor entre
+  checklists, mantenimientos y punto de partida. Aviso: 100 km / 15 h / 15
+  días antes (AVISO_POR_CONTROL, o el que ponga el admin por unidad). Hojas:
+  MANTENIMIENTOS, MTTO_MATERIALES, MTTO_INSPECCION, MTTO_PARAMETROS. Cada
+  mantenimiento crea su fila en ACTIVIDADES_MTTO con N° OT. NO OK en la
+  inspección y NC en checklists crean falla automática.
+  Si cambia el Excel de control: correr herramientas/generar_planes_mtto.py.
+- Fechas: usar siempre fechaPE() (dd/mm/yyyy con dos dígitos), no
+  toLocaleDateString, para que coincidan con lo que devuelve el servidor.
 - Los números de OT (`OTM-`) y falla (`F-`) los asigna el servidor; la
   columna `ID_UNICO` evita duplicados cuando un registro llega dos veces.
 

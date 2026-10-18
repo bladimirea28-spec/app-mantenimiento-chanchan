@@ -77,7 +77,7 @@ async function guardarFalla(){
   const registro = {
     id: idFalla + "_" + Date.now(),
     id_falla: idFalla,
-    fecha: ahora.toLocaleDateString("es-PE"),
+    fecha: fechaPE(ahora),
     tecnico: sesion.nombre || "—",
     dni: sesion.dni || "—",
     tecnico_responsable: tecnicoResponsable,
@@ -139,7 +139,7 @@ async function guardarFallaOperador(){
   const registro = {
     id: idFalla + "_" + Date.now(),
     id_falla: idFalla,
-    fecha: ahora.toLocaleDateString("es-PE"),
+    fecha: fechaPE(ahora),
     tecnico: sesion.nombre || "—",
     dni: sesion.dni || "—",
     tecnico_responsable: "",

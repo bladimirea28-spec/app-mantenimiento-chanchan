@@ -446,6 +446,42 @@
   .chk-vb:last-child{border-bottom:none;}
   .chk-vb.ok{color:var(--verde-texto);}
   .chk-btn-vb{width:auto;margin-top:0;padding:8px 12px;font-size:12.5px;}
+  /* ---------- Control de mantenimiento ---------- */
+  .alerta-mtto{
+    display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:none;cursor:pointer;
+    border-radius:14px;padding:14px 16px;margin-bottom:14px;font-family:inherit;font-size:13.5px;line-height:1.35;
+  }
+  .alerta-mtto.vencido{background:var(--rojo-100);color:var(--rojo-texto);}
+  .alerta-mtto.proximo{background:var(--ambar-100);color:var(--ambar-texto);}
+  .alerta-mtto small{font-size:12px;opacity:.9;}
+  .alerta-mtto-icono{font-size:22px;}
+  .mtto-resumen{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;}
+  .mtto-chip{border-radius:12px;padding:10px 6px;text-align:center;font-size:11px;font-weight:700;line-height:1.3;}
+  .mtto-chip b{display:block;font-size:20px;}
+  .mtto-chip.vencido,.badge.mtto-estado.vencido{background:var(--rojo-100);color:var(--rojo-texto);}
+  .mtto-chip.proximo,.badge.mtto-estado.proximo{background:var(--ambar-100);color:var(--ambar-texto);}
+  .mtto-chip.aldia,.badge.mtto-estado.aldia{background:var(--verde-100);color:var(--verde-texto);}
+  .mtto-chip.sinregistro,.badge.mtto-estado.sinregistro{background:var(--superficie);color:var(--tinta-600);border:1px solid var(--linea);}
+  .mtto-unidad{border-left:5px solid var(--linea);}
+  .mtto-unidad.vencido{border-left-color:var(--rojo-600);}
+  .mtto-unidad.proximo{border-left-color:var(--ambar-500);}
+  .mtto-unidad.aldia{border-left-color:var(--verde-700);}
+  .mtto-datos{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;margin-top:10px;font-size:12.5px;color:var(--tinta-900);}
+  .mtto-datos span{display:block;font-size:11px;color:var(--tinta-600);font-weight:700;text-transform:uppercase;letter-spacing:.02em;}
+  .mtto-btn{width:auto;flex:1;margin-top:0;padding:9px 10px;font-size:12.5px;}
+  .mtto-info-unidad{margin-bottom:14px;}
+  .mtto-material{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;padding:10px 0;border-bottom:1px solid var(--linea);}
+  .mtto-material.no-cambiado .mtto-material-texto{opacity:.55;}
+  .mtto-material-texto{flex:1 1 180px;font-size:13px;}
+  .mtto-material-texto small{display:block;color:var(--tinta-600);font-size:11.5px;margin-top:2px;}
+  .mtto-material-controles{display:flex;align-items:center;gap:6px;}
+  .mtto-material-controles input{width:78px;padding:9px 8px;}
+  .mtto-sino button{min-height:38px;padding:0 10px;font-size:12.5px;}
+  .mtto-unidad-txt{font-size:12px;color:var(--tinta-600);min-width:34px;}
+  .mtto-quitar{background:none;border:none;color:var(--rojo-600);font-size:16px;cursor:pointer;padding:4px;}
+  .mtto-total{margin-top:12px;padding-top:10px;border-top:1px solid var(--linea);text-align:right;font-size:13.5px;}
+  @media (max-width:380px){ .mtto-resumen{grid-template-columns:repeat(2,1fr);} .mtto-datos{grid-template-columns:1fr;} }
+
   @media (max-width:480px){
     .chk-tabla{min-width:520px;font-size:11px;}
     .chk-tabla tbody th{min-width:118px;max-width:130px;font-size:11px;}

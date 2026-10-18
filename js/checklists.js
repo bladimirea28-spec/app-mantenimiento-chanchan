@@ -326,7 +326,7 @@ async function guardarChecklist(){
     plantilla: p.id, codigo_formato: p.codigo, nombre_formato: p.nombre,
     equipo_codigo: eq.codigo, equipo: eq.nombre, equipo_clave: eq.clave, area: eq.area,
     turno: p.pideTurno ? turno : "", tractor,
-    fecha: ahora.toLocaleDateString("es-PE"),
+    fecha: fechaPE(ahora),
     hora: ahora.toTimeString().slice(0, 5),
     semana: semanaISO(ahora), dia: DIAS_SEMANA[indiceDiaSemana(ahora)],
     lectura, lectura_tipo: p.lectura.tipo, lectura_unidad: p.lectura.unidad,
@@ -345,82 +345,25 @@ async function guardarChecklist(){
   mostrarToast("Checklist guardado" + (navigator.onLine ? "" : " (pendiente de sincronizar)"), true);
 
   if(registro.nc > 0 || registro.puede_utilizar === "NO"){
-    ofrecerFallaDesdeChecklist(registro);
+    avisarFallaAutomatica(registro);
   }else{
     abrirChecklists();
   }
+  if(navigator.onLine) sincronizarTodo();
 }
 
-/* ---------- NC o "No se puede utilizar" → reportar falla ---------- */
-function ofrecerFallaDesdeChecklist(registro){
+/* ---------- NC o "No se puede utilizar" → alerta automática ----------
+   La falla la crea el servidor al sincronizar (no depende de que el
+   operador acepte), así le llega al técnico en Alertas / Fallas abiertas. */
+function avisarFallaAutomatica(registro){
   const motivo = registro.puede_utilizar === "NO"
     ? "Marcaste que el equipo <b>no se puede utilizar</b>."
     : `Encontraste <b>${registro.nc} punto(s) No conforme</b>.`;
   abrirModal(`
-    <div class="modal-titulo"><span>¿Avisar a mantenimiento?</span><button class="modal-cerrar" onclick="cerrarModal(); abrirChecklists();">×</button></div>
-    <p class="subtexto">${motivo} Podemos crear el reporte de falla ya llenado con el equipo y lo que encontraste, para que llegue a mantenimiento.</p>
-    <div style="display:flex;gap:8px;margin-top:14px;">
-      <button class="btn btn-secundario" style="flex:1;" onclick="cerrarModal(); abrirChecklists();">Ahora no</button>
-      <button class="btn btn-primario" style="flex:1;" onclick="reportarFallaDesdeChecklist(${jsArg(registro.id)})">Sí, reportar falla</button>
-    </div>
+    <div class="modal-titulo"><span>Se avisará a mantenimiento</span><button class="modal-cerrar" onclick="cerrarModal(); abrirChecklists();">×</button></div>
+    <p class="subtexto">${motivo} Al sincronizar se crea automáticamente una alerta de falla para que un técnico la corrija.${navigator.onLine ? "" : " Ahora no tienes señal: se enviará cuando vuelva la conexión."}</p>
+    <button class="btn btn-primario" style="margin-top:14px;" onclick="cerrarModal(); abrirChecklists();">Entendido</button>
   `);
-}
-
-/* Elige el área en un <select> de área; si no está en la lista usa "Otros". */
-function elegirAreaEnSelect(idSelect, idOtro, area){
-  const sel = document.getElementById(idSelect);
-  const otro = document.getElementById(idOtro);
-  const opcion = [...sel.options].find(o => o.value && o.text.toLowerCase() === String(area || "").toLowerCase());
-  if(opcion){
-    sel.value = opcion.value;
-    otro.style.display = "none";
-  }else if(area){
-    sel.value = "Otros";
-    otro.style.display = "block";
-    otro.value = area;
-  }
-}
-
-async function reportarFallaDesdeChecklist(idChecklist){
-  cerrarModal();
-  const registro = (await leerStore("checklists")).find(r => r.id === idChecklist);
-  if(!registro){ abrirChecklists(); return; }
-
-  const hallazgos = registro.respuestas
-    .filter(r => r.marca === "NC" || r.marca === "O")
-    .map(r => `- ${r.item}: ${r.marca === "NC" ? "No conforme" : "Observado"}${r.obs ? " — " + r.obs : ""}`);
-  const descripcion = [
-    `Detectado en checklist ${registro.nombre_formato} (${registro.codigo_formato}) del ${registro.fecha}, ${registro.lectura_tipo === "km" ? "km" : "horómetro"}: ${registro.lectura}.`,
-    ...hallazgos,
-    registro.puede_utilizar === "NO" ? "El equipo NO se puede utilizar." : "",
-    registro.observaciones ? "Observaciones: " + registro.observaciones : ""
-  ].filter(Boolean).join("\n");
-  const equipoTexto = registro.equipo_codigo ? `${registro.equipo_codigo} - ${registro.equipo}` : registro.equipo;
-  const criticidad = registro.puede_utilizar === "NO" ? "Alta" : "Media";
-
-  const sesion = JSON.parse(localStorage.getItem("sesion_activa") || "{}");
-  if(sesion.rol === "operador"){
-    abrirFormFallaOperador();
-    document.getElementById("oper-falla-equipo").value = equipoTexto;
-    elegirAreaEnSelect("oper-falla-area", "oper-falla-area-otro", registro.area);
-    document.getElementById("oper-falla-tipo").value = "Detectada en checklist";
-    document.getElementById("oper-falla-criticidad").value = criticidad;
-    document.getElementById("oper-falla-descripcion").value = descripcion;
-    fotosTemp.falla_operador = [...(registro.fotos || [])];
-    renderFotoPreviews("falla_operador", "oper-falla-foto-previews");
-  }else{
-    abrirFormFalla();
-    document.getElementById("falla-equipo").value = equipoTexto;
-    elegirAreaEnSelect("falla-area", "falla-area-otro", registro.area);
-    document.getElementById("falla-tipo").value = "Detectada en checklist";
-    document.getElementById("falla-criticidad").value = criticidad;
-    document.getElementById("falla-descripcion").value = descripcion;
-    document.getElementById("falla-hora-inicio").value = registro.hora || "";
-    if(registro.turno) document.getElementById("falla-turno").value = registro.turno;
-    fotosTemp.falla = [...(registro.fotos || [])];
-    renderFotoPreviews("falla", "falla-foto-previews");
-  }
-  mostrarToast("Revisa el reporte y toca Guardar para enviarlo a mantenimiento", true);
 }
 
 /* ---------- Vista semanal (técnicos, admins y jefes de área) ---------- */
@@ -491,8 +434,8 @@ async function verSemanaChecklist(){
 
   const dias = DIAS_SEMANA.map((nombre, i) => {
     const fecha = new Date(lunes); fecha.setDate(lunes.getDate() + i);
-    const fechaPE = fecha.toLocaleDateString("es-PE");
-    return { nombre, fecha, registros: registros.filter(r => r.fecha === fechaPE).sort((x, y) => (x.turno > y.turno ? 1 : -1)) };
+    const fechaDelDia = fechaPE(fecha);
+    return { nombre, fecha, registros: registros.filter(r => mismaFechaPE(r.fecha, fechaDelDia)).sort((x, y) => (x.turno > y.turno ? 1 : -1)) };
   });
   const equipoTexto = document.getElementById("sem-equipo").selectedOptions[0].text;
   semanaChecklist = { plantilla:p, clave, equipoTexto, semana, lunes, dias, vistos, registros };
@@ -601,7 +544,7 @@ function exportarSemanaChecklistExcel(){
     [p.titulo.toUpperCase()],
     [],
     ["Equipo:", s.equipoTexto],
-    ["Semana:", `${s.semana} (del ${s.lunes.toLocaleDateString("es-PE")} al ${domingo.toLocaleDateString("es-PE")})`],
+    ["Semana:", `${s.semana} (del ${fechaPE(s.lunes)} al ${fechaPE(domingo)})`],
     ["Leyenda:", p.marcas.map(m => `${m} = ${NOMBRES_MARCAS[m]}`).join("   ")],
     [],
     ["ASPECTO A REVISAR", ...s.dias.map(d => `${d.nombre.toUpperCase()} ${fechaCorta(d.fecha)}`), "OBSERVACIÓN"]

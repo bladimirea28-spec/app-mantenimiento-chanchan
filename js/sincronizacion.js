@@ -15,7 +15,8 @@ async function contarPendientes(){
   const falls = await leerStore("fallas");
   const reqs = await leerStore("requerimientos");
   const chks = await leerStore("checklists");
-  return [acts, falls, reqs, chks].reduce((n, lista) => n + lista.filter(r=>!r.sincronizado).length, 0);
+  const mtos = await leerStore("mantenimientos");
+  return [acts, falls, reqs, chks, mtos].reduce((n, lista) => n + lista.filter(r=>!r.sincronizado).length, 0);
 }
 
 async function actualizarTextoPendientes(){
@@ -75,11 +76,18 @@ async function sincronizarTodo(){
     if(res.sesion_invalida){ manejarSesionVencida(); return; }
     if(res.ok){ r.sincronizado = true; await guardarEnStore("checklists", r); exitos++; } else fallos++;
   }
+  const mtos = (await leerStore("mantenimientos")).filter(r=>!r.sincronizado);
+  for(const r of mtos){
+    const res = await enviarRegistro(url, "mantenimiento", r);
+    if(res.sesion_invalida){ manejarSesionVencida(); return; }
+    if(res.ok){ r.sincronizado = true; if(res.id_ot) r.n_ot = res.id_ot; await guardarEnStore("mantenimientos", r); exitos++; } else fallos++;
+  }
 
   let mensajeFinal = fallos===0 ? `${exitos} registro(s) sincronizado(s)` : `${exitos} listo(s), ${fallos} con error`;
   if(correlativosNuevos.length){ mensajeFinal += ` (${correlativosNuevos.join(", ")})`; }
   mostrarToast(mensajeFinal, fallos===0);
   actualizarTextoPendientes();
+  if(exitos > 0) actualizarAlertaMantenimiento(true);
 }
 
 async function enviarRegistro(url, tipo, registro){
