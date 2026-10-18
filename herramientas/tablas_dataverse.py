@@ -85,6 +85,26 @@ def nombre_columna_dataverse(nombre_hoja):
     return nombre_hoja.replace("Ñ", "NI")
 
 
+# Entorno personal de Bladimir (org9a7207d6): prefijo del editor y nombre del
+# "conjunto" de cada tabla en la API (Dataverse lo pluraliza a su manera).
+PREFIJO = "cra58_"
+CONJUNTOS = {
+    "Mtto Actividades": "cra58_mtto_actividadeses",
+    "Mtto Fallas": "cra58_mtto_fallases",
+    "Mtto Requerimientos": "cra58_mtto_requerimientoses",
+    "Mtto Requerimiento Detalle": "cra58_mtto_requerimiento_detalles",
+    "Mtto Solicitudes": "cra58_mtto_solicitudeses",
+    "Mtto Checklists": "cra58_mtto_checklistses",
+    "Mtto Checklist Detalle": "cra58_mtto_checklist_detalles",
+    "Mtto Checklist Visto Bueno": "cra58_mtto_checklist_visto_buenos",
+    "Mtto Control Mantenimientos": "cra58_mtto_control_mantenimientoses",
+    "Mtto Control Materiales": "cra58_mtto_control_materialeses",
+    "Mtto Control Inspeccion": "cra58_mtto_control_inspeccions",
+    "Mtto Control Punto Partida": "cra58_mtto_control_punto_partidas",
+    "Mtto Usuarios": "cra58_mtto_usuarioses",
+}
+
+
 def main():
     SALIDA_EXCEL.mkdir(parents=True, exist_ok=True)
     config = []
@@ -106,8 +126,8 @@ def main():
         archivo = SALIDA_EXCEL / f"{tabla}.xlsx"
         libro.save(archivo)
         config.append({
-            "hoja": hoja, "tabla": tabla, "clave": claves[0],
-            "columnas": [[c, nombre_columna_dataverse(c), t] for c, t in columnas],
+            "hoja": hoja, "tabla": CONJUNTOS[tabla], "clave": claves[0],
+            "columnas": [[c, PREFIJO + nombre_columna_dataverse(c).lower(), t] for c, t in columnas],
         })
         print(f"{tabla:32} {len(columnas) + 1:>3} columnas -> {archivo.name}")
 
