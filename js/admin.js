@@ -132,7 +132,7 @@ function topPorConteo(lista, campo, top){
 
 function renderRankingHtml(pares){
   if(!pares.length) return "Sin datos.";
-  return pares.map(([nombre,n])=>`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--linea);"><span>${esc(nombre)}</span><b>${n}</b></div>`).join("");
+  return pares.map(([nombre,n])=>`<div style="display:flex;justify-content:space-between;gap:10px;padding:4px 0;border-bottom:1px solid var(--linea);"><span>${esc(nombre)}</span><b style="white-space:nowrap;">${n}</b></div>`).join("");
 }
 
 function minutosParadaDelMes(fallas){
@@ -424,7 +424,8 @@ function calcularAnchosColumnas(filas, columnas){
   });
 }
 
-function exportarExcel(){
+async function exportarExcel(){
+  try{ await asegurarXLSX(); }catch(e){ mostrarToast(e.message, false); return; }
   const quitarFotos = (arr) => arr.map(r=>{
     const copia = Object.assign({}, r);
     delete copia.FOTOS;

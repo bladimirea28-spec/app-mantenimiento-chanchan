@@ -533,9 +533,10 @@ async function darVistoBuenoChecklist(tipo){
 }
 
 /* Excel con el mismo orden que la hoja en papel: puntos × días. */
-function exportarSemanaChecklistExcel(){
+async function exportarSemanaChecklistExcel(){
   const s = semanaChecklist;
   if(!s) return;
+  try{ await asegurarXLSX(); }catch(e){ mostrarToast(e.message, false); return; }
   const p = s.plantilla;
   const domingo = new Date(s.lunes); domingo.setDate(s.lunes.getDate() + 6);
   const unir = (lista) => lista.filter(Boolean).join(" / ");

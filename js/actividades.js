@@ -235,13 +235,41 @@ function iniciarFotoInput(modulo, idInput, idPreviews){
   });
 }
 
-function archivoABase64(file){
+/* Convierte la foto a texto (base64) para guardarla en el celular y
+   subirla. Antes la reduce: lado mayor de 1600 px y JPEG al 75 %. Una foto
+   de celular pasa de 3-5 MB a ~200-400 KB, así se guarda y sincroniza mucho
+   más rápido con poca señal. Si algo falla, se guarda la foto original. */
+const FOTO_LADO_MAXIMO = 1600;
+const FOTO_CALIDAD = 0.75;
+
+function leerArchivoComoDataUrl(file){
   return new Promise((resolve,reject)=>{
     const reader = new FileReader();
     reader.onload = ()=>resolve(reader.result);
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+}
+
+async function archivoABase64(file){
+  const original = await leerArchivoComoDataUrl(file);
+  try{
+    const img = await new Promise((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = reject;
+      i.src = original;
+    });
+    const escala = Math.min(1, FOTO_LADO_MAXIMO / Math.max(img.naturalWidth, img.naturalHeight));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(img.naturalWidth * escala);
+    canvas.height = Math.round(img.naturalHeight * escala);
+    canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+    const reducida = canvas.toDataURL("image/jpeg", FOTO_CALIDAD);
+    return reducida.length < original.length ? reducida : original;
+  }catch(e){
+    return original;
+  }
 }
 
 function renderFotoPreviews(modulo, idPreviews){

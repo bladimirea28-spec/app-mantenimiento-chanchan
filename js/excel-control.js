@@ -69,7 +69,8 @@ class HojaXml {
 }
 
 async function abrirPlantillaControl(){
-  if(typeof JSZip === "undefined") throw new Error("No se pudo cargar el lector de Excel (revisa tu internet).");
+  await asegurarJSZip();
+  await asegurarPlanesMtto();
   const resp = await fetch("plantillas/CONTROL_MANTENIMIENTO.xlsx");
   if(!resp.ok) throw new Error("No se encontró la plantilla del Excel de control.");
   const zip = await JSZip.loadAsync(await resp.arrayBuffer());

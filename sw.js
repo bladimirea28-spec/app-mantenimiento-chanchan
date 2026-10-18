@@ -1,4 +1,4 @@
-const CACHE_NAME = "mantenimiento-chanchan-v8";
+const CACHE_NAME = "mantenimiento-chanchan-v9";
 const ARCHIVOS_BASE = [
   "./",
   "./index.html",
@@ -22,9 +22,14 @@ const ARCHIVOS_BASE = [
   "./js/checklists.js",
   "./js/control-mantenimiento.js",
   "./js/excel-control.js",
+  "./js/dashboard-control.js",
   "./js/sincronizacion.js",
   "./js/admin.js",
-  "./js/inicio.js"
+  "./js/inicio.js",
+  // Librerías para exportar a Excel: se cargan solo al exportar, pero se
+  // guardan aquí para que también funcionen sin señal.
+  "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js",
+  "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"
 ];
 
 self.addEventListener("install", (event) => {
@@ -45,20 +50,32 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
+/* Estrategia "rápido primero": la app se abre al instante con lo que ya está
+   guardado en el celular y, en segundo plano, se trae la versión nueva de
+   cada archivo para la próxima vez. Cuando se publica una versión (cambia
+   CACHE_NAME), este archivo se instala solo y deja todo listo.
+   Los pedidos al servidor (Apps Script) nunca se guardan: van directo. */
 self.addEventListener("fetch", (event) => {
-  // Los envíos al servidor (POST al Apps Script) no se guardan en caché:
-  // pasan directo a internet como siempre.
-  if (event.request.method !== "GET") return;
+  const req = event.request;
+  if (req.method !== "GET") return;
+  const url = new URL(req.url);
+  if (url.hostname.endsWith("script.google.com") || url.hostname.endsWith("googleusercontent.com")) return;
 
-  // Estrategia: intenta la red primero (para no quedarte con versión vieja
-  // si hay internet), y si falla (sin señal), usa lo que haya en caché.
-  event.respondWith(
-    fetch(event.request)
-      .then((respuesta) => {
-        const copia = respuesta.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copia));
-        return respuesta;
-      })
-      .catch(() => caches.match(event.request))
-  );
+  const esPagina = req.mode === "navigate";
+  event.respondWith((async () => {
+    const cache = await caches.open(CACHE_NAME);
+    const guardado = esPagina
+      ? (await cache.match("./index.html")) || (await cache.match("./"))
+      : await cache.match(req, { ignoreSearch: true });
+    const deRed = fetch(req).then((resp) => {
+      if (resp && (resp.ok || resp.type === "opaque") && !esPagina) cache.put(req, resp.clone());
+      if (resp && resp.ok && esPagina) cache.put("./index.html", resp.clone());
+      return resp;
+    }).catch(() => null);
+    if (guardado) {
+      event.waitUntil(deRed);
+      return guardado;
+    }
+    return (await deRed) || Response.error();
+  })());
 });

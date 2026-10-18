@@ -18,6 +18,7 @@ const TABS_POR_PANTALLA = {
   "pantalla-admin-fallas": "tab-panel-admin",
   "pantalla-admin-requerimientos": "tab-panel-admin",
   "pantalla-admin-checklists": "tab-panel-admin",
+  "pantalla-admin-dashboard-control": "tab-panel-admin",
   "pantalla-admin-solicitudes": "tab-panel-admin",
   "pantalla-admin-generar-solicitud": "tab-panel-admin",
   "pantalla-admin-dispositivos": "tab-panel-admin",

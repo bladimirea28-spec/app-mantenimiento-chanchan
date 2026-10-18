@@ -91,6 +91,14 @@ js/excel-control.js   → Llena la plantilla (REGISTRO, EQUIPOS, CONSULTA,
   mantenimiento crea su fila en ACTIVIDADES_MTTO con N° OT. NO OK en la
   inspección y NC en checklists crean falla automática.
   Si cambia el Excel de control: correr herramientas/generar_planes_mtto.py.
+- Velocidad (2026-10-18): sw.js usa "rápido primero" (abre con lo guardado y
+  actualiza en segundo plano; subir CACHE_NAME al publicar). XLSX, JSZip,
+  materiales.js y planes-mantenimiento.js se cargan bajo demanda con
+  asegurarXLSX / asegurarJSZip / asegurarMateriales / asegurarPlanesMtto
+  (js/config.js): no volver a ponerlos como <script> en index.html. Las fotos
+  se reducen a 1600 px JPEG 75 % en archivoABase64. En el servidor: libroDatos()
+  y CacheService para sesiones y usuarios (invalidar al escribir USUARIOS).
+- Dashboard admin "Control de mantenimiento": js/dashboard-control.js.
 - Fechas: usar siempre fechaPE() (dd/mm/yyyy con dos dígitos), no
   toLocaleDateString, para que coincidan con lo que devuelve el servidor.
 - Los números de OT (`OTM-`) y falla (`F-`) los asigna el servidor; la

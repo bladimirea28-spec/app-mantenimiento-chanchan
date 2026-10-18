@@ -15,6 +15,7 @@ function iniciarAutocompleteMaterial(){
   input.addEventListener("input", ()=>{
     const q = input.value.trim().toLowerCase();
     if(q.length < 2){ lista.classList.remove("activa"); lista.innerHTML=""; return; }
+    if(typeof CATALOGO_MATERIALES === "undefined"){ asegurarMateriales(); return; }
     const resultados = CATALOGO_MATERIALES.filter(m =>
       m.nombre.toLowerCase().includes(q) || m.codigo.includes(q)
     ).slice(0,8);
@@ -233,7 +234,8 @@ function limpiarBorradorRequerimiento(){
   try{ localStorage.removeItem("req_borrador"); }catch(e){}
 }
 
-function abrirFormRequerimiento(){
+async function abrirFormRequerimiento(){
+  asegurarMateriales().catch(e => mostrarToast(e.message, false)); // el buscador lo usa al escribir
   reqItemDraft = null;
   reqItemFotoBase64 = null;
   document.getElementById("req-material-buscar").value = "";

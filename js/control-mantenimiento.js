@@ -57,6 +57,7 @@ function mantenimientoDesdeServidor(f){
 }
 
 async function cargarControlMantenimiento(){
+  await asegurarPlanesMtto();
   let deServidor = null;
   if(navigator.onLine && tokenSesion()){
     const resp = await llamarServidor({ tipo:"control_mantenimiento" });
@@ -155,6 +156,7 @@ async function actualizarAlertaMantenimiento(refrescar){
   const el = document.getElementById("alerta-mantenimiento");
   if(!el) return;
   if(!(s.rol === "admin" || s.rol === "tecnico" || s.es_jefe_area)){ el.style.display = "none"; return; }
+  try{ await asegurarPlanesMtto(); }catch(e){ return; }
   if(refrescar) await cargarControlMantenimiento();
   else if(!controlDatos.actualizado){
     try{ const c = JSON.parse(localStorage.getItem("cache_control_mtto") || "null"); if(c) controlDatos = c; }catch(e){}
@@ -292,7 +294,8 @@ async function darVistoBuenoMantenimiento(id, codigo){
 }
 
 /* ---------- Pantalla: registrar mantenimiento ---------- */
-function abrirFormMantenimiento(codigo){
+async function abrirFormMantenimiento(codigo){
+  try{ await Promise.all([asegurarPlanesMtto(), asegurarMateriales()]); }catch(e){ mostrarToast(e.message, false); return; }
   document.getElementById("mto-equipo").innerHTML = `<option value="">Selecciona la unidad</option>` +
     EQUIPOS_MTTO.map(e => `<option value="${esc(e.codigo)}">${esc(e.codigo)} - ${esc(e.descripcion)}</option>`).join("");
   document.getElementById("mto-equipo").value = codigo || "";
@@ -400,6 +403,7 @@ function cambiarMaterialMantenimiento(i, campo, valor, sinRepintar){
 function quitarMaterialMantenimiento(i){ mtoMateriales.splice(i, 1); renderMaterialesMantenimiento(); }
 
 function agregarMaterialMantenimiento(){
+  if(typeof CATALOGO_MATERIALES === "undefined") return;
   const input = document.getElementById("mto-material-nuevo");
   const nombre = input.value.trim();
   if(!nombre) return;

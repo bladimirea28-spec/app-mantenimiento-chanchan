@@ -131,6 +131,31 @@ function urlSegura(url){
   return /^(https:\/\/|data:image\/)/i.test(u) ? esc(u) : "";
 }
 
+/* ============ CARGA BAJO DEMANDA ============
+   Para que la app abra rápido, lo pesado no se carga al inicio:
+   - Librería de Excel (861 KB) y lector de plantillas: solo al exportar.
+   - Catálogo de materiales (1748) y planes de mantenimiento: solo al usar
+     requerimientos o el control de mantenimiento.
+   Cada archivo se pide una sola vez; después queda en memoria y en el
+   celular (service worker), así que funciona también sin señal. */
+const _scriptsCargados = {};
+function cargarScript(src){
+  if(!_scriptsCargados[src]){
+    _scriptsCargados[src] = new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = src;
+      s.onload = () => resolve();
+      s.onerror = () => { delete _scriptsCargados[src]; reject(new Error("No se pudo cargar " + src.split("/").pop() + ". Revisa tu internet.")); };
+      document.head.appendChild(s);
+    });
+  }
+  return _scriptsCargados[src];
+}
+function asegurarXLSX(){ return typeof XLSX !== "undefined" ? Promise.resolve() : cargarScript("https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"); }
+function asegurarJSZip(){ return typeof JSZip !== "undefined" ? Promise.resolve() : cargarScript("https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"); }
+function asegurarMateriales(){ return typeof CATALOGO_MATERIALES !== "undefined" ? Promise.resolve() : cargarScript("datos/materiales.js"); }
+function asegurarPlanesMtto(){ return typeof EQUIPOS_MTTO !== "undefined" ? Promise.resolve() : cargarScript("datos/planes-mantenimiento.js"); }
+
 /* Fecha como "01/09/2026" (siempre con dos dígitos). Así coincide con lo que
    devuelve el servidor (dd/MM/yyyy). toLocaleDateString("es-PE") da
    "1/9/2026" en los días y meses de un dígito, por eso no se usa directo. */
