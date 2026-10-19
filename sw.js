@@ -1,10 +1,10 @@
-const CACHE_NAME = "mantenimiento-chanchan-v10";
+const CACHE_NAME = "mantenimiento-chanchan-v11";
 const ARCHIVOS_BASE = [
   "./",
   "./index.html",
   "./manifest.json",
-  "./icon-192.png",
-  "./icon-512.png",
+  "./icono-app-192.png",
+  "./icono-app-512.png",
   "./css/estilos.css",
   "./img/logo.png",
   "./datos/equipos.js",
