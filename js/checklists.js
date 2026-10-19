@@ -74,12 +74,19 @@ function leerCacheLecturas(){
   try{ return JSON.parse(localStorage.getItem("cache_lecturas") || "{}"); }catch(e){ return {}; }
 }
 
-/* Trae del servidor el último horómetro/km de cada equipo (si hay internet). */
+/* Trae del servidor el último horómetro/km de cada equipo (si hay internet).
+   Va por detrás (sin tapar la pantalla) y como mucho cada 5 minutos: lo que
+   se llena en este celular ya cuenta desde el almacén local. */
 async function actualizarCacheLecturas(){
   if(!navigator.onLine || !tokenSesion()) return;
-  const resp = await llamarServidor({ tipo:"lecturas_equipos" });
+  const ultima = Number(localStorage.getItem("cache_lecturas_ts") || 0);
+  if(Date.now() - ultima < 5 * 60 * 1000) return;
+  const resp = await llamarServidor({ tipo:"lecturas_equipos" }, { silencioso:true });
   if(resp && resp.ok && resp.lecturas){
-    try{ localStorage.setItem("cache_lecturas", JSON.stringify(resp.lecturas)); }catch(e){}
+    try{
+      localStorage.setItem("cache_lecturas", JSON.stringify(resp.lecturas));
+      localStorage.setItem("cache_lecturas_ts", String(Date.now()));
+    }catch(e){}
   }
 }
 

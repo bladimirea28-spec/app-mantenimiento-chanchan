@@ -246,7 +246,7 @@ function revisarSesionGuardada(){
 let listaTecnicosResponsables = [];
 
 async function cargarTecnicosResponsables(){
-  const resp = await llamarServidor({ tipo:"cupos" });
+  const resp = await llamarServidor({ tipo:"cupos" }, { silencioso:true });
   if(resp && resp.ok && Array.isArray(resp.cupos)){
     listaTecnicosResponsables = resp.cupos
       .filter(u => !u.disponible && u.nombre)

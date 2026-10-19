@@ -56,11 +56,11 @@ function mantenimientoDesdeServidor(f){
   };
 }
 
-async function cargarControlMantenimiento(){
+async function cargarControlMantenimiento(silencioso){
   await asegurarPlanesMtto();
   let deServidor = null;
   if(navigator.onLine && tokenSesion()){
-    const resp = await llamarServidor({ tipo:"control_mantenimiento" });
+    const resp = await llamarServidor({ tipo:"control_mantenimiento" }, { silencioso:!!silencioso });
     if(resp && resp.ok){
       deServidor = { parametros:resp.parametros || [], mantenimientos:(resp.mantenimientos || []).map(mantenimientoDesdeServidor),
                      lecturas:resp.lecturas || {}, actualizado:new Date().toLocaleString("es-PE") };
@@ -157,7 +157,8 @@ async function actualizarAlertaMantenimiento(refrescar){
   if(!el) return;
   if(!(s.rol === "admin" || s.rol === "tecnico" || s.es_jefe_area)){ el.style.display = "none"; return; }
   try{ await asegurarPlanesMtto(); }catch(e){ return; }
-  if(refrescar) await cargarControlMantenimiento();
+  // El aviso del inicio se refresca por detrás, sin tapar la pantalla.
+  if(refrescar) await cargarControlMantenimiento(true);
   else if(!controlDatos.actualizado){
     try{ const c = JSON.parse(localStorage.getItem("cache_control_mtto") || "null"); if(c) controlDatos = c; }catch(e){}
   }

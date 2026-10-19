@@ -80,8 +80,11 @@ function tokenSesion(){
 /* Envía una acción al Apps Script (login, autoregistro, cupos, listado, etc.)
    Devuelve siempre un objeto con al menos {ok:boolean, mensaje}.
    Si el servidor dice que la sesión ya no vale, vuelve a la pantalla de
-   ingreso (los registros sin sincronizar se quedan guardados en el celular). */
-async function llamarServidor(payload){
+   ingreso (los registros sin sincronizar se quedan guardados en el celular).
+   opciones.silencioso: consulta de fondo, sin la tuerquita que tapa la
+   pantalla (el usuario sigue trabajando mientras Google responde). */
+async function llamarServidor(payload, opciones){
+  const silencioso = !!(opciones && opciones.silencioso);
   const url = obtenerSyncUrl();
   if(!url){
     return {ok:false, mensaje:"Falta configurar la conexión a Google Sheets (⚙️ en el menú)."};
@@ -89,7 +92,7 @@ async function llamarServidor(payload){
   if(!navigator.onLine){
     return {ok:false, mensaje:"Necesitas conexión a internet para esto."};
   }
-  mostrarCargando();
+  if(!silencioso) mostrarCargando();
   try{
     const resp = await fetch(url, {
       method:"POST",
@@ -103,7 +106,7 @@ async function llamarServidor(payload){
     console.error("Error llamando al servidor:", err);
     return {ok:false, mensaje:"No se pudo conectar. Revisa tu internet e intenta de nuevo."};
   }finally{
-    ocultarCargando();
+    if(!silencioso) ocultarCargando();
   }
 }
 
