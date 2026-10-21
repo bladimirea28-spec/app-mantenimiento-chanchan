@@ -1,4 +1,5 @@
-const CACHE_NAME = "mantenimiento-chanchan-v13";
+// Al publicar, subir este número y VERSION_APP en js/config.js (el mismo).
+const CACHE_NAME = "mantenimiento-chanchan-v14";
 const ARCHIVOS_BASE = [
   "./",
   "./index.html",
@@ -34,7 +35,10 @@ const ARCHIVOS_BASE = [
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ARCHIVOS_BASE))
+    // cache:"reload" = siempre de internet, nunca la copia de unos minutos
+    // que guarda el navegador (si no, la versión nueva quedaba con archivos viejos).
+    caches.open(CACHE_NAME).then((cache) =>
+      cache.addAll(ARCHIVOS_BASE.map((u) => new Request(u, { cache: "reload" }))))
   );
   self.skipWaiting();
 });
@@ -67,7 +71,10 @@ self.addEventListener("fetch", (event) => {
     const guardado = esPagina
       ? (await cache.match("./index.html")) || (await cache.match("./"))
       : await cache.match(req, { ignoreSearch: true });
-    const deRed = fetch(req).then((resp) => {
+    const fresco = esPagina
+      ? fetch("./index.html", { cache: "no-cache" })
+      : fetch(new Request(req, { cache: "no-cache" }));
+    const deRed = fresco.then((resp) => {
       if (resp && (resp.ok || resp.type === "opaque") && !esPagina) cache.put(req, resp.clone());
       if (resp && resp.ok && esPagina) cache.put("./index.html", resp.clone());
       return resp;

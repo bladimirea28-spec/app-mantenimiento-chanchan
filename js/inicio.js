@@ -60,7 +60,20 @@ window.addEventListener("offline", actualizarEstadoConexion);
     revisarSesionGuardada();
     cargarTecnicosResponsables();
 
+    mostrarVersionApp();
     if("serviceWorker" in navigator){
+      // Cuando se instala una versión nueva, la app se recarga una vez sola
+      // para usarla de inmediato (solo si ya había una versión anterior).
+      const habiaVersion = !!navigator.serviceWorker.controller;
+      let recargado = false;
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if(!habiaVersion || recargado) return;
+        recargado = true;
+        // Si está llenando un formulario, se espera a que vuelva al inicio.
+        const activa = document.querySelector(".pantalla.activa");
+        if(activa && esPantallaFormulario(activa.id)) window.__recargarAlVolver = true;
+        else location.reload();
+      });
       try{ await navigator.serviceWorker.register("sw.js"); }
       catch(e){ console.log("No se pudo registrar el service worker (normal si se abre como archivo local):", e); }
     }

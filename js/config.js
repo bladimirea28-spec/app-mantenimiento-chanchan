@@ -177,6 +177,30 @@ function primerNombre(nombreCompleto){
   return (nombreCompleto||"").trim().split(/\s+/)[0] || nombreCompleto;
 }
 
+/* ============ VERSIÓN Y ACTUALIZACIÓN DE LA APP ============
+   VERSION_APP debe ser igual al número de CACHE_NAME en sw.js. */
+const VERSION_APP = "v14";
+
+function mostrarVersionApp(){
+  document.querySelectorAll(".txt-version-app").forEach(el => { el.textContent = "(versión " + VERSION_APP + ")"; });
+}
+
+/* Borra lo guardado de la app (no los registros ni la sesión) y la vuelve a
+   bajar de internet. Sirve si un celular se quedó con una versión antigua. */
+async function actualizarApp(){
+  if(!navigator.onLine){ mostrarToast("Necesitas internet para actualizar la app", false); return; }
+  mostrarToast("Actualizando la app...", true);
+  try{
+    if("serviceWorker" in navigator){
+      for(const r of await navigator.serviceWorker.getRegistrations()) await r.unregister();
+    }
+    if(window.caches){
+      for(const k of await caches.keys()) await caches.delete(k);
+    }
+  }catch(e){ console.log("No se pudo limpiar la app:", e); }
+  location.reload();
+}
+
 /* ============ MODO OSCURO (manual) ============ */
 function aplicarTemaGuardado(){
   const tema = localStorage.getItem("tema_preferido");

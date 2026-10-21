@@ -27,7 +27,14 @@ const TABS_POR_PANTALLA = {
   "pantalla-perfil": "tab-perfil",
   "pantalla-config": "tab-perfil"
 };
+/* Pantallas donde la persona está escribiendo (no se recargan solas). */
+function esPantallaFormulario(id){
+  return id.startsWith("pantalla-form") || ["pantalla-resolver-falla", "pantalla-autoregistro", "pantalla-registro-operador"].includes(id);
+}
+
 function irA(idPantalla){
+  // Llegó una versión nueva mientras llenaba un formulario: se usa al salir.
+  if(window.__recargarAlVolver && !esPantallaFormulario(idPantalla)){ location.reload(); return; }
   document.querySelectorAll(".pantalla").forEach(p=>p.classList.remove("activa"));
   document.getElementById(idPantalla).classList.add("activa");
   if(idPantalla === "pantalla-lista-mtto") renderListaMtto();
