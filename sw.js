@@ -1,4 +1,4 @@
-const CACHE_NAME = "mantenimiento-chanchan-v11";
+const CACHE_NAME = "mantenimiento-chanchan-v12";
 const ARCHIVOS_BASE = [
   "./",
   "./index.html",
