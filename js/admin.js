@@ -393,8 +393,82 @@ function renderizarListadoFallasAdmin(){
       </div>
       ${r.DESCRIPCION?`<div class="desc">${esc(r.DESCRIPCION)}</div>`:""}
       ${fotosHtmlAdmin(r.FOTOS, 56)}
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button type="button" class="btn btn-secundario" style="width:auto;flex:1;padding:9px 10px;font-size:12.5px;" onclick="verDetalleFallaAdmin(${jsArg(r.CLAVE||"")})">Ver detalle</button>
+        ${r.CLAVE ? `<button type="button" class="btn btn-texto" style="width:auto;flex:1;padding:9px 10px;font-size:12.5px;color:var(--rojo-texto,#c0392b);" onclick="eliminarFallaAdmin(${jsArg(r.CLAVE)})">Eliminar</button>` : ""}
+      </div>
     </div>`;
   }).join("");
+}
+
+/* ============ ADMIN: VER DETALLE / ELIMINAR FALLAS ============
+   Cada falla trae una CLAVE única del servidor (hay números de falla
+   repetidos de antes), así se borra exactamente la elegida. */
+function fallaAdminPorClave(clave){
+  return adminDatosCache.fallas.find(f => String(f.CLAVE||"") === String(clave));
+}
+
+function verDetalleFallaAdmin(clave){
+  const r = fallaAdminPorClave(clave);
+  if(!r){ mostrarToast("No se encontró la falla.", false); return; }
+  const fila = (titulo, valor) => `<div class="modal-fila"><b>${titulo}</b>${esc(valor === "" || valor == null ? "—" : valor)}</div>`;
+  const fotosHtml = fotosHtmlAdmin(r.FOTOS, 70) || "<span style=\"opacity:.7;\">Sin fotos</span>";
+  abrirModal(`
+    <div class="modal-titulo"><span>Detalle de falla</span><button class="modal-cerrar" onclick="cerrarModal()">×</button></div>
+    ${fila("N° de falla", r.ID_FALLA)}
+    ${fila("Fecha", r.FECHA)}
+    ${fila("Estado", r.ESTADO || "Abierta")}
+    ${fila("Criticidad", r.CRITICIDAD)}
+    ${fila("Equipo", r.EQUIPO)}
+    ${fila("Área", r.AREA)}
+    ${fila("Tipo de falla", r.TIPO_FALLA)}
+    ${fila("Reportado por", r.TECNICO)}
+    ${fila("Técnico responsable", r.TECNICO_RESPONSABLE)}
+    ${fila("Turno", r.TURNO)}
+    ${fila("Hora inicio", r.HORA_INICIO)}
+    ${fila("Hora fin", r.HORA_FIN)}
+    ${fila("Minutos de parada", r.MINUTOS_PARADA)}
+    ${fila("N° operarios", r.N_OPERARIOS)}
+    ${fila("Tipo de atención", r.TIPO_ATENCION)}
+    ${fila("Descripción", r.DESCRIPCION)}
+    ${fila("Causa raíz", r.CAUSA_RAIZ)}
+    ${fila("Acción correctiva", r.ACCION_CORRECTIVA)}
+    ${fila("Resuelto por", r.RESUELTO_POR)}
+    ${fila("Fecha de resolución", r.FECHA_RESOLUCION)}
+    <div class="modal-fila" style="border-bottom:none;"><b>Fotos</b>${fotosHtml}</div>
+    <div style="display:flex;gap:8px;margin-top:14px;">
+      <button class="btn btn-secundario" style="flex:1;" onclick="cerrarModal()">Cerrar</button>
+      ${r.CLAVE ? `<button class="btn btn-texto" style="flex:1;color:var(--rojo-texto,#c0392b);" onclick="eliminarFallaAdmin(${jsArg(r.CLAVE)})">Eliminar</button>` : ""}
+    </div>
+  `);
+}
+
+function eliminarFallaAdmin(clave){
+  const r = fallaAdminPorClave(clave);
+  if(!r){ mostrarToast("No se encontró la falla.", false); return; }
+  abrirModal(`
+    <div class="modal-titulo"><span>Eliminar falla</span><button class="modal-cerrar" onclick="cerrarModal()">×</button></div>
+    <p class="subtexto"><b>${esc(r.ID_FALLA||"")}</b> · ${esc(r.EQUIPO||"")} · ${esc(r.FECHA||"")}</p>
+    <p class="subtexto" style="margin-top:8px;">Esta acción borra la falla de forma permanente de la base de datos (también de Power Apps). No se puede deshacer. ¿Deseas continuar?</p>
+    <div style="display:flex;gap:8px;margin-top:14px;">
+      <button class="btn btn-secundario" style="flex:1;" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn btn-primario" style="flex:1;background:var(--rojo-600,#c0392b);" id="btn-confirmar-elim-falla" onclick="confirmarEliminarFallaAdmin(${jsArg(clave)})">Sí, eliminar</button>
+    </div>
+  `);
+}
+
+async function confirmarEliminarFallaAdmin(clave){
+  const boton = document.getElementById("btn-confirmar-elim-falla");
+  if(boton){ boton.disabled = true; boton.textContent = "Eliminando..."; }
+  const resp = await llamarServidor({ tipo:"eliminar_falla", clave });
+  mostrarToast(resp.mensaje || (resp.ok ? "Falla eliminada" : "No se pudo eliminar"), resp.ok);
+  if(resp.ok){
+    cerrarModal();
+    await abrirPanelAdmin();
+    irA("pantalla-admin-fallas");
+  } else if(boton){
+    boton.disabled = false; boton.textContent = "Sí, eliminar";
+  }
 }
 
 function soloFechaExcel(valor){
