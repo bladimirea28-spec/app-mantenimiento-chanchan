@@ -38,6 +38,15 @@ function guardarEnStore(store, obj){
   });
 }
 
+function borrarDeStore(store, id){
+  return new Promise((resolve,reject)=>{
+    const tx = db.transaction(store,"readwrite");
+    tx.objectStore(store).delete(id);
+    tx.oncomplete = ()=>resolve();
+    tx.onerror = (e)=>reject(e);
+  });
+}
+
 function leerStore(store){
   return new Promise((resolve,reject)=>{
     const tx = db.transaction(store,"readonly");

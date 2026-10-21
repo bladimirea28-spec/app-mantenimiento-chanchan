@@ -88,6 +88,35 @@ async function sincronizarTodo(){
   mostrarToast(mensajeFinal, fallos===0);
   actualizarTextoPendientes();
   if(exitos > 0) actualizarAlertaMantenimiento(true);
+  limpiarCopiasBorradas();
+}
+
+/* ============ COPIAS DEL CELULAR AL DÍA ============
+   Lo ya enviado queda guardado en el celular para mostrarlo en "Mis
+   registros". Si un admin lo borra del servidor, aquí se borra también su
+   copia (si no, seguiría apareciendo, por ejemplo un checklist de prueba).
+   Solo se revisan registros desde el 15/10/2026: desde ahí todos tienen su
+   código único en la hoja. Lo pendiente de enviar nunca se toca. */
+const COPIAS_REVISABLES_DESDE = new Date(2026, 9, 15).getTime();
+async function limpiarCopiasBorradas(forzar){
+  if(!navigator.onLine || !tokenSesion()) return 0;
+  const ultima = Number(localStorage.getItem("copias_revisadas_ts") || 0);
+  if(!forzar && Date.now() - ultima < 10 * 60 * 1000) return 0;
+  localStorage.setItem("copias_revisadas_ts", String(Date.now()));
+  let borradas = 0;
+  for(const coleccion of ["checklists", "fallas", "actividades", "mantenimientos", "requerimientos"]){
+    try{
+      const locales = (await leerStore(coleccion)).filter(r => r.sincronizado && (r.creado || 0) >= COPIAS_REVISABLES_DESDE);
+      if(!locales.length) continue;
+      const resp = await llamarServidor({ tipo:"existen_registros", coleccion, ids:locales.map(r => r.id).slice(0, 500) }, { silencioso:true });
+      if(!resp || !resp.ok || !Array.isArray(resp.existen)) continue;
+      const existen = new Set(resp.existen);
+      for(const r of locales.slice(0, 500)){
+        if(!existen.has(String(r.id))){ await borrarDeStore(coleccion, r.id); borradas++; }
+      }
+    }catch(e){ console.log("No se pudo revisar " + coleccion, e); }
+  }
+  return borradas;
 }
 
 async function enviarRegistro(url, tipo, registro){

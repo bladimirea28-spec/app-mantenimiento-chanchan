@@ -124,6 +124,8 @@ async function abrirChecklists(){
   irA("pantalla-checklists");
   renderChecklistsRecientes();
   actualizarCacheLecturas();
+  // Por detrás: si un admin borró alguno, desaparece también de esta lista.
+  limpiarCopiasBorradas().then(n => { if(n && document.getElementById("pantalla-checklists").classList.contains("activa")) renderChecklistsRecientes(); });
 }
 
 async function renderChecklistsRecientes(){

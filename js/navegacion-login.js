@@ -191,6 +191,7 @@ function entrarAMenu(usuario){
   }
   actualizarAlertaMantenimiento(true);
   abrirEquipoDelEnlace(usuario);   // si se entró escaneando el QR de un equipo
+  limpiarCopiasBorradas();         // por detrás: quita copias de registros borrados
 }
 
 async function guardarCorreoAdmin(){
