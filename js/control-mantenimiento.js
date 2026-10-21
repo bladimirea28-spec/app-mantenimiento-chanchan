@@ -14,7 +14,9 @@ const AVISO_POR_CONTROL = { KM:100, HR:15, MESES:15 };
 const UNIDAD_CONTROL = { KM:"km", HR:"h", MESES:"días" };   // para "faltan …"
 const UNIDAD_INTERVALO = { KM:"km", HR:"h", MESES:"meses" }; // para "cada …"
 
-let controlDatos = { parametros:[], mantenimientos:[], lecturas:{}, actualizado:null };
+/* Un solo paquete de datos para la ficha de cada equipo y el dashboard:
+   punto de partida, mantenimientos, lecturas, fallas y checklists recientes. */
+let controlDatos = { parametros:[], mantenimientos:[], lecturas:{}, fallas:[], checklists:[], actualizado:null };
 let mtoTipo = "Preventivo";
 let mtoMateriales = [];
 let mtoInspeccion = [];
@@ -63,7 +65,8 @@ async function cargarControlMantenimiento(silencioso){
     const resp = await llamarServidor({ tipo:"control_mantenimiento" }, { silencioso:!!silencioso });
     if(resp && resp.ok){
       deServidor = { parametros:resp.parametros || [], mantenimientos:(resp.mantenimientos || []).map(mantenimientoDesdeServidor),
-                     lecturas:resp.lecturas || {}, actualizado:new Date().toLocaleString("es-PE"), ts:Date.now() };
+                     lecturas:resp.lecturas || {}, fallas:resp.fallas || [], checklists:resp.checklists || [],
+                     actualizado:new Date().toLocaleString("es-PE"), ts:Date.now() };
       try{ localStorage.setItem("cache_control_mtto", JSON.stringify(deServidor)); }catch(e){}
     }
   }
@@ -71,6 +74,8 @@ async function cargarControlMantenimiento(silencioso){
     try{ deServidor = JSON.parse(localStorage.getItem("cache_control_mtto") || "null"); }catch(e){ deServidor = null; }
   }
   controlDatos = deServidor || { parametros:[], mantenimientos:[], lecturas:{}, actualizado:null };
+  controlDatos.fallas = controlDatos.fallas || [];
+  controlDatos.checklists = (controlDatos.checklists || []).slice();
 
   // Lo que todavía no llegó al servidor también cuenta. Lo que ya se envió
   // lo trae el servidor (así, si un admin borró un registro, este celular no
@@ -85,7 +90,16 @@ async function cargarControlMantenimiento(silencioso){
     const actual = controlDatos.lecturas[clave];
     if(!actual || n > Number(actual.lectura)) controlDatos.lecturas[clave] = { lectura:n, fecha, origen };
   };
-  (await leerStore("checklists")).filter(nuevoParaServidor).forEach(c => anotar(c.equipo_clave, c.lectura, c.fecha, "Checklist"));
+  (await leerStore("checklists")).filter(nuevoParaServidor).forEach(c => {
+    anotar(c.equipo_clave, c.lectura, c.fecha, "Checklist");
+    if(!controlDatos.checklists.some(x => x.id === c.id)) controlDatos.checklists.push({
+      id:c.id, fecha:c.fecha, hora:c.hora, plantilla:c.plantilla, codigo_formato:c.codigo_formato,
+      equipo_codigo:c.equipo_codigo, equipo:c.equipo, equipo_clave:c.equipo_clave, turno:c.turno,
+      lectura:c.lectura, lectura_tipo:c.lectura_tipo, nc:c.nc || 0, observados:c.observados || 0,
+      puede_utilizar:c.puede_utilizar, observaciones:c.observaciones, usuario:c.usuario,
+      hallazgos:(c.respuestas || []).filter(x => x.marca === "NC" || x.marca === "O"), pendiente:!c.sincronizado
+    });
+  });
   controlDatos.mantenimientos.forEach(m => { if(m.lectura !== "" && m.lectura != null) anotar(m.codigo, m.lectura, m.fecha, "Mantenimiento"); });
   return controlDatos;
 }
@@ -184,6 +198,7 @@ async function abrirControlUnidades(){
   const s = sesionActual();
   document.getElementById("btn-mtto-registrar").style.display = (s.rol === "admin" || s.rol === "tecnico") ? "flex" : "none";
   document.getElementById("btn-mtto-partida").style.display = s.rol === "admin" ? "flex" : "none";
+  document.getElementById("btn-mtto-qr").style.display = s.rol === "admin" ? "flex" : "none";
   irA("pantalla-control-unidades");
   document.getElementById("mtto-lista-unidades").innerHTML = `<div class="subtexto">Cargando...</div>`;
   await cargarControlMantenimiento();
@@ -224,20 +239,92 @@ function renderControlUnidades(){
         ${e.control !== "MESES" ? `<div><span>Lectura actual</span>${lectura}</div>` : ""}
         <div><span>Último PM</span>${r.base ? `${esc(r.base.pm || "Ninguno")}${e.control !== "MESES" ? ` a ${miles(r.base.lectura)} ${r.unidad}` : ""}${r.base.fecha ? ` · ${fechaPE(r.base.fecha)}` : ""}` : "Falta cargar el punto de partida"}</div>
       </div>
+      ${(() => { const n = fallasDeEquipo(e.codigo).filter(fallaAbierta).length; return n ? `<div class="mtto-pendientes" onclick="abrirFichaEquipo(${jsArg(e.codigo)})">⚠ ${n} pendiente(s) por corregir — toca para ver</div>` : ""; })()}
       <div style="display:flex;gap:8px;margin-top:10px;">
-        <button type="button" class="btn btn-secundario mtto-btn" onclick="verUnidadMantenimiento(${jsArg(e.codigo)})">Historial (${r.historial.length})</button>
+        <button type="button" class="btn btn-secundario mtto-btn" onclick="abrirFichaEquipo(${jsArg(e.codigo)})">Ver ficha</button>
         ${puedeRegistrar ? `<button type="button" class="btn btn-primario mtto-btn" onclick="abrirFormMantenimiento(${jsArg(e.codigo)})">Registrar</button>` : ""}
       </div>
     </div>`;
   }).join("") : `<div class="vacio"><div class="subtexto">No hay unidades para este filtro.</div></div>`;
 }
 
-/* ---------- Historial de una unidad ---------- */
-function verUnidadMantenimiento(codigo){
+/* ---------- Fallas y checklists de una unidad ---------- */
+/* "04101 - VL001- TRIMOTO…" → "04101" (también si la hoja quitó el cero). */
+function codigoDeTextoEquipo(texto){
+  const m = String(texto || "").match(/^\s*(\d{3,5})\b/);
+  return m ? m[1].padStart(5, "0") : "";
+}
+function fallaAbierta(f){ return String(f.ESTADO || "Abierta") !== "Resuelta"; }
+function diasDesdeTexto(fechaTexto){
+  const f = fechaDesdePE(fechaTexto);
+  if(!f) return null;
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  return Math.round((hoy - f) / 86400000);
+}
+function haceTexto(fechaTexto){
+  const d = diasDesdeTexto(fechaTexto);
+  return d == null ? "" : d <= 0 ? "hoy" : d === 1 ? "ayer" : `hace ${d} días`;
+}
+/* Ordena por fecha (y hora) de la más reciente a la más antigua. */
+function masRecientesPrimero(lista, campoFecha, campoHora){
+  const valor = x => { const f = fechaDesdePE(x[campoFecha]); return (f ? f.getTime() : 0) + (campoHora && x[campoHora] ? Number(String(x[campoHora]).replace(":", "")) : 0); };
+  return lista.slice().sort((a, b) => valor(b) - valor(a));
+}
+function fallasDeEquipo(codigo){ return controlDatos.fallas.filter(f => codigoDeTextoEquipo(f.EQUIPO) === codigo); }
+function checklistsDeEquipo(codigo){
+  return masRecientesPrimero(controlDatos.checklists.filter(c => String(c.equipo_clave || c.equipo_codigo) === codigo), "fecha", "hora");
+}
+function puedeAtender(s){ return s.rol === "admin" || s.rol === "tecnico"; }
+
+/* Tarjeta de una falla pendiente, con sus acciones (resolver o correctivo). */
+function htmlFallaPendiente(f, codigo, s){
+  const hallazgo = /hallazgo|no conformidad/i.test(f.TIPO_FALLA || "");
+  return `
+    <div class="ficha-falla ${String(f.CRITICIDAD).toLowerCase() === "alta" ? "alta" : ""}">
+      <div class="fila1">
+        <div style="font-weight:700;font-size:13px;">${hallazgo ? "🔎 " : "⚠️ "}${esc(f.TIPO_FALLA || "Falla")}</div>
+        <span class="badge ${claseEstadoFalla(f.ESTADO || "Abierta")}">${esc(f.ESTADO || "Abierta")}</span>
+      </div>
+      <div class="subtexto">${esc(f.ID_FALLA || "")} · ${esc(f.FECHA || "")} (${esc(haceTexto(f.FECHA))})${f.TECNICO_RESPONSABLE ? " · " + esc(f.TECNICO_RESPONSABLE) : " · sin técnico asignado"}</div>
+      <div class="desc" style="margin-top:6px;white-space:pre-line;">${esc(f.DESCRIPCION || "")}</div>
+      ${puedeAtender(s) && f.CLAVE ? `<div class="ficha-acciones">
+        <button class="btn btn-primario mtto-btn" onclick="resolverFallaDesdeFicha(${jsArg(f.CLAVE)}, ${jsArg(codigo)})">✔ Resolver</button>
+        ${equipoMtto(codigo) ? `<button class="btn btn-secundario mtto-btn" onclick="cerrarModal();abrirFormMantenimiento(${jsArg(codigo)}, { correctivo:true, falla:${jsArg(f.ID_FALLA)} })">🔧 Correctivo</button>` : ""}
+      </div>` : ""}
+    </div>`;
+}
+
+/* ---------- Ficha del equipo: todo de una unidad en un solo lugar ---------- */
+function verUnidadMantenimiento(codigo){ abrirFichaEquipo(codigo); }
+
+function abrirFichaEquipo(codigo){
   const eq = equipoMtto(codigo);
   if(!eq) return;
   const r = estadoUnidad(eq);
   const s = sesionActual();
+  const fallas = masRecientesPrimero(fallasDeEquipo(codigo), "FECHA");
+  const pendientes = fallas.filter(fallaAbierta);
+  const resueltas = fallas.filter(f => !fallaAbierta(f)).slice(0, 3);
+  const checklists = checklistsDeEquipo(codigo);
+  const lectura = r.lect ? `${miles(r.lect.lectura)} ${r.unidad === "días" ? "" : r.unidad}` : "—";
+
+  const htmlChecklist = c => `
+    <div class="ficha-chk">
+      <div class="fila1">
+        <div><b>${esc(c.fecha)}</b> ${esc(c.hora || "")} · ${c.lectura !== "" && c.lectura != null ? esc(miles(c.lectura)) + " " + esc(c.lectura_tipo === "km" ? "km" : "h") : "—"}</div>
+        <div class="badge-fila">
+          ${c.nc ? `<span class="badge criticidad-alta">${c.nc} NC</span>` : ""}
+          ${c.observados ? `<span class="badge criticidad-media">${c.observados} obs.</span>` : ""}
+          ${c.puede_utilizar === "NO" ? `<span class="badge criticidad-alta">No usar</span>` : ""}
+          ${!c.nc && !c.observados && c.puede_utilizar !== "NO" ? `<span class="badge criticidad-baja">Todo conforme</span>` : ""}
+          ${c.pendiente ? `<span class="badge pendiente">Pendiente</span>` : ""}
+        </div>
+      </div>
+      <div class="subtexto">${esc(c.usuario || "—")}${c.turno ? " · " + esc(c.turno) : ""}</div>
+      ${(c.hallazgos || []).map(x => `<div class="ficha-hallazgo"><span class="chk-pill marca-${esc(x.marca)}">${esc(x.marca)}</span><span>${esc(x.item)}${x.obs ? ` — <i>${esc(x.obs)}</i>` : ""}</span></div>`).join("")}
+      ${c.observaciones ? `<div class="subtexto" style="margin-top:4px;">Obs.: ${esc(c.observaciones)}</div>` : ""}
+    </div>`;
+
   const filas = r.historial.slice().reverse().map(m => `
     <div class="registro-item" style="box-shadow:none;">
       <div class="fila1">
@@ -245,7 +332,7 @@ function verUnidadMantenimiento(codigo){
           <div style="font-weight:700;font-size:13.5px;">${esc(m.tipo === "Preventivo" ? m.pm : "Correctivo")} · ${esc(m.fecha)}</div>
           <div class="subtexto">${m.lectura !== "" && m.lectura != null ? esc(miles(m.lectura)) + " " + esc(r.unidad) + " · " : ""}${esc(m.n_ot || "OT pendiente")} · ${esc(m.tecnico || "—")} · S/ ${(Number(m.costo) || 0).toFixed(2)}</div>
         </div>
-        <span class="badge ${m.sincronizado ? "" : "pendiente"}">${m.sincronizado ? (m.vb_nombre ? "✓ V°B°" : "Sin V°B°") : "Pendiente"}</span>
+        <span class="badge ${m.sincronizado ? (m.vb_nombre ? "criticidad-baja" : "") : "pendiente"}">${m.sincronizado ? (m.vb_nombre ? "✓ V°B° " + esc(primerNombre(m.vb_nombre)) : "Falta V°B°") : "Pendiente de enviar"}</span>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">
         <button class="btn btn-secundario mtto-btn" onclick="verMantenimiento(${jsArg(m.id)})">Ver</button>
@@ -253,15 +340,51 @@ function verUnidadMantenimiento(codigo){
         ${s.rol === "admin" && m.sincronizado && !m.vb_nombre ? `<button class="btn btn-secundario mtto-btn" onclick="darVistoBuenoMantenimiento(${jsArg(m.id)}, ${jsArg(codigo)})">Dar V°B°</button>` : ""}
       </div>
     </div>`).join("");
+
   abrirModal(`
     <div class="modal-titulo"><span>${esc(eq.codigo)} · ${esc(eq.descripcion)}</span><button class="modal-cerrar" onclick="cerrarModal()">×</button></div>
-    <div class="modal-fila"><b>Estado</b><span class="badge mtto-estado ${CLASE_ESTADO[r.estado]}">${esc(r.estado)}</span></div>
-    <div class="modal-fila"><b>Próximo mantenimiento</b>${esc(r.proximo)}${r.proximoTexto ? " a " + esc(r.proximoTexto) : ""}${r.falta != null ? " · " + esc(textoFalta(r)) : ""}</div>
-    <div class="modal-fila"><b>Área · criticidad</b>${esc(eq.area)} · ${esc(eq.criticidad)}</div>
-    <div style="font-weight:700;font-size:13.5px;margin:12px 0 6px;">Mantenimientos (${r.historial.length})</div>
+    <div class="ficha-cabecera ${CLASE_ESTADO[r.estado]}">
+      <span class="badge mtto-estado ${CLASE_ESTADO[r.estado]}">${esc(r.estado)}</span>
+      <span class="subtexto">${esc(eq.plan)} · ${esc(eq.area)} · criticidad ${esc(eq.criticidad)}</span>
+    </div>
+    <div class="ficha-kpis">
+      <div><span>${eq.control === "MESES" ? "Último PM" : "Lectura actual"}</span><b>${eq.control === "MESES" ? esc(r.base && r.base.fecha ? fechaPE(r.base.fecha) : "—") : esc(lectura)}</b>${r.lect && eq.control !== "MESES" ? `<small>${esc(r.lect.origen)} · ${esc(String(r.lect.fecha).slice(0, 10))}</small>` : ""}</div>
+      <div><span>Próximo</span><b>${esc(String(r.proximo).split(" - ")[0])}</b><small>${r.falta != null ? esc(textoFalta(r)) : "falta punto de partida"}</small></div>
+      <div class="${pendientes.length ? "alerta" : ""}"><span>Pendientes</span><b>${pendientes.length}</b><small>${pendientes.length ? "por corregir" : "nada pendiente"}</small></div>
+    </div>
+    <div class="ficha-acciones" style="margin-top:10px;">
+      ${puedeAtender(s) ? `<button class="btn btn-primario mtto-btn" onclick="cerrarModal();abrirFormMantenimiento(${jsArg(codigo)})">🔧 Registrar mantenimiento</button>` : ""}
+      <button class="btn btn-secundario mtto-btn" onclick="mostrarQrEquipo(${jsArg(codigo)})">▦ Código QR</button>
+    </div>
+
+    <div class="ficha-titulo">⚠ Pendientes por corregir (${pendientes.length})</div>
+    ${pendientes.length ? pendientes.map(f => htmlFallaPendiente(f, codigo, s)).join("")
+      : `<div class="subtexto">Sin fallas ni hallazgos abiertos. 👍</div>`}
+
+    <div class="ficha-titulo">📋 Checklists diarios (${checklists.length} en los últimos 4 meses)</div>
+    ${checklists.length ? checklists.slice(0, 5).map(htmlChecklist).join("") + (checklists.length > 5 ? `<div class="subtexto">… y ${checklists.length - 5} más.</div>` : "")
+      : `<div class="subtexto">Todavía no hay checklists de esta unidad.</div>`}
+
+    <div class="ficha-titulo">🔧 Mantenimientos (${r.historial.length})</div>
     ${filas || `<div class="subtexto">Todavía no hay mantenimientos registrados.</div>`}
+    <div class="ficha-nota">V°B° = firma de revisión del supervisor. Es solo la aprobación: el mantenimiento ya cuenta en el control, el dashboard y Power Apps desde que se registra.</div>
+
+    ${resueltas.length ? `<div class="ficha-titulo">✔ Fallas resueltas recientes</div>
+      ${resueltas.map(f => `<div class="ficha-chk"><div class="fila1"><div><b>${esc(f.ID_FALLA || "")}</b> · ${esc(f.FECHA || "")}</div><span class="badge estado-resuelta">Resuelta</span></div>
+        <div class="subtexto">${esc(String(f.DESCRIPCION || "").slice(0, 120))}</div>
+        ${f.ACCION_CORRECTIVA ? `<div class="subtexto"><b>Acción:</b> ${esc(f.ACCION_CORRECTIVA)}${f.RESUELTO_POR ? " · " + esc(f.RESUELTO_POR) : ""}</div>` : ""}</div>`).join("")}` : ""}
+
     <button class="btn btn-primario" style="margin-top:14px;" onclick="cerrarModal()">Cerrar</button>
+    <div class="subtexto" style="text-align:center;margin-top:8px;">${controlDatos.actualizado ? "Actualizado: " + esc(controlDatos.actualizado) : "Sin conexión: datos guardados en el celular."}</div>
   `);
+}
+
+/* Abre "Resolver falla" con la falla elegida y, al terminar, vuelve a la ficha. */
+function resolverFallaDesdeFicha(clave, codigo){
+  const f = controlDatos.fallas.find(x => x.CLAVE === clave);
+  if(!f) return;
+  cerrarModal();
+  abrirResolverFallaObjeto(f, () => abrirFichaEquipo(codigo));
 }
 
 function verMantenimiento(id){
@@ -298,7 +421,12 @@ async function darVistoBuenoMantenimiento(id, codigo){
 }
 
 /* ---------- Pantalla: registrar mantenimiento ---------- */
-async function abrirFormMantenimiento(codigo){
+/* opciones.correctivo: abrir directo como correctivo; opciones.falla: la
+   falla (N°) que ese correctivo resuelve (viene de la ficha del equipo). */
+let mtoFallaElegida = "";
+async function abrirFormMantenimiento(codigo, opciones){
+  opciones = opciones || {};
+  mtoFallaElegida = opciones.falla || "";
   try{ await Promise.all([asegurarPlanesMtto(), asegurarMateriales()]); }catch(e){ mostrarToast(e.message, false); return; }
   document.getElementById("mto-equipo").innerHTML = `<option value="">Selecciona la unidad</option>` +
     EQUIPOS_MTTO.map(e => `<option value="${esc(e.codigo)}">${esc(e.codigo)} - ${esc(e.descripcion)}</option>`).join("");
@@ -314,8 +442,8 @@ async function abrirFormMantenimiento(codigo){
   if(!lista.childElementCount){
     lista.innerHTML = CATALOGO_MATERIALES.map(m => `<option value="${esc(m.nombre)}"></option>`).join("");
   }
-  mtoTipo = "Preventivo";
-  elegirTipoMantenimiento("Preventivo", true);
+  mtoTipo = opciones.correctivo ? "Correctivo" : "Preventivo";
+  elegirTipoMantenimiento(mtoTipo, true);
   irA("pantalla-form-mantenimiento");
   cambioEquipoMantenimiento();
 }
@@ -459,10 +587,15 @@ async function cargarFallasParaCorrectivo(){
   const sel = document.getElementById("mto-falla");
   const codigo = document.getElementById("mto-equipo").value;
   sel.innerHTML = `<option value="">Ninguna / sin falla reportada</option>`;
-  if(!codigo || !navigator.onLine) return;
-  const resp = await llamarServidor({ tipo:"listado_fallas_abiertas" });
-  const fallas = (resp && resp.ok ? resp.fallas : []).filter(f => String(f.EQUIPO || "").startsWith(codigo));
+  if(!codigo) return;
+  // Las fallas abiertas ya vienen en el control (sin otra espera al servidor).
+  let fallas = (controlDatos.fallas || []).filter(f => fallaAbierta(f) && codigoDeTextoEquipo(f.EQUIPO) === codigo);
+  if(!fallas.length && navigator.onLine && !controlDatos.actualizado){
+    const resp = await llamarServidor({ tipo:"listado_fallas_abiertas" }, { silencioso:true });
+    fallas = (resp && resp.ok ? resp.fallas : []).filter(f => codigoDeTextoEquipo(f.EQUIPO) === codigo);
+  }
   sel.innerHTML += fallas.map(f => `<option value="${esc(f.ID_FALLA)}">${esc(f.ID_FALLA)} · ${esc(f.FECHA)} · ${esc(String(f.DESCRIPCION || "").slice(0, 60))}</option>`).join("");
+  if(mtoFallaElegida && fallas.some(f => f.ID_FALLA === mtoFallaElegida)) sel.value = mtoFallaElegida;
 }
 
 function errorMantenimiento(msg){

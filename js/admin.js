@@ -246,7 +246,11 @@ function grafBarras(labels, series){
   const n = labels.length;
   let maxValor = 0;
   series.forEach(s=> s.valores.forEach(v=>{ if(v>maxValor) maxValor = v; }));
-  const maxEscala = Math.max(Math.ceil(maxValor*1.15), 1);
+  // Escala "redonda" divisible entre 4 líneas (sin números repetidos en el eje).
+  const LINEAS = 4;
+  const paso = [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 2500, 5000, 10000]
+    .find(p => p * LINEAS >= maxValor * 1.1) || Math.ceil(maxValor * 1.1 / LINEAS);
+  const maxEscala = paso * LINEAS;
 
   const anchoGrupo = areaAncho / n;
   const numSeries = series.length;
@@ -255,9 +259,8 @@ function grafBarras(labels, series){
 
   let svg = `<svg viewBox="0 0 ${ancho} ${alto}" class="grafico-svg" preserveAspectRatio="xMidYMid meet">`;
 
-  const LINEAS = 4;
   for(let i=0;i<=LINEAS;i++){
-    const val = Math.round(maxEscala * i / LINEAS);
+    const val = paso * i;
     const y = margenSup + areaAlto - (areaAlto * i / LINEAS);
     svg += `<line x1="${margenIzq}" y1="${y.toFixed(1)}" x2="${ancho-margenDer}" y2="${y.toFixed(1)}" style="stroke:var(--linea);stroke-width:1"/>`;
     svg += `<text x="${margenIzq-5}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="9" style="fill:var(--tinta-600)">${val}</text>`;
@@ -405,7 +408,16 @@ function renderizarListadoFallasAdmin(){
    Cada falla trae una CLAVE única del servidor (hay números de falla
    repetidos de antes), así se borra exactamente la elegida. */
 function fallaAdminPorClave(clave){
-  return adminDatosCache.fallas.find(f => String(f.CLAVE||"") === String(clave));
+  const buscar = lista => (lista || []).find(f => String(f.CLAVE||"") === String(clave));
+  return buscar(adminDatosCache.fallas) || (typeof controlDatos !== "undefined" ? buscar(controlDatos.fallas) : null);
+}
+
+/* Resolver desde el panel admin: al terminar vuelve al Historial de Fallas. */
+function resolverFallaAdmin(clave){
+  const r = fallaAdminPorClave(clave);
+  if(!r) return;
+  cerrarModal();
+  abrirResolverFallaObjeto(r, async () => { await abrirPanelAdmin(); irA("pantalla-admin-fallas"); });
 }
 
 function verDetalleFallaAdmin(clave){
@@ -436,7 +448,13 @@ function verDetalleFallaAdmin(clave){
     ${fila("Resuelto por", r.RESUELTO_POR)}
     ${fila("Fecha de resolución", r.FECHA_RESOLUCION)}
     <div class="modal-fila" style="border-bottom:none;"><b>Fotos</b>${fotosHtml}</div>
-    <div style="display:flex;gap:8px;margin-top:14px;">
+    ${String(r.ESTADO || "Abierta") !== "Resuelta" && r.CLAVE ? `
+    <div class="ficha-nota" style="margin-top:12px;"><b>¿Cómo se cierra?</b> Con <b>Resolver</b> se anota la causa y la acción correctiva (trabajo rápido). Si hubo cambio de repuestos o un trabajo mayor, usa <b>Correctivo</b>: queda como mantenimiento con su OT y costo, y la falla se cierra sola.</div>
+    <div style="display:flex;gap:8px;margin-top:10px;">
+      <button class="btn btn-primario" style="flex:1;margin-top:0;" onclick="resolverFallaAdmin(${jsArg(r.CLAVE)})">✔ Resolver</button>
+      ${codigoDeTextoEquipo(r.EQUIPO) && typeof EQUIPOS_MTTO !== "undefined" && equipoMtto(codigoDeTextoEquipo(r.EQUIPO)) ? `<button class="btn btn-secundario" style="flex:1;margin-top:0;" onclick="cerrarModal();abrirFormMantenimiento(${jsArg(codigoDeTextoEquipo(r.EQUIPO))}, { correctivo:true, falla:${jsArg(r.ID_FALLA)} })">🔧 Correctivo</button>` : ""}
+    </div>` : ""}
+    <div style="display:flex;gap:8px;margin-top:10px;">
       <button class="btn btn-secundario" style="flex:1;" onclick="cerrarModal()">Cerrar</button>
       ${r.CLAVE ? `<button class="btn btn-texto" style="flex:1;color:var(--rojo-texto,#c0392b);" onclick="eliminarFallaAdmin(${jsArg(r.CLAVE)})">Eliminar</button>` : ""}
     </div>

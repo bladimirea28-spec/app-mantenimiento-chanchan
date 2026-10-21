@@ -1,5 +1,5 @@
 // Al publicar, subir este número y VERSION_APP en js/config.js (el mismo).
-const CACHE_NAME = "mantenimiento-chanchan-v15";
+const CACHE_NAME = "mantenimiento-chanchan-v16";
 const ARCHIVOS_BASE = [
   "./",
   "./index.html",
@@ -22,6 +22,7 @@ const ARCHIVOS_BASE = [
   "./js/requerimientos.js",
   "./js/checklists.js",
   "./js/control-mantenimiento.js",
+  "./js/qr-equipos.js",
   "./js/excel-control.js",
   "./js/dashboard-control.js",
   "./js/sincronizacion.js",
@@ -30,7 +31,8 @@ const ARCHIVOS_BASE = [
   // Librerías para exportar a Excel: se cargan solo al exportar, pero se
   // guardan aquí para que también funcionen sin señal.
   "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js",
-  "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"
+  "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js",
+  "https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"
 ];
 
 self.addEventListener("install", (event) => {

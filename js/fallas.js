@@ -287,6 +287,14 @@ async function marcarEnAtencionFalla(idFalla){
 function abrirResolverFalla(idFalla){
   const falla = fallasAbiertasCache.find(f=>f.ID_FALLA===idFalla);
   if(!falla) return;
+  abrirResolverFallaObjeto(falla, null);
+}
+
+/* alTerminar: qué hacer al guardar (por ejemplo, volver a la ficha del
+   equipo). Si no se indica, vuelve a "Fallas abiertas". */
+let alTerminarResolucion = null;
+function abrirResolverFallaObjeto(falla, alTerminar){
+  alTerminarResolucion = alTerminar || null;
   fallaEnResolucion = falla;
   document.getElementById("resolver-resumen").innerHTML = `
     <div style="font-weight:700;font-size:14px;">${esc(falla.EQUIPO)}</div>
@@ -327,6 +335,7 @@ async function guardarResolucionFalla(){
   const sesion = JSON.parse(localStorage.getItem("sesion_activa")||"{}");
   const registro = {
     id_falla: fallaEnResolucion.ID_FALLA,
+    clave: fallaEnResolucion.CLAVE || "",   // la fila exacta (hay números repetidos)
     causa, accion,
     hora_fin: horaFin,
     minutos_parada: calcularMinutosParada(fallaEnResolucion.HORA_INICIO, horaFin),
@@ -343,6 +352,15 @@ async function guardarResolucionFalla(){
   }
   mostrarToast("Falla marcada como resuelta", true);
   fallaEnResolucion = null;
-  irA("pantalla-fallas-abiertas");
+  const despues = alTerminarResolucion;
+  alTerminarResolucion = null;
+  if(despues){
+    irA("pantalla-control-unidades");
+    await cargarControlMantenimiento(true);
+    if(typeof renderControlUnidades === "function") renderControlUnidades();
+    despues();
+  }else{
+    irA("pantalla-fallas-abiertas");
+  }
 }
 

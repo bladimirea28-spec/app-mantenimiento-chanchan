@@ -190,6 +190,7 @@ function entrarAMenu(usuario){
     actualizarResumenInicio();
   }
   actualizarAlertaMantenimiento(true);
+  abrirEquipoDelEnlace(usuario);   // si se entró escaneando el QR de un equipo
 }
 
 async function guardarCorreoAdmin(){

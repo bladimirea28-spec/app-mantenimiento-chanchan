@@ -525,6 +525,7 @@ function renderSemanaChecklist(aviso){
       <div style="font-weight:700;font-size:13.5px;margin-bottom:8px;">Visto bueno de la semana</div>
       ${lineaVb("area", "Supervisor responsable del área", sesion.rol === "admin" || sesion.es_jefe_area)}
       ${lineaVb("mantenimiento", "Supervisor de mantenimiento", sesion.rol === "admin")}
+      <div class="ficha-nota">El visto bueno es la firma de revisión de la semana (sale en el Excel, como en el formato de papel). No detiene nada: los checklists, sus NC y los horómetros ya cuentan desde que el operador los envía.</div>
     </div>
     <button class="btn btn-primario" style="margin-top:14px;" onclick="exportarSemanaChecklistExcel()">⬇ Descargar Excel de la semana</button>`;
   cont.innerHTML = html;

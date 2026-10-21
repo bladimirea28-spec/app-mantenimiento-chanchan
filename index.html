@@ -424,6 +424,7 @@
         <button class="btn btn-secundario" style="margin-top:0;" onclick="exportarControlExcel()">⬇ Excel de control</button>
       </div>
       <button class="btn btn-texto" id="btn-mtto-partida" style="display:none;margin-top:4px;" onclick="abrirPuntoPartida()">⚙️ Punto de partida de las unidades (admin)</button>
+      <button class="btn btn-texto" id="btn-mtto-qr" style="display:none;margin-top:0;" onclick="imprimirEtiquetasQr()">▦ Etiquetas QR de las unidades (imprimir)</button>
       <div class="campo" style="margin-top:12px;">
         <label>Mostrar</label>
         <select id="mtto-filtro" onchange="renderControlUnidades()">
@@ -1565,6 +1566,7 @@
 <script src="js/requerimientos.js"></script>
 <script src="js/checklists.js"></script>
 <script src="js/control-mantenimiento.js"></script>
+<script src="js/qr-equipos.js"></script>
 <script src="js/excel-control.js"></script>
 <script src="js/dashboard-control.js"></script>
 <script src="js/sincronizacion.js"></script>
