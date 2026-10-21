@@ -63,7 +63,7 @@ async function cargarControlMantenimiento(silencioso){
     const resp = await llamarServidor({ tipo:"control_mantenimiento" }, { silencioso:!!silencioso });
     if(resp && resp.ok){
       deServidor = { parametros:resp.parametros || [], mantenimientos:(resp.mantenimientos || []).map(mantenimientoDesdeServidor),
-                     lecturas:resp.lecturas || {}, actualizado:new Date().toLocaleString("es-PE") };
+                     lecturas:resp.lecturas || {}, actualizado:new Date().toLocaleString("es-PE"), ts:Date.now() };
       try{ localStorage.setItem("cache_control_mtto", JSON.stringify(deServidor)); }catch(e){}
     }
   }
@@ -72,8 +72,11 @@ async function cargarControlMantenimiento(silencioso){
   }
   controlDatos = deServidor || { parametros:[], mantenimientos:[], lecturas:{}, actualizado:null };
 
-  // Lo que todavía no se sincronizó también cuenta (mantenimientos y lecturas de checklists).
-  (await leerStore("mantenimientos")).forEach(m => {
+  // Lo que todavía no llegó al servidor también cuenta. Lo que ya se envió
+  // lo trae el servidor (así, si un admin borró un registro, este celular no
+  // lo sigue usando con su copia antigua).
+  const nuevoParaServidor = r => !deServidor || !r.sincronizado || (deServidor.ts && r.creado > deServidor.ts);
+  (await leerStore("mantenimientos")).filter(nuevoParaServidor).forEach(m => {
     if(!controlDatos.mantenimientos.some(x => x.id === m.id)) controlDatos.mantenimientos.push(m);
   });
   const anotar = (clave, valor, fecha, origen) => {
@@ -82,7 +85,7 @@ async function cargarControlMantenimiento(silencioso){
     const actual = controlDatos.lecturas[clave];
     if(!actual || n > Number(actual.lectura)) controlDatos.lecturas[clave] = { lectura:n, fecha, origen };
   };
-  (await leerStore("checklists")).forEach(c => anotar(c.equipo_clave, c.lectura, c.fecha, "Checklist"));
+  (await leerStore("checklists")).filter(nuevoParaServidor).forEach(c => anotar(c.equipo_clave, c.lectura, c.fecha, "Checklist"));
   controlDatos.mantenimientos.forEach(m => { if(m.lectura !== "" && m.lectura != null) anotar(m.codigo, m.lectura, m.fecha, "Mantenimiento"); });
   return controlDatos;
 }

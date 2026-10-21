@@ -92,8 +92,11 @@ async function actualizarCacheLecturas(){
 
 async function ultimaLecturaDe(clave){
   let mejor = leerCacheLecturas()[clave] || null;
+  // Del celular solo cuenta lo que el servidor todavía no conoce (lo ya
+  // enviado viene en la lista del servidor; si un admin lo borró, no vale).
+  const desde = Number(localStorage.getItem("cache_lecturas_ts") || 0);
   const locales = await leerStore("checklists");
-  locales.filter(r => r.equipo_clave === clave && r.lectura != null).forEach(r => {
+  locales.filter(r => r.equipo_clave === clave && r.lectura != null && (!r.sincronizado || !desde || r.creado > desde)).forEach(r => {
     if(!mejor || Number(r.lectura) > Number(mejor.lectura)) mejor = { lectura:Number(r.lectura), fecha:r.fecha };
   });
   return mejor;
