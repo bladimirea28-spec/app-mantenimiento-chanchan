@@ -28,7 +28,24 @@ async function actualizarTextoPendientes(){
   els.forEach(el=>{ el.textContent = texto; });
 }
 
-async function sincronizarTodo(){
+/* Nunca dos sincronizaciones a la vez (manual, automática o al guardar). */
+/* Si llega un pedido mientras ya se está sincronizando (por ejemplo, alguien
+   guarda un checklist), se vuelve a sincronizar al terminar, para que lo
+   recién guardado no quede esperando. */
+let sincronizandoAhora = false;
+let sincronizarOtraVez = false;
+async function sincronizarTodo(opciones){
+  if(sincronizandoAhora){ sincronizarOtraVez = true; return; }
+  sincronizandoAhora = true;
+  try{
+    await sincronizarTodoUnaVez(opciones || {});
+    while(sincronizarOtraVez){ sincronizarOtraVez = false; await sincronizarTodoUnaVez({ automatico:true }); }
+  }finally{ sincronizandoAhora = false; }
+}
+
+async function sincronizarTodoUnaVez(opciones){
+  const automatico = !!opciones.automatico;
+  if(automatico && (await contarPendientes()) === 0) return;
   const url = obtenerSyncUrl();
   if(!url){
     mostrarToast("Primero configura la conexión a Google Sheets", false);
@@ -36,10 +53,10 @@ async function sincronizarTodo(){
     return;
   }
   if(!navigator.onLine){
-    mostrarToast("Sin conexión a internet ahora mismo", false);
+    if(!automatico) mostrarToast("Sin conexión a internet ahora mismo", false);
     return;
   }
-  mostrarToast("Sincronizando...", true);
+  mostrarToast(automatico ? "Enviando registros pendientes..." : "Sincronizando...", true);
 
   const acts = (await leerStore("actividades")).filter(r=>!r.sincronizado);
   const falls = (await leerStore("fallas")).filter(r=>!r.sincronizado);
@@ -83,13 +100,68 @@ async function sincronizarTodo(){
     if(res.ok){ r.sincronizado = true; if(res.id_ot) r.n_ot = res.id_ot; await guardarEnStore("mantenimientos", r); exitos++; } else fallos++;
   }
 
-  let mensajeFinal = fallos===0 ? `${exitos} registro(s) sincronizado(s)` : `${exitos} listo(s), ${fallos} con error`;
+  let mensajeFinal = fallos===0 ? `${exitos} registro(s) sincronizado(s)${automatico ? " automáticamente" : ""}` : `${exitos} listo(s), ${fallos} con error`;
   if(correlativosNuevos.length){ mensajeFinal += ` (${correlativosNuevos.join(", ")})`; }
   mostrarToast(mensajeFinal, fallos===0);
   actualizarTextoPendientes();
   if(exitos > 0) actualizarAlertaMantenimiento(true);
   limpiarCopiasBorradas();
 }
+
+/* ============ BOTÓN "ACTUALIZAR" (único medio de actualizar) ============
+   Envía lo pendiente y trae lo último del servidor SIN recargar la página,
+   así nunca se pierde nada de lo que se esté llenando. */
+async function actualizarDatos(){
+  if(!navigator.onLine){ mostrarToast("Sin conexión: lo llenado queda guardado en el celular.", false); return; }
+  const btn = document.getElementById("btn-actualizar");
+  if(btn) btn.classList.add("girando");
+  try{
+    await sincronizarTodo();
+    await limpiarCopiasBorradas(true);
+    const s = JSON.parse(localStorage.getItem("sesion_activa") || "{}");
+    if(s.rol && s.rol !== "operador") actualizarResumenInicio();
+    await actualizarAlertaMantenimiento(true);
+    localStorage.removeItem("cache_lecturas_ts");
+    actualizarCacheLecturas();
+    actualizarTextoPendientes();
+    mostrarToast("Datos actualizados ✓", true);
+  }finally{
+    if(btn) btn.classList.remove("girando");
+  }
+}
+
+/* ============ SINCRONIZACIÓN AUTOMÁTICA ============
+   Si algo lleva 30 minutos o más como "Pendiente" (se llenó sin señal o se
+   olvidaron de sincronizar), apenas haya internet se envía solo. Se revisa
+   cada minuto, al volver la señal y al volver a abrir la app. */
+const MINUTOS_AUTO_SINCRONIZAR = 30;
+async function pendientesAntiguos(){
+  const limite = Date.now() - MINUTOS_AUTO_SINCRONIZAR * 60 * 1000;
+  let n = 0;
+  for(const store of ["actividades", "fallas", "requerimientos", "checklists", "mantenimientos"]){
+    n += (await leerStore(store)).filter(r => !r.sincronizado && (r.creado || 0) <= limite).length;
+  }
+  return n;
+}
+async function revisarSincronizacionAutomatica(){
+  try{
+    if(!db || !navigator.onLine || !tokenSesion() || sincronizandoAhora) return;
+    if(await pendientesAntiguos()) await sincronizarTodo({ automatico:true });
+  }catch(e){ console.log("Sincronización automática:", e); }
+}
+setInterval(revisarSincronizacionAutomatica, 60 * 1000);
+window.addEventListener("online", () => setTimeout(revisarSincronizacionAutomatica, 3000));
+document.addEventListener("visibilitychange", () => { if(document.visibilityState === "visible") revisarSincronizacionAutomatica(); });
+
+/* Si se intenta cerrar o recargar la página en medio de un formulario, el
+   navegador pregunta antes (para no perder lo que se está llenando). */
+window.addEventListener("beforeunload", (e) => {
+  const activa = document.querySelector(".pantalla.activa");
+  if(activa && typeof esPantallaFormulario === "function" && esPantallaFormulario(activa.id)){
+    e.preventDefault();
+    e.returnValue = "";
+  }
+});
 
 /* ============ COPIAS DEL CELULAR AL DÍA ============
    Lo ya enviado queda guardado en el celular para mostrarlo en "Mis

@@ -179,7 +179,7 @@ function primerNombre(nombreCompleto){
 
 /* ============ VERSIÓN Y ACTUALIZACIÓN DE LA APP ============
    VERSION_APP debe ser igual al número de CACHE_NAME en sw.js. */
-const VERSION_APP = "v17";
+const VERSION_APP = "v18";
 
 function mostrarVersionApp(){
   document.querySelectorAll(".txt-version-app").forEach(el => { el.textContent = "(versión " + VERSION_APP + ")"; });
