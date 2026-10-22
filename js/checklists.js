@@ -45,6 +45,27 @@ function equiposDePlantilla(p){
   return EQUIPOS.filter(e => p.filtroEquipos.test(e.desc));
 }
 
+/* La lectura del día según el equipo: km para vehículos, horómetro para
+   motores y generador (si el checklist lo define en lecturaPorEquipo). */
+function lecturaDe(p, nombreEquipo){
+  const regla = (p.lecturaPorEquipo || []).find(r => r.filtro.test(String(nombreEquipo || "")));
+  return regla ? regla.lectura : p.lectura;
+}
+/* Texto general cuando el checklist mezcla km y horómetro. */
+function etiquetaLecturaGeneral(p){
+  return (p.lecturaPorEquipo || []).length ? "Kilometraje u horómetro" : p.lectura.etiqueta;
+}
+/* Lectura del equipo elegido ahora en el formulario. */
+function lecturaActualChecklist(){
+  const eq = equipoSeleccionado();
+  return lecturaDe(chkPlantilla, eq ? eq.nombre : "");
+}
+function actualizarEtiquetaLectura(){
+  const l = lecturaActualChecklist();
+  document.getElementById("chk-lectura-label").textContent = equipoSeleccionado() || !(chkPlantilla.lecturaPorEquipo || []).length
+    ? `${l.etiqueta} (${l.unidad})` : "Kilometraje u horómetro (elige primero el equipo)";
+}
+
 function claveEquipo(codigo, nombre){
   return codigo ? String(codigo) : String(nombre || "").trim().toUpperCase();
 }
@@ -109,16 +130,25 @@ async function abrirChecklists(){
     const nItems = p.secciones.reduce((n, s) => n + s.items.length, 0);
     return `
     <button class="modulo-btn" onclick="abrirFormChecklist(${jsArg(p.id)})">
-      <div class="modulo-icono morado">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 3h6v3H9zM6 6h12v15H6z"/><path d="M9 12l2 2 4-4"/></svg>
+      <div class="modulo-icono morado" style="font-size:24px;">
+        ${p.icono ? esc(p.icono) : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 3h6v3H9zM6 6h12v15H6z"/><path d="M9 12l2 2 4-4"/></svg>`}
       </div>
       <div class="modulo-txt">
         <div class="titulo-lg">${esc(p.nombre)}</div>
-        <div class="subtexto">${esc(p.codigo)} · ${nItems} puntos · ${esc(p.lectura.etiqueta)}</div>
+        ${p.subtitulo ? `<div class="subtexto" style="color:var(--tinta-900);">${esc(p.subtitulo)}</div>` : ""}
+        <div class="subtexto">${esc(p.codigo)} · ${nItems} puntos · ${esc(etiquetaLecturaGeneral(p))}</div>
       </div>
       <div class="modulo-flecha"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>
     </button>`;
-  }).join("");
+  }).join("") + (typeof CATEGORIAS_PROXIMAMENTE !== "undefined" ? CATEGORIAS_PROXIMAMENTE : []).map(c => `
+    <div class="modulo-btn" style="opacity:.6;cursor:default;" onclick="mostrarToast(${jsArg(c.nombre + ": sus checklists se agregarán pronto.")}, true)">
+      <div class="modulo-icono morado" style="font-size:24px;">${esc(c.icono || "📋")}</div>
+      <div class="modulo-txt">
+        <div class="titulo-lg">${esc(c.nombre)}</div>
+        ${c.subtitulo ? `<div class="subtexto" style="color:var(--tinta-900);">${esc(c.subtitulo)}</div>` : ""}
+        <div class="subtexto"><span class="badge">Próximamente</span></div>
+      </div>
+    </div>`).join("");
   const puedeVerSemana = sesion.rol === "admin" || sesion.rol === "tecnico" || sesion.es_jefe_area;
   document.getElementById("btn-checklist-semanal").style.display = puedeVerSemana ? "flex" : "none";
   irA("pantalla-checklists");
@@ -193,7 +223,7 @@ function abrirFormChecklist(idPlantilla){
   document.getElementById("chk-tractor-otro").value = "";
   document.getElementById("chk-tractor-otro").style.display = "none";
 
-  document.getElementById("chk-lectura-label").textContent = `${p.lectura.etiqueta} (${p.lectura.unidad})`;
+  actualizarEtiquetaLectura();
   document.getElementById("chk-lectura").value = "";
   document.getElementById("chk-lectura-ayuda").textContent = "";
   document.getElementById("chk-lectura-ayuda").classList.remove("alerta");
@@ -258,6 +288,7 @@ async function cambioEquipoChecklist(){
   const sel = document.getElementById("chk-equipo");
   document.getElementById("chk-equipo-otro").style.display = sel.value === "__otro" ? "block" : "none";
   const eq = equipoSeleccionado();
+  actualizarEtiquetaLectura();   // km o horómetro según el equipo
   chkUltimaLectura = eq ? await ultimaLecturaDe(eq.clave) : null;
   revisarLecturaChecklist();
 }
@@ -267,7 +298,7 @@ async function cambioEquipoChecklist(){
 function revisarLecturaChecklist(){
   const ayuda = document.getElementById("chk-lectura-ayuda");
   const confirmar = document.getElementById("chk-confirmar-lectura");
-  const unidad = chkPlantilla ? chkPlantilla.lectura.unidad : "";
+  const unidad = chkPlantilla ? lecturaActualChecklist().unidad : "";
   const valor = parseFloat(document.getElementById("chk-lectura").value);
   ayuda.classList.remove("alerta");
   confirmar.style.display = "none";
@@ -310,11 +341,11 @@ async function guardarChecklist(){
   const lecturaTexto = document.getElementById("chk-lectura").value.trim();
   const lectura = parseFloat(lecturaTexto);
   if(lecturaTexto === "" || isNaN(lectura) || lectura < 0){
-    return errorChecklist(`Escribe el ${p.lectura.etiqueta.toLowerCase()} de hoy.`);
+    return errorChecklist(`Escribe el ${lecturaDe(p, eq.nombre).etiqueta.toLowerCase()} de hoy.`);
   }
   if(chkUltimaLectura && lectura < Number(chkUltimaLectura.lectura) && !document.getElementById("chk-confirmar-lectura-check").checked){
     revisarLecturaChecklist();
-    return errorChecklist(`El ${p.lectura.etiqueta.toLowerCase()} es menor que el último registrado. Corrígelo o confirma que es correcto.`);
+    return errorChecklist(`El ${lecturaDe(p, eq.nombre).etiqueta.toLowerCase()} es menor que el último registrado. Corrígelo o confirma que es correcto.`);
   }
 
   const faltantes = chkRespuestas.map((r, i) => r.marca ? -1 : i).filter(i => i >= 0);
@@ -341,7 +372,7 @@ async function guardarChecklist(){
     fecha: fechaPE(ahora),
     hora: ahora.toTimeString().slice(0, 5),
     semana: semanaISO(ahora), dia: DIAS_SEMANA[indiceDiaSemana(ahora)],
-    lectura, lectura_tipo: p.lectura.tipo, lectura_unidad: p.lectura.unidad,
+    lectura, lectura_tipo: lecturaDe(p, eq.nombre).tipo, lectura_unidad: lecturaDe(p, eq.nombre).unidad,
     respuestas: chkRespuestas.map(r => ({ seccion:r.seccion, item:r.item, marca:r.marca, obs:r.obs.trim() })),
     nc: chkRespuestas.filter(r => r.marca === "NC").length,
     observados: chkRespuestas.filter(r => r.marca === "O").length,
@@ -496,7 +527,7 @@ function renderSemanaChecklist(aviso){
       html += `<tr><th>${esc(it.texto)}</th>${s.dias.map(d => `<td>${celda(marcaDelDia(d, it.texto))}</td>`).join("")}</tr>`;
     });
   });
-  html += filaExtra(esc(p.lectura.etiqueta), r => `${r.lectura} ${r.lectura_unidad || p.lectura.unidad}`);
+  html += filaExtra(esc(etiquetaLecturaGeneral(p)), r => `${r.lectura} ${r.lectura_unidad || p.lectura.unidad}`);
   if(p.pideTurno) html += filaExtra("Turno", r => r.turno || "—");
   if(p.pideTractor) html += filaExtra("Tractor", r => r.tractor || "—");
   html += filaExtra("Responsable", r => r.usuario || "—");
@@ -573,7 +604,8 @@ async function exportarSemanaChecklistExcel(){
       filas.push([it.texto, ...s.dias.map(d => unir(marcaDelDia(d, it.texto))), unir(obs)]);
     });
   });
-  filas.push([`${p.lectura.etiqueta.toUpperCase()} (${p.lectura.unidad})`, ...s.dias.map(d => unir(d.registros.map(r => String(r.lectura))))]);
+  filas.push([(p.lecturaPorEquipo || []).length ? "KILOMETRAJE / HORÓMETRO" : `${p.lectura.etiqueta.toUpperCase()} (${p.lectura.unidad})`,
+    ...s.dias.map(d => unir(d.registros.map(r => String(r.lectura) + ((p.lecturaPorEquipo || []).length && r.lectura_unidad ? " " + r.lectura_unidad : ""))))]);
   if(p.pideTurno) filas.push(["TURNO", ...s.dias.map(d => unir(d.registros.map(r => r.turno)))]);
   if(p.pideTractor) filas.push(["TRACTOR", ...s.dias.map(d => unir(d.registros.map(r => r.tractor)))]);
   filas.push(["RESPONSABLE", ...s.dias.map(d => unir(d.registros.map(r => r.usuario)))]);

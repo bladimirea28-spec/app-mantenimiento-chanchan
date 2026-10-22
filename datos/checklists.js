@@ -10,18 +10,34 @@
      la lista; se compara con el texto del equipo. Si ninguno coincide, el
      operador puede escribir el equipo a mano.
    - lectura: el horómetro o kilometraje que se anota cada día.
+   - lecturaPorEquipo (opcional): otra lectura para ciertos equipos del mismo
+     checklist (ej. motores y generador van por horómetro, no por km).
+   - icono y subtitulo: solo para mostrar el checklist más claro en la lista.
    - pideTurno / pideTractor: campos extra del encabezado. */
 
 const NOMBRES_MARCAS = { C:"Conforme", NC:"No conforme", O:"Observado", NA:"No aplica" };
+
+/* Categorías que se muestran en la lista pero todavía no tienen checklist
+   (aparecen como "Próximamente" y no se pueden abrir). Cuando se arme su
+   checklist, se pasa a CHECKLISTS como un bloque más. */
+const CATEGORIAS_PROXIMAMENTE = [
+  { nombre: "Equipos Packing", subtitulo: "Todos los equipos y unidades de packing", icono: "📦" }
+];
 
 const CHECKLISTS = [
   {
     id: "trimoto",
     codigo: "MTTO 024 6 02",
-    nombre: "Trimotos",
+    nombre: "Equipos menores a combustión",
+    subtitulo: "Trimotos, cuatrimotos, motores estacionarios y generador",
+    icono: "🛵",
     titulo: "Check list de vehículos / equipos menores para usuario",
-    filtroEquipos: /TRIMOTO/i,
+    // CUATRIMOTO también contiene "TRIMOTO".
+    filtroEquipos: /TRIMOTO|MOTOR ESTACIONARIO|GENERADOR/i,
     lectura: { tipo: "km", etiqueta: "Kilometraje", unidad: "km" },
+    lecturaPorEquipo: [
+      { filtro: /MOTOR ESTACIONARIO|GENERADOR/i, lectura: { tipo: "horometro", etiqueta: "Horómetro", unidad: "h" } }
+    ],
     marcas: ["C", "NC", "O", "NA"],
     pideTurno: false,
     pideTractor: false,
@@ -50,7 +66,9 @@ const CHECKLISTS = [
   {
     id: "tractor",
     codigo: "MTTO 026 9 01",
-    nombre: "Tractor agrícola",
+    nombre: "Maquinaria agrícola",
+    subtitulo: "Pre-operacional diario del tractor",
+    icono: "🚜",
     titulo: "Check list pre-operacional tractor agrícola",
     // "(^|[^X])TRACTOR" evita que entren los EXTRACTORES de secado.
     filtroEquipos: /(^|[^X])TRACTOR/i,
@@ -78,7 +96,9 @@ const CHECKLISTS = [
   {
     id: "jacto",
     codigo: "MTTO 026 8 02",
-    nombre: "Implemento Jacto",
+    nombre: "Implementos de campo",
+    subtitulo: "Implemento Jacto (aplicación), con su tractor",
+    icono: "🌱",
     titulo: "Check list pre-operacional implemento de aplicación Jacto",
     filtroEquipos: /JACTO/i,
     lectura: { tipo: "horometro", etiqueta: "Horómetro", unidad: "h" },
