@@ -469,8 +469,15 @@ function checklistDesdeServidor(f){
     turno:f.TURNO, tractor:f.TRACTOR, lectura:f.LECTURA, lectura_unidad:f.LECTURA_TIPO === "km" ? "km" : "h",
     respuestas, puede_utilizar:f.PUEDE_UTILIZAR, observaciones:f.OBSERVACIONES,
     fotos:String(f.FOTOS || "").split("|").map(s => s.trim()).filter(Boolean),
-    usuario:f.USUARIO, dni:String(f.DNI || ""), sincronizado:true
+    usuario:f.USUARIO, dni:String(f.DNI || ""), registrado:f.REGISTRADO || "", recibido:f.FECHA_SYNC || "", sincronizado:true
   };
+}
+
+/* Hora real en que se guardó en el celular (la pone la app; solo admin). */
+function momentoChecklist(r){
+  if(r.registrado) return r.registrado;
+  if(r.creado) return new Date(r.creado).toLocaleString("es-PE", { day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit", hour12:false });
+  return r.recibido ? r.recibido + " (llegada)" : "—";
 }
 
 async function verSemanaChecklist(){
@@ -554,6 +561,7 @@ function renderSemanaChecklist(aviso){
   if(p.pideTurno) html += filaExtra("Turno", r => r.turno || "—");
   if(p.pideTractor) html += filaExtra("Tractor", r => r.tractor || "—");
   html += filaExtra("Responsable", r => r.usuario || "—");
+  if(sesion.rol === "admin") html += filaExtra("🕒 Registrado (hora real)", momentoChecklist);
   html += `<tr class="chk-fila-extra"><th>¿Se puede utilizar?</th>${s.dias.map(d =>
     `<td>${d.registros.map(r => `<span class="chk-pill ${r.puede_utilizar === "NO" ? "marca-NC" : "marca-C"}">${esc(r.puede_utilizar)}</span>`).join(" ") || "—"}</td>`).join("")}</tr>`;
   html += `</tbody></table></div>`;
@@ -579,7 +587,7 @@ function renderSemanaChecklist(aviso){
   };
   html += `<div class="tarjeta" style="margin-top:12px;">
       <div style="font-weight:700;font-size:13.5px;margin-bottom:8px;">Visto bueno de la semana</div>
-      ${lineaVb("area", "Supervisor responsable del área", sesion.rol === "admin" || sesion.es_jefe_area)}
+      ${lineaVb("area", "Supervisor responsable del área", sesion.rol === "admin")}
       ${lineaVb("mantenimiento", "Supervisor de mantenimiento", sesion.rol === "admin")}
       <div class="ficha-nota">El visto bueno es la firma de revisión de la semana (sale en el Excel, como en el formato de papel). No detiene nada: los checklists, sus NC y los horómetros ya cuentan desde que el operador los envía.</div>
     </div>

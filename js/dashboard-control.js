@@ -87,7 +87,7 @@ function renderDashboardControl(){
       ${tarjetaKpi(cuenta("VENCIDO"), "PM vencidos", "rojo")}
       ${tarjetaKpi(cuenta("PRÓXIMO"), "PM próximos", "ambar")}
       ${tarjetaKpi(cuenta("AL DÍA"), "Al día", "verde")}
-      ${tarjetaKpi(cuenta("SIN REGISTRO"), "Sin punto de partida", "")}
+      ${tarjetaKpi(cuenta("SIN REGISTRO"), "Sin primer mantenimiento", "")}
     </div>`;
 
   // Lo más importante primero: lo que hay que corregir.
@@ -232,7 +232,7 @@ function renderDashboardControl(){
 
   // Próximos mantenimientos para programar.
   const orden = { "VENCIDO":0, "PRÓXIMO":1, "AL DÍA":2, "SIN REGISTRO":3 };
-  const proximos = estados.filter(r => r.estado !== "SIN REGISTRO")
+  const proximos = estados.filter(r => r.estado !== "SIN REGISTRO" && r.estado !== "SIN PLAN")
     .sort((a, b) => (orden[a.estado] - orden[b.estado]) || ((a.falta ?? 1e9) - (b.falta ?? 1e9))).slice(0, 8);
   html += `<div class="tarjeta dash-bloque">
       <div class="dash-titulo" style="margin-top:0;">Próximos mantenimientos para programar</div>
@@ -240,7 +240,7 @@ function renderDashboardControl(){
         <div class="dash-fila" onclick="verUnidadMantenimiento(${jsArg(r.eq.codigo)})">
           <span class="badge mtto-estado ${CLASE_ESTADO[r.estado]}">${esc(r.estado)}</span>
           <div style="flex:1;"><b>${esc(r.eq.codigo)}</b> ${esc(r.eq.descripcion.split(" - ")[0])}<div class="subtexto">${esc(r.proximo)} · ${esc(textoFalta(r))}</div></div>
-        </div>`).join("") : `<div class="subtexto">Carga el punto de partida de las unidades para ver aquí sus próximos mantenimientos.</div>`}
+        </div>`).join("") : `<div class="subtexto">Cuando los técnicos registren el primer mantenimiento de cada unidad, aquí saldrán sus próximos.</div>`}
     </div>
     <div class="fila-2" style="margin-top:14px;">
       <button class="btn btn-secundario" style="margin-top:0;" onclick="abrirControlUnidades()">Ver unidades</button>

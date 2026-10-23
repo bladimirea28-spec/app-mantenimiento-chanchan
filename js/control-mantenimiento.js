@@ -41,7 +41,42 @@ function peDesdeIso(iso){
 function hoyIso(){ return isoDesdePE(fechaPE(new Date())); }
 function sumarMeses(fecha, meses){ const d = new Date(fecha); d.setMonth(d.getMonth() + Number(meses)); return d; }
 function miles(n){ return Number(n).toLocaleString("es-PE", { maximumFractionDigits:1 }); }
-function equipoMtto(codigo){ return EQUIPOS_MTTO.find(e => e.codigo === String(codigo)) || null; }
+function equipoMtto(codigo){ return equiposControl().find(e => e.codigo === String(codigo)) || null; }
+
+/* Todos los equipos de la base maestra (datos/equipos.js), clasificados por
+   su código. Los que tienen plan de PM (EQUIPOS_MTTO) llevan su plan; el
+   resto ("sinPlan") se registra con preventivo libre o correctivo. */
+const CATEGORIAS_EQUIPO = [
+  { id:"vehiculos-menores", nombre:"Vehículos menores a combustión", es:c => c.startsWith("041") },
+  { id:"camionetas", nombre:"Camionetas", es:c => c.startsWith("042") },
+  { id:"maquinaria", nombre:"Maquinaria agrícola", es:c => c === "05112" },
+  { id:"implementos", nombre:"Implementos agrícolas", es:c => c.startsWith("051") },
+  { id:"packing", nombre:"Equipos de packing", es:c => /^05[2356]/.test(c) },
+  { id:"aires", nombre:"Aires acondicionados", es:c => c.startsWith("054") },
+  { id:"equipos-menores", nombre:"Equipos menores a combustión", es:c => c.startsWith("057") },
+  { id:"taller", nombre:"Equipos de taller", es:c => c.startsWith("058") },
+  { id:"tableros", nombre:"Tableros eléctricos", es:c => c.startsWith("059") }
+];
+function categoriaDe(codigo){ const c = CATEGORIAS_EQUIPO.find(x => x.es(String(codigo))); return c ? c.id : "otros"; }
+function nombreCategoria(id){ const c = CATEGORIAS_EQUIPO.find(x => x.id === id); return c ? c.nombre : "Otros equipos"; }
+
+let _equiposControl = null;
+function equiposControl(){
+  if(_equiposControl) return _equiposControl;
+  const conPlan = typeof EQUIPOS_MTTO !== "undefined" ? EQUIPOS_MTTO : [];
+  const lista = conPlan.map(e => Object.assign({ categoria:categoriaDe(e.codigo) }, e));
+  (typeof EQUIPOS !== "undefined" ? EQUIPOS : []).forEach(e => {
+    if(lista.some(x => x.codigo === e.codigo)) return;
+    const d = String(e.desc || "");
+    lista.push({ codigo:e.codigo, descripcion:d, plan:"", control:"", intervalo:0, criticidad:"", sinPlan:true,
+      area:/PACKING/i.test(d) ? "PACKING" : /CAMPO/i.test(d) ? "CAMPO" : "", categoria:categoriaDe(e.codigo) });
+  });
+  lista.sort((a, b) => a.codigo.localeCompare(b.codigo));
+  if(conPlan.length) _equiposControl = lista;   // con los planes ya cargados
+  return lista;
+}
+/* ¿Lleva km u horómetro obligatorio? Solo las unidades con plan por km/horas. */
+function usaLectura(eq){ return eq.control === "KM" || eq.control === "HR"; }
 function pasoDelCiclo(plan, pm){ return (plan.ciclo || []).findIndex(c => c.paso === pm || c.mantenimiento === pm); }
 
 /* ---------- Datos: servidor + lo guardado en el celular ---------- */
@@ -55,7 +90,7 @@ function mantenimientoDesdeServidor(f){
     trabajo:f.TRABAJO_REALIZADO, falla_id:f.FALLA_RELACIONADA, materiales:f.MATERIALES || [],
     inspeccion:f.INSPECCION || [], fotos:String(f.FOTOS || "").split("|").map(s => s.trim()).filter(Boolean),
     vb_nombre:f.VB_NOMBRE, vb_fecha:f.VB_FECHA, repuestos:f.REPUESTOS || [], requerimiento:String(f.REQUERIMIENTO || ""),
-    editado_por:f.EDITADO_POR || "", sincronizado:true
+    editado_por:f.EDITADO_POR || "", registrado:f.REGISTRADO || "", recibido:f.FECHA_SYNC || "", sincronizado:true
   };
 }
 
@@ -100,7 +135,7 @@ async function cargarControlMantenimiento(silencioso, codigo){
       id:c.id, fecha:c.fecha, hora:c.hora, plantilla:c.plantilla, codigo_formato:c.codigo_formato,
       equipo_codigo:c.equipo_codigo, equipo:c.equipo, equipo_clave:c.equipo_clave, turno:c.turno,
       lectura:c.lectura, lectura_tipo:c.lectura_tipo, nc:c.nc || 0, observados:c.observados || 0,
-      puede_utilizar:c.puede_utilizar, observaciones:c.observaciones, usuario:c.usuario,
+      puede_utilizar:c.puede_utilizar, observaciones:c.observaciones, usuario:c.usuario, creado:c.creado,
       hallazgos:(c.respuestas || []).filter(x => x.marca === "NC" || x.marca === "O"), pendiente:!c.sincronizado
     });
   });
@@ -122,6 +157,11 @@ function estadoUnidad(eq){
   const ultimo = preventivos[preventivos.length - 1];
   const lect = controlDatos.lecturas[eq.codigo] || null;
   const aviso = params && params.AVISO !== "" && params.AVISO != null ? Number(params.AVISO) : AVISO_POR_CONTROL[eq.control];
+  if(eq.sinPlan){
+    // Sin plan de PM: solo su historial (sin "le toca" ni vencidos).
+    return { eq, plan, params:null, ultimo:delEquipo[delEquipo.length - 1], base:null, lect, aviso:0, historial:delEquipo,
+             unidad:"", estado:"SIN PLAN", proximo:"—" };
+  }
 
   let base = null;
   if(ultimo){
@@ -161,9 +201,9 @@ function estadoUnidad(eq){
   return r;
 }
 
-function estadosDeUnidades(){ return EQUIPOS_MTTO.map(estadoUnidad); }
+function estadosDeUnidades(){ return equiposControl().map(estadoUnidad); }
 
-const CLASE_ESTADO = { "VENCIDO":"vencido", "PRÓXIMO":"proximo", "AL DÍA":"aldia", "SIN REGISTRO":"sinregistro" };
+const CLASE_ESTADO = { "VENCIDO":"vencido", "PRÓXIMO":"proximo", "AL DÍA":"aldia", "SIN REGISTRO":"sinregistro", "SIN PLAN":"sinregistro" };
 
 function textoFalta(r){
   if(r.falta == null) return "";
@@ -201,7 +241,12 @@ async function actualizarAlertaMantenimiento(refrescar){
 async function abrirControlUnidades(){
   const s = sesionActual();
   document.getElementById("btn-mtto-registrar").style.display = (s.rol === "admin" || s.rol === "tecnico") ? "flex" : "none";
-  document.getElementById("btn-mtto-partida").style.display = s.rol === "admin" ? "flex" : "none";
+  // Punto de partida ya no se usa: cada unidad empieza con su primer mantenimiento.
+  document.getElementById("btn-mtto-partida").style.display = "none";
+  const selCat = document.getElementById("mtto-categoria");
+  if(selCat && selCat.options.length <= 1){
+    selCat.innerHTML = `<option value="">Todas las categorías</option>` + CATEGORIAS_EQUIPO.map(c => `<option value="${c.id}">${esc(c.nombre)}</option>`).join("");
+  }
   document.getElementById("btn-mtto-qr").style.display = s.rol === "admin" ? "flex" : "none";
   irA("pantalla-control-unidades");
   document.getElementById("mtto-lista-unidades").innerHTML = `<div class="subtexto">Cargando...</div>`;
@@ -215,43 +260,53 @@ function renderControlUnidades(){
   const filtro = document.getElementById("mtto-filtro").value;
   const cuenta = e => estados.filter(r => r.estado === e).length;
   document.getElementById("mtto-resumen").innerHTML = ["VENCIDO", "PRÓXIMO", "AL DÍA", "SIN REGISTRO"]
-    .map(e => `<div class="mtto-chip ${CLASE_ESTADO[e]}"><b>${cuenta(e)}</b>${e === "SIN REGISTRO" ? "Sin registro" : e.charAt(0) + e.slice(1).toLowerCase()}</div>`).join("");
+    .map(e => `<div class="mtto-chip ${CLASE_ESTADO[e]}"><b>${cuenta(e)}</b>${e === "SIN REGISTRO" ? "Sin 1er mtto." : e.charAt(0) + e.slice(1).toLowerCase()}</div>`).join("");
   document.getElementById("mtto-aviso").innerHTML = controlDatos.actualizado ? "" :
     `<div class="tarjeta chk-aviso">Sin conexión con el servidor: se muestra lo guardado en este celular.</div>`;
 
-  const orden = { "VENCIDO":0, "PRÓXIMO":1, "AL DÍA":2, "SIN REGISTRO":3 };
+  const orden = { "VENCIDO":0, "PRÓXIMO":1, "AL DÍA":2, "SIN REGISTRO":3, "SIN PLAN":4 };
+  const categoria = (document.getElementById("mtto-categoria") || {}).value || "";
   const buscar = (document.getElementById("mtto-buscar").value || "").trim().toLowerCase().split(/\s+/).filter(Boolean);
   const lista = estados
+    .filter(r => !categoria || r.eq.categoria === categoria)
     .filter(r => !filtro || (filtro === "alerta" ? (r.estado === "VENCIDO" || r.estado === "PRÓXIMO") : r.estado === filtro))
     .filter(r => { const t = `${r.eq.codigo} ${r.eq.descripcion} ${r.eq.plan} ${r.eq.area}`.toLowerCase(); return buscar.every(p => t.includes(p)); })
-    .sort((a, b) => (orden[a.estado] - orden[b.estado]) || ((a.falta ?? 1e9) - (b.falta ?? 1e9)));
+    .sort((a, b) => (orden[a.estado] - orden[b.estado]) || ((a.falta ?? 1e9) - (b.falta ?? 1e9)) || a.eq.codigo.localeCompare(b.eq.codigo));
   const s = sesionActual();
   const puedeRegistrar = s.rol === "admin" || s.rol === "tecnico";
-  document.getElementById("mtto-lista-unidades").innerHTML = lista.length ? lista.map(r => {
+  // Agrupado por categoría (en el orden de CATEGORIAS_EQUIPO).
+  const grupos = CATEGORIAS_EQUIPO.map(c => c.id).concat("otros")
+    .map(id => ({ id, items:lista.filter(r => r.eq.categoria === id) })).filter(g => g.items.length);
+  document.getElementById("mtto-lista-unidades").innerHTML = lista.length ? grupos.map(g =>
+    `<div class="mtto-categoria-titulo">${esc(nombreCategoria(g.id))} (${g.items.length})</div>` + g.items.map(r => {
     const e = r.eq;
     const lectura = r.lect ? `${miles(r.lect.lectura)} ${r.unidad === "días" ? "" : r.unidad} · ${esc(r.lect.origen)} ${esc(String(r.lect.fecha).slice(0, 10))}` : "Sin lecturas todavía";
+    const ult = r.ultimo;
     return `
     <div class="registro-item mtto-unidad ${CLASE_ESTADO[r.estado]}">
       <div class="fila1">
         <div>
           <div style="font-weight:800;font-size:14px;">${esc(e.codigo)} · ${esc(e.descripcion)}</div>
-          <div class="subtexto" style="margin-top:2px;">${esc(e.plan)} · cada ${miles(e.intervalo)} ${esc(UNIDAD_INTERVALO[e.control])}</div>
+          <div class="subtexto" style="margin-top:2px;">${e.sinPlan ? "Sin plan de PM · preventivo libre" : `${esc(e.plan)} · cada ${miles(e.intervalo)} ${esc(UNIDAD_INTERVALO[e.control])}`}</div>
         </div>
-        <span class="badge mtto-estado ${CLASE_ESTADO[r.estado]}">${esc(r.estado)}</span>
+        <span class="badge mtto-estado ${CLASE_ESTADO[r.estado]}">${esc(r.estado === "SIN REGISTRO" ? "SIN 1ER MTTO." : r.estado)}</span>
       </div>
-      <div class="mtto-datos">
+      ${e.sinPlan ? `<div class="mtto-datos">
+        <div><span>Último mantenimiento</span>${ult ? `${esc(ult.tipo === "Preventivo" ? "Preventivo" : "Correctivo")} · ${esc(ult.fecha)}${ult.n_ot ? " · " + esc(ult.n_ot) : ""}` : "Todavía ninguno"}</div>
+        ${r.lect ? `<div><span>Última lectura</span>${lectura}</div>` : ""}
+      </div>` : `<div class="mtto-datos">
         <div><span>Próximo</span><b>${esc(r.proximo)}</b>${r.proximoTexto ? ` a ${esc(r.proximoTexto)}` : ""}</div>
         ${r.falta != null ? `<div><span>Falta</span><b>${esc(textoFalta(r))}</b></div>` : ""}
         ${e.control !== "MESES" ? `<div><span>Lectura actual</span>${lectura}</div>` : ""}
-        <div><span>Último PM</span>${r.base ? `${esc(r.base.pm || "Ninguno")}${e.control !== "MESES" ? ` a ${miles(r.base.lectura)} ${r.unidad}` : ""}${r.base.fecha ? ` · ${fechaPE(r.base.fecha)}` : ""}` : "Falta cargar el punto de partida"}</div>
-      </div>
+        <div><span>Último PM</span>${r.base ? `${esc(r.base.pm || "Ninguno")}${e.control !== "MESES" ? ` a ${miles(r.base.lectura)} ${r.unidad}` : ""}${r.base.fecha ? ` · ${fechaPE(r.base.fecha)}` : ""}` : "Esperando su primer mantenimiento (ese será su punto de partida)"}</div>
+      </div>`}
       ${(() => { const n = fallasDeEquipo(e.codigo).filter(fallaAbierta).length; return n ? `<div class="mtto-pendientes" onclick="abrirFichaEquipo(${jsArg(e.codigo)})">⚠ ${n} pendiente(s) por corregir — toca para ver</div>` : ""; })()}
       <div style="display:flex;gap:8px;margin-top:10px;">
         <button type="button" class="btn btn-secundario mtto-btn" onclick="abrirFichaEquipo(${jsArg(e.codigo)})">Ver ficha</button>
         ${puedeRegistrar ? `<button type="button" class="btn btn-primario mtto-btn" onclick="abrirFormMantenimiento(${jsArg(e.codigo)})">Registrar</button>` : ""}
       </div>
     </div>`;
-  }).join("") : `<div class="vacio"><div class="subtexto">No hay unidades para este filtro.</div></div>`;
+  }).join("")).join("") : `<div class="vacio"><div class="subtexto">No hay unidades para este filtro.</div></div>`;
 }
 
 /* ---------- Fallas y checklists de una unidad ---------- */
@@ -328,6 +383,7 @@ function abrirFichaEquipo(codigo){
         </div>
       </div>
       <div class="subtexto">${esc(c.usuario || "—")}${c.turno ? " · " + esc(c.turno) : ""}</div>
+      ${htmlMomentoRegistro(c)}
       ${(c.hallazgos || []).map(x => `<div class="ficha-hallazgo"><span class="chk-pill marca-${esc(x.marca)}">${esc(x.marca)}</span><span>${esc(x.item)}${x.obs ? ` — <i>${esc(x.obs)}</i>` : ""}</span></div>`).join("")}
       ${c.observaciones ? `<div class="subtexto" style="margin-top:4px;">Obs.: ${esc(c.observaciones)}</div>` : ""}
     </div>`;
@@ -341,10 +397,11 @@ function abrirFichaEquipo(codigo){
         </div>
         <span class="badge ${m.sincronizado ? (m.vb_nombre ? "criticidad-baja" : "") : "pendiente"}">${m.sincronizado ? (m.vb_nombre ? "✓ V°B° " + esc(primerNombre(m.vb_nombre)) : "Falta V°B°") : "Pendiente de enviar"}</span>
       </div>
+      ${htmlMomentoRegistro(m)}
       ${htmlRepuestosPedidos(m)}
       <div class="ficha-botones">
         <button class="btn btn-secundario mtto-btn" onclick="verMantenimiento(${jsArg(m.id)})">Ver</button>
-        ${m.tipo === "Preventivo" ? `<button class="btn btn-secundario mtto-btn" onclick="exportarFormatoMantenimiento(${jsArg(m.id)})">⬇ Formato Excel</button>` : ""}
+        ${m.tipo === "Preventivo" && !eq.sinPlan ? `<button class="btn btn-secundario mtto-btn" onclick="exportarFormatoMantenimiento(${jsArg(m.id)})">⬇ Formato Excel</button>` : ""}
         ${s.rol === "admin" && m.sincronizado && !m.vb_nombre ? `<button class="btn btn-secundario mtto-btn" onclick="darVistoBuenoMantenimiento(${jsArg(m.id)}, ${jsArg(codigo)})">Dar V°B°</button>` : ""}
         ${htmlBotonesAdminMantenimiento(m, s)}
       </div>
@@ -354,11 +411,12 @@ function abrirFichaEquipo(codigo){
     <div class="modal-titulo"><span>${esc(eq.codigo)} · ${esc(eq.descripcion)}</span><button class="modal-cerrar" onclick="cerrarModal()">×</button></div>
     <div class="ficha-cabecera ${CLASE_ESTADO[r.estado]}">
       <span class="badge mtto-estado ${CLASE_ESTADO[r.estado]}">${esc(r.estado)}</span>
-      <span class="subtexto">${esc(eq.plan)} · ${esc(eq.area)} · criticidad ${esc(eq.criticidad)}</span>
+      <span class="subtexto">${[nombreCategoria(eq.categoria), eq.sinPlan ? "sin plan de PM" : eq.plan, eq.area, eq.criticidad ? "criticidad " + eq.criticidad : ""].filter(Boolean).map(esc).join(" · ")}</span>
     </div>
     <div class="ficha-kpis">
       <div><span>${eq.control === "MESES" ? "Último PM" : "Lectura actual"}</span><b>${eq.control === "MESES" ? esc(r.base && r.base.fecha ? fechaPE(r.base.fecha) : "—") : esc(lectura)}</b>${r.lect && eq.control !== "MESES" ? `<small>${esc(r.lect.origen)} · ${esc(String(r.lect.fecha).slice(0, 10))}</small>` : ""}</div>
-      <div><span>Próximo</span><b>${esc(String(r.proximo).split(" - ")[0])}</b><small>${r.falta != null ? esc(textoFalta(r)) : "falta punto de partida"}</small></div>
+      ${eq.sinPlan ? `<div><span>Último mtto.</span><b>${esc(r.ultimo ? r.ultimo.fecha : "—")}</b><small>${esc(r.ultimo ? r.ultimo.tipo : "todavía ninguno")}</small></div>`
+        : `<div><span>Próximo</span><b>${esc(String(r.proximo).split(" - ")[0])}</b><small>${r.falta != null ? esc(textoFalta(r)) : "esperando su primer mantenimiento"}</small></div>`}
       <div class="${pendientes.length ? "alerta" : ""}"><span>Pendientes</span><b>${pendientes.length}</b><small>${pendientes.length ? "por corregir" : "nada pendiente"}</small></div>
     </div>
     <div class="ficha-acciones" style="margin-top:10px;">
@@ -411,6 +469,7 @@ function verMantenimiento(id){
     <div class="modal-fila"><b>Fecha · OT</b>${esc(m.fecha)} · ${esc(m.n_ot || "pendiente de sincronizar")}</div>
     <div class="modal-fila"><b>Lectura</b>${esc(m.lectura)}</div>
     <div class="modal-fila"><b>Técnico</b>${esc(m.tecnico || "—")}${m.hora_inicio ? ` · ${esc(m.hora_inicio)} – ${esc(m.hora_fin)}` : ""}</div>
+    ${htmlMomentoRegistro(m)}
     ${m.trabajo ? `<div class="modal-fila"><b>Trabajo realizado</b>${esc(m.trabajo)}</div>` : ""}
     ${m.cambios_fuera_plan ? `<div class="modal-fila"><b>Cambios fuera del plan</b>${esc(m.cambios_fuera_plan)}</div>` : ""}
     ${m.observaciones ? `<div class="modal-fila"><b>Observaciones</b>${esc(m.observaciones)}</div>` : ""}
@@ -424,6 +483,15 @@ function verMantenimiento(id){
     <div class="ficha-botones">${htmlBotonesAdminMantenimiento(m, sesionActual())}</div>
     <button class="btn btn-primario" style="margin-top:14px;" onclick="verUnidadMantenimiento(${jsArg(m.codigo)})">Volver</button>
   `);
+}
+
+/* Solo admin: cuándo se guardó de verdad en el celular (y cuándo llegó al
+   servidor). Nadie lo llena: lo pone la app. */
+function htmlMomentoRegistro(x){
+  if(!esAdminSesion()) return "";
+  const reg = x.registrado || (x.creado ? new Date(x.creado).toLocaleString("es-PE", { day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit", hour12:false }) : "");
+  if(!reg && !x.recibido) return "";
+  return `<div class="momento-registro">🕒 Registrado: <b>${esc(reg || "—")}</b>${x.recibido && x.recibido !== reg ? ` · llegó al servidor: ${esc(x.recibido)}` : ""}</div>`;
 }
 
 /* Lista corta de los repuestos que pidió el técnico (y si ya hay requerimiento). */
@@ -542,9 +610,14 @@ async function abrirFormMantenimiento(codigo, opciones){
   mtoFallaElegida = opciones.falla || "";
   mtoEditando = opciones.edicion || null;
   try{ await Promise.all([asegurarPlanesMtto(), asegurarMateriales()]); }catch(e){ mostrarToast(e.message, false); return; }
-  document.getElementById("mto-equipo").innerHTML = `<option value="">Selecciona la unidad</option>` +
-    EQUIPOS_MTTO.map(e => `<option value="${esc(e.codigo)}">${esc(e.codigo)} - ${esc(e.descripcion)}</option>`).join("");
+  // Primero la categoría; la lista de unidades sale de esa categoría.
+  const selCat = document.getElementById("mto-categoria");
+  selCat.innerHTML = `<option value="">Selecciona la categoría</option>` +
+    CATEGORIAS_EQUIPO.map(c => `<option value="${c.id}">${esc(c.nombre)}</option>`).join("");
+  selCat.value = codigo ? categoriaDe(codigo) : "";
+  llenarUnidadesMantenimiento();
   document.getElementById("mto-equipo").value = codigo || "";
+  selCat.disabled = !!mtoEditando;
   document.getElementById("mto-equipo").disabled = !!mtoEditando;
   document.getElementById("mto-fecha").value = hoyIso();
   ["mto-lectura", "mto-hora-inicio", "mto-hora-fin", "mto-trabajo", "mto-cambios", "mto-observaciones", "mto-material-nuevo"]
@@ -572,11 +645,38 @@ async function abrirFormMantenimiento(codigo, opciones){
   if(mtoEditando) cargarEdicionMantenimiento(mtoEditando);
 }
 
+function llenarUnidadesMantenimiento(){
+  const cat = document.getElementById("mto-categoria").value;
+  const sel = document.getElementById("mto-equipo");
+  const lista = cat ? equiposControl().filter(e => e.categoria === cat) : [];
+  sel.innerHTML = `<option value="">${cat ? "Selecciona la unidad" : "Primero elige la categoría"}</option>` +
+    lista.map(e => `<option value="${esc(e.codigo)}">${esc(e.codigo)} - ${esc(e.descripcion)}</option>`).join("");
+}
+function cambioCategoriaMantenimiento(){
+  llenarUnidadesMantenimiento();
+  cambioEquipoMantenimiento();
+}
+
+/* Qué partes del formulario se ven: el PM y su inspección solo en unidades
+   con plan; "trabajo realizado" en correctivos y en preventivos sin plan. */
+function ajustarFormMantenimiento(){
+  const eq = equipoMtto(document.getElementById("mto-equipo").value);
+  const preventivo = mtoTipo === "Preventivo";
+  const conPlan = !!eq && !eq.sinPlan;
+  document.getElementById("mto-campo-pm").style.display = preventivo && conPlan ? "block" : "none";
+  document.getElementById("mto-bloque-inspeccion").style.display = preventivo && conPlan ? "block" : "none";
+  document.getElementById("mto-bloque-correctivo").style.display = preventivo ? "none" : "block";
+  document.getElementById("mto-campo-trabajo").style.display = !preventivo || (eq && eq.sinPlan) ? "block" : "none";
+  document.getElementById("mto-campo-lectura").classList.toggle("campo-obligatorio", !eq || usaLectura(eq));
+  document.getElementById("mto-titulo-materiales").textContent = preventivo && conPlan ? "Materiales a cambiar (según plan)" : "Materiales usados";
+}
+
 /* Volver: el admin regresa al control (o a la ficha si editaba); el técnico al inicio. */
 function salirFormMantenimiento(){
   const editado = mtoEditando;
   mtoEditando = null;
   document.getElementById("mto-equipo").disabled = false;
+  document.getElementById("mto-categoria").disabled = false;
   if(!esAdminSesion()) return irA("pantalla-menu");
   abrirControlUnidades().then(() => { if(editado) abrirFichaEquipo(editado.codigo); });
 }
@@ -704,10 +804,7 @@ function elegirTipoMantenimiento(tipo, sinRecargar){
     if(b.dataset.valor === tipo) b.classList.add("activo", tipo === "Preventivo" ? "marca-C" : "marca-O");
   });
   const preventivo = tipo === "Preventivo";
-  document.getElementById("mto-campo-pm").style.display = preventivo ? "block" : "none";
-  document.getElementById("mto-bloque-inspeccion").style.display = preventivo ? "block" : "none";
-  document.getElementById("mto-bloque-correctivo").style.display = preventivo ? "none" : "block";
-  document.getElementById("mto-titulo-materiales").textContent = preventivo ? "Materiales a cambiar (según plan)" : "Materiales usados";
+  ajustarFormMantenimiento();
   if(!sinRecargar){ renderPlanMantenimiento(); if(!preventivo) cargarFallasParaCorrectivo(); }
 }
 
@@ -715,17 +812,26 @@ async function cambioEquipoMantenimiento(){
   const eq = equipoMtto(document.getElementById("mto-equipo").value);
   const info = document.getElementById("mto-info-unidad");
   const selPm = document.getElementById("mto-pm");
+  ajustarFormMantenimiento();
   if(!eq){ info.style.display = "none"; selPm.innerHTML = ""; renderPlanMantenimiento(); return; }
   if(!esAdminSesion()) await cargarControlMantenimiento(false, eq.codigo);   // técnico: solo esta unidad
   else if(!controlDatos.actualizado && !controlDatos.mantenimientos.length) await cargarControlMantenimiento();
   const r = estadoUnidad(eq);
   info.style.display = "block";
-  info.innerHTML = `<div class="fila1"><b>${esc(eq.plan)}</b><span class="badge mtto-estado ${CLASE_ESTADO[r.estado]}">${esc(r.estado)}</span></div>
-    <div class="subtexto" style="margin-top:4px;">Le toca: <b>${esc(r.proximo)}</b>${r.proximoTexto ? " a " + esc(r.proximoTexto) : ""}${r.falta != null ? " · " + esc(textoFalta(r)) : ""}</div>
-    ${r.lect && eq.control !== "MESES" ? `<div class="subtexto">Última lectura: ${miles(r.lect.lectura)} ${esc(r.unidad)} (${esc(String(r.lect.fecha).slice(0, 10))})</div>` : ""}`;
+  if(eq.sinPlan){
+    const ult = r.ultimo;
+    info.innerHTML = `<div class="fila1"><b>${esc(nombreCategoria(eq.categoria))}</b><span class="badge mtto-estado sinregistro">SIN PLAN</span></div>
+      <div class="subtexto" style="margin-top:4px;">Este equipo no tiene plan de PM: describe el trabajo realizado y los materiales usados.</div>
+      <div class="subtexto">Último mantenimiento: ${ult ? `${esc(ult.tipo)} · ${esc(ult.fecha)}` : "todavía ninguno"}</div>`;
+  }else{
+    info.innerHTML = `<div class="fila1"><b>${esc(eq.plan)}</b><span class="badge mtto-estado ${CLASE_ESTADO[r.estado]}">${esc(r.estado === "SIN REGISTRO" ? "PRIMER MANTENIMIENTO" : r.estado)}</span></div>
+      <div class="subtexto" style="margin-top:4px;">${r.base ? `Le toca: <b>${esc(r.proximo)}</b>${r.proximoTexto ? " a " + esc(r.proximoTexto) : ""}${r.falta != null ? " · " + esc(textoFalta(r)) : ""}`
+        : "Es su primer mantenimiento en la app: elige el PM que le hiciste. Desde aquí se calcula el siguiente."}</div>
+      ${r.lect && eq.control !== "MESES" ? `<div class="subtexto">Última lectura: ${miles(r.lect.lectura)} ${esc(r.unidad)} (${esc(String(r.lect.fecha).slice(0, 10))})</div>` : ""}`;
+  }
   const plan = PLANES_MTTO[eq.plan] || { ciclo:[] };
-  selPm.innerHTML = plan.ciclo.map(c => `<option value="${esc(c.paso)}" ${c.paso === r.proximo ? "selected" : ""}>${esc(c.paso)}${c.paso === r.proximo ? " (le toca)" : ""}</option>`).join("");
-  document.getElementById("mto-lectura-label").textContent = eq.control === "KM" ? "Kilometraje real (km)" : (eq.control === "HR" ? "Horómetro real (h)" : "Horómetro / km (opcional)");
+  selPm.innerHTML = plan.ciclo.map(c => `<option value="${esc(c.paso)}" ${c.paso === r.proximo ? "selected" : ""}>${esc(c.paso)}${c.paso === r.proximo && r.base ? " (le toca)" : ""}</option>`).join("");
+  document.getElementById("mto-lectura-label").textContent = eq.control === "KM" ? "Kilometraje real (km)" : (eq.control === "HR" ? "Horómetro real (h)" : "Km / horómetro (opcional)");
   document.getElementById("mto-lectura").placeholder = r.lect ? String(r.lect.lectura) : "";
   renderPlanMantenimiento();
   if(mtoTipo === "Correctivo") cargarFallasParaCorrectivo();
@@ -736,7 +842,7 @@ function renderPlanMantenimiento(){
   const ayuda = document.getElementById("mto-pm-ayuda");
   mtoMateriales = mtoMateriales.filter(m => m.extra);
   mtoInspeccion = [];
-  if(eq && mtoTipo === "Preventivo"){
+  if(eq && !eq.sinPlan && mtoTipo === "Preventivo"){
     const plan = PLANES_MTTO[eq.plan] || { ciclo:[], materiales:{}, inspeccion:{} };
     const pm = document.getElementById("mto-pm").value;
     const paso = plan.ciclo.find(c => c.paso === pm);
@@ -861,16 +967,16 @@ async function guardarMantenimiento(){
   if(!eq) return errorMantenimiento("Elige la unidad.");
   const preventivo = mtoTipo === "Preventivo";
   const pm = document.getElementById("mto-pm").value;
-  if(preventivo && !pm) return errorMantenimiento("Elige el mantenimiento realizado.");
+  if(preventivo && !eq.sinPlan && !pm) return errorMantenimiento("Elige el mantenimiento realizado.");
   const fechaIso = document.getElementById("mto-fecha").value;
   if(!fechaIso) return errorMantenimiento("Indica la fecha.");
   const lecturaTexto = document.getElementById("mto-lectura").value.trim();
   const lectura = parseFloat(lecturaTexto);
-  if(eq.control !== "MESES" && (lecturaTexto === "" || isNaN(lectura) || lectura < 0)){
+  if(usaLectura(eq) && (lecturaTexto === "" || isNaN(lectura) || lectura < 0)){
     return errorMantenimiento(eq.control === "KM" ? "Escribe el kilometraje real." : "Escribe el horómetro real.");
   }
   const trabajo = document.getElementById("mto-trabajo").value.trim();
-  if(!preventivo && !trabajo) return errorMantenimiento("Describe el trabajo realizado.");
+  if((!preventivo || eq.sinPlan) && !trabajo) return errorMantenimiento("Describe el trabajo realizado.");
   if(preventivo){
     const faltan = mtoInspeccion.map((t, i) => t.resultado ? -1 : i).filter(i => i >= 0);
     if(faltan.length){
@@ -885,14 +991,14 @@ async function guardarMantenimiento(){
     }
   }
 
-  if(eq.control !== "MESES" && !(await lecturaMantenimientoConfirmada(eq, lectura, fechaIso))) return;
+  if(!isNaN(lectura) && usaLectura(eq) && !(await lecturaMantenimientoConfirmada(eq, lectura, fechaIso))) return;
 
   const s = sesionActual();
   const ahora = new Date();
   const registro = {
     id: mtoEditando ? mtoEditando.id : "MTO-" + ahora.getTime() + "-" + Math.random().toString(16).slice(2, 6),
     tipo:mtoTipo, codigo:eq.codigo, equipo:eq.descripcion, area:eq.area, criticidad:eq.criticidad,
-    plan:eq.plan, control:eq.control, pm: preventivo ? pm : "",
+    plan:eq.plan, control:eq.control, pm: preventivo ? (eq.sinPlan ? "PREVENTIVO" : pm) : "",
     fecha:peDesdeIso(fechaIso), lectura: isNaN(lectura) ? "" : lectura,
     hora_inicio:document.getElementById("mto-hora-inicio").value, hora_fin:document.getElementById("mto-hora-fin").value,
     materiales:mtoMateriales.map(m => ({ sistema:m.sistema, descripcion:m.descripcion, cantidad_plan:m.cantidad_plan, unidad:m.unidad,
@@ -931,7 +1037,7 @@ async function guardarMantenimiento(){
   await guardarEnStore("mantenimientos", registro);
 
   let siguiente = "";
-  if(preventivo){
+  if(preventivo && !eq.sinPlan){
     const plan = PLANES_MTTO[eq.plan];
     const idx = pasoDelCiclo(plan, pm);
     const prox = plan.ciclo[(idx + 1) % plan.ciclo.length];
@@ -942,7 +1048,7 @@ async function guardarMantenimiento(){
   const noOk = registro.inspeccion.filter(t => t.resultado === "NO OK").length;
   abrirModal(`
     <div class="modal-titulo"><span>Mantenimiento guardado</span><button class="modal-cerrar" onclick="cerrarModal(); salirFormMantenimiento();">×</button></div>
-    <p class="subtexto">${esc(eq.codigo)} · ${esc(preventivo ? pm : "Correctivo")} · ${esc(registro.fecha)}</p>
+    <p class="subtexto">${esc(eq.codigo)} · ${esc(preventivo ? registro.pm : "Correctivo")} · ${esc(registro.fecha)}</p>
     ${siguiente ? `<div class="tarjeta" style="margin:12px 0;"><div class="subtexto">Siguiente mantenimiento</div><div style="font-weight:800;font-size:16px;">${esc(siguiente)}</div></div>` : ""}
     ${noOk ? `<p class="subtexto">Se encontraron <b>${noOk} tarea(s) NO OK</b>: al sincronizar se creará una falla para que se corrija.</p>` : ""}
     ${registro.repuestos.length ? `<p class="subtexto">Pediste <b>${registro.repuestos.length} repuesto(s)</b>: el administrador generará el requerimiento.</p>` : ""}

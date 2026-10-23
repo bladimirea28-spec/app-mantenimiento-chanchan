@@ -923,6 +923,7 @@ function verDetalleChecklistAdmin(id){
     ${c.turno ? `<div class="modal-fila"><b>Turno</b>${esc(c.turno)}</div>` : ""}
     ${c.tractor ? `<div class="modal-fila"><b>Tractor</b>${esc(c.tractor)}</div>` : ""}
     <div class="modal-fila"><b>Responsable</b>${esc(c.usuario || "—")} · DNI ${esc(c.dni || "—")}</div>
+    <div class="modal-fila"><b>🕒 Registrado (hora real)</b>${esc(momentoChecklist(c))}${c.recibido && c.registrado && c.recibido !== c.registrado ? ` · llegó al servidor: ${esc(c.recibido)}` : ""}</div>
     <div class="modal-fila"><b>¿Se puede utilizar?</b>${esc(c.puede_utilizar)}</div>
     ${c.observaciones ? `<div class="modal-fila"><b>Observaciones</b>${esc(c.observaciones)}</div>` : ""}
     <div style="font-weight:700;font-size:13.5px;margin-top:12px;">Puntos revisados</div>

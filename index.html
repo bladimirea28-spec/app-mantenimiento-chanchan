@@ -422,13 +422,20 @@
       <div class="campo" style="margin-top:12px;">
         <input type="search" id="mtto-buscar" placeholder="🔍 Buscar unidad (código o nombre)…" oninput="renderControlUnidades()" autocomplete="off">
       </div>
-      <div class="campo">
-        <label>Mostrar</label>
-        <select id="mtto-filtro" onchange="renderControlUnidades()">
-          <option value="">Todas las unidades</option>
-          <option value="alerta">Solo vencidas y próximas</option>
-          <option value="SIN REGISTRO">Sin registro (falta punto de partida)</option>
-        </select>
+      <div class="fila-2">
+        <div class="campo">
+          <label>Categoría</label>
+          <select id="mtto-categoria" onchange="renderControlUnidades()"><option value="">Todas las categorías</option></select>
+        </div>
+        <div class="campo">
+          <label>Mostrar</label>
+          <select id="mtto-filtro" onchange="renderControlUnidades()">
+            <option value="">Todas</option>
+            <option value="alerta">Solo vencidas y próximas</option>
+            <option value="SIN REGISTRO">Sin primer mantenimiento</option>
+            <option value="SIN PLAN">Sin plan de PM</option>
+          </select>
+        </div>
       </div>
       <div id="mtto-aviso"></div>
       <div id="mtto-lista-unidades"><div class="subtexto">Cargando...</div></div>
@@ -451,7 +458,12 @@
       </div>
 
       <div class="campo campo-obligatorio">
-        <label>Unidad</label>
+        <label>Categoría</label>
+        <select id="mto-categoria" onchange="cambioCategoriaMantenimiento()"></select>
+      </div>
+
+      <div class="campo campo-obligatorio">
+        <label>Unidad / equipo</label>
         <select id="mto-equipo" onchange="cambioEquipoMantenimiento()"></select>
       </div>
       <div class="tarjeta mtto-info-unidad" id="mto-info-unidad" style="display:none;"></div>
@@ -467,7 +479,7 @@
           <label>Fecha</label>
           <input type="date" id="mto-fecha">
         </div>
-        <div class="campo campo-obligatorio">
+        <div class="campo campo-obligatorio" id="mto-campo-lectura">
           <label id="mto-lectura-label">KM / horómetro real</label>
           <input type="number" id="mto-lectura" inputmode="decimal" step="0.1" min="0">
         </div>
@@ -483,10 +495,10 @@
           <select id="mto-falla"></select>
           <label class="chk-confirmar" style="color:var(--tinta-600);margin-top:8px;"><input type="checkbox" id="mto-cerrar-falla" checked> Marcar esa falla como resuelta</label>
         </div>
-        <div class="campo campo-obligatorio">
-          <label>Trabajo realizado</label>
-          <textarea id="mto-trabajo" placeholder="¿Qué se reparó o cambió?"></textarea>
-        </div>
+      </div>
+      <div class="campo campo-obligatorio" id="mto-campo-trabajo" style="display:none;">
+        <label>Trabajo realizado</label>
+        <textarea id="mto-trabajo" placeholder="¿Qué se hizo? (limpieza, revisión, cambio de piezas…)"></textarea>
       </div>
 
       <div class="tarjeta" style="margin-bottom:14px;">

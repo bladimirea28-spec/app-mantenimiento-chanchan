@@ -49,7 +49,7 @@ async function mostrarQrEquipo(codigo){
 
 /* Unidades con etiqueta: las del control de mantenimiento y las de los checklists. */
 function codigosConEtiqueta(){
-  const codigos = (typeof EQUIPOS_MTTO !== "undefined" ? EQUIPOS_MTTO : []).map(e => e.codigo);
+  const codigos = equiposControl().map(e => e.codigo);
   (typeof CHECKLISTS !== "undefined" ? CHECKLISTS : []).forEach(p => equiposDePlantilla(p).forEach(e => codigos.push(e.codigo)));
   return [...new Set(codigos)].sort();
 }
@@ -105,7 +105,7 @@ async function abrirEquipoDelEnlace(usuario){
     return;
   }
   try{ await asegurarPlanesMtto(); }catch(e){ return; }
-  if(!equipoMtto(codigo)){ mostrarToast("Equipo " + codigo + " sin plan de mantenimiento.", false); return; }
+  if(!equipoMtto(codigo)){ mostrarToast("Equipo " + codigo + " no está en la base de equipos.", false); return; }
   if(usuario.rol !== "admin"){
     // Técnico: directo a registrar el mantenimiento de esa unidad.
     abrirFormMantenimiento(codigo);
