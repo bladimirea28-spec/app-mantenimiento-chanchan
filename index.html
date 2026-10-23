@@ -196,7 +196,7 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg>
           </div>
           <div class="modulo-txt">
-            <div class="titulo-lg">Control de mantenimiento</div>
+            <div class="titulo-lg" id="menu-titulo-control">Control de mantenimiento</div>
             <div class="subtexto" id="menu-subtexto-control">Preventivos por horómetro / km y correctivos</div>
           </div>
           <div class="modulo-flecha"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>
@@ -224,16 +224,6 @@
           <div class="modulo-flecha"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>
         </button>
 
-        <button class="modulo-btn proximamente" onclick="mostrarToast('Esta función todavía está en desarrollo. Pronto la activamos.', true)">
-          <div class="modulo-icono azul">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7V4h3M20 7V4h-3M4 17v3h3M20 17v3h-3M4 4l16 16"/></svg>
-          </div>
-          <div class="modulo-txt">
-            <div class="titulo-lg">Resumen<span class="pill-proximo">Próximamente</span></div>
-            <div class="subtexto">Escanea el QR de un equipo y ve su historial</div>
-          </div>
-          <div class="modulo-flecha"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>
-        </button>
       </div>
 
       <button class="modulo-btn" id="btn-reportar-falla-operador" style="display:none;" onclick="abrirFormFallaOperador()">
@@ -430,6 +420,9 @@
       <button class="btn btn-texto" id="btn-mtto-partida" style="display:none;margin-top:4px;" onclick="abrirPuntoPartida()">⚙️ Punto de partida de las unidades (admin)</button>
       <button class="btn btn-texto" id="btn-mtto-qr" style="display:none;margin-top:0;" onclick="imprimirEtiquetasQr()">▦ Etiquetas QR de las unidades (imprimir)</button>
       <div class="campo" style="margin-top:12px;">
+        <input type="search" id="mtto-buscar" placeholder="🔍 Buscar unidad (código o nombre)…" oninput="renderControlUnidades()" autocomplete="off">
+      </div>
+      <div class="campo">
         <label>Mostrar</label>
         <select id="mtto-filtro" onchange="renderControlUnidades()">
           <option value="">Todas las unidades</option>
@@ -445,8 +438,8 @@
   <!-- ================= PANTALLA: REGISTRAR MANTENIMIENTO (preventivo / correctivo) ================= -->
   <section class="pantalla" id="pantalla-form-mantenimiento">
     <div class="barra-superior">
-      <button class="btn-volver" onclick="abrirControlUnidades()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg></button>
-      <div class="titulo-lg">Registrar mantenimiento</div>
+      <button class="btn-volver" onclick="salirFormMantenimiento()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="titulo-lg" id="mto-titulo-pantalla">Registrar mantenimiento</div>
     </div>
     <div class="contenido">
       <div class="campo campo-obligatorio">
@@ -512,6 +505,13 @@
         <div id="mto-inspeccion"></div>
       </div>
 
+      <div class="tarjeta" style="margin-bottom:14px;" id="mto-bloque-repuestos">
+        <div style="font-weight:800;font-size:14px;margin-bottom:4px;">🛒 Repuestos / materiales que se necesitan</div>
+        <div class="subtexto" style="margin-bottom:8px;">Lo que hace falta para corregir lo observado. Búscalo en el catálogo; si no está, escríbelo con su precio.</div>
+        <div id="mto-repuestos"></div>
+        <button type="button" class="btn btn-secundario" style="margin-top:8px;" onclick="abrirBuscadorRepuesto('')">+ Agregar repuesto</button>
+      </div>
+
       <div class="campo">
         <label>Cambios fuera del plan</label>
         <textarea id="mto-cambios" placeholder="Repuestos o trabajos que no estaban en el plan"></textarea>
@@ -531,11 +531,12 @@
           <input type="file" id="mto-foto-camara" accept="image/*" capture="environment" multiple>
           <input type="file" id="mto-foto-galeria" accept="image/*" multiple>
           <div class="foto-previews" id="mto-foto-previews"></div>
+          <div class="subtexto" id="mto-fotos-actuales" style="display:none;margin-top:6px;"></div>
         </div>
       </div>
 
       <div class="error-msg" id="mto-error"></div>
-      <button class="btn btn-primario" onclick="guardarMantenimiento()">Guardar mantenimiento</button>
+      <button class="btn btn-primario" id="mto-btn-guardar" onclick="guardarMantenimiento()">Guardar mantenimiento</button>
     </div>
   </section>
 

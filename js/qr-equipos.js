@@ -106,6 +106,11 @@ async function abrirEquipoDelEnlace(usuario){
   }
   try{ await asegurarPlanesMtto(); }catch(e){ return; }
   if(!equipoMtto(codigo)){ mostrarToast("Equipo " + codigo + " sin plan de mantenimiento.", false); return; }
+  if(usuario.rol !== "admin"){
+    // Técnico: directo a registrar el mantenimiento de esa unidad.
+    abrirFormMantenimiento(codigo);
+    return;
+  }
   await cargarControlMantenimiento();
   abrirFichaEquipo(codigo);
 }

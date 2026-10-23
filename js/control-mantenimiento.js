@@ -54,23 +54,27 @@ function mantenimientoDesdeServidor(f){
     costo:Number(f.COSTO) || 0, cambios_fuera_plan:f.CAMBIOS_FUERA_PLAN, observaciones:f.OBSERVACIONES,
     trabajo:f.TRABAJO_REALIZADO, falla_id:f.FALLA_RELACIONADA, materiales:f.MATERIALES || [],
     inspeccion:f.INSPECCION || [], fotos:String(f.FOTOS || "").split("|").map(s => s.trim()).filter(Boolean),
-    vb_nombre:f.VB_NOMBRE, vb_fecha:f.VB_FECHA, sincronizado:true
+    vb_nombre:f.VB_NOMBRE, vb_fecha:f.VB_FECHA, repuestos:f.REPUESTOS || [], requerimiento:String(f.REQUERIMIENTO || ""),
+    editado_por:f.EDITADO_POR || "", sincronizado:true
   };
 }
 
-async function cargarControlMantenimiento(silencioso){
+/* El admin trae todo. Un técnico trae solo la unidad que va a registrar
+   (codigo): qué PM le toca, su plan y sus propias fallas de esa unidad. */
+async function cargarControlMantenimiento(silencioso, codigo){
   await asegurarPlanesMtto();
+  const admin = esAdminSesion();
   let deServidor = null;
-  if(navigator.onLine && tokenSesion()){
-    const resp = await llamarServidor({ tipo:"control_mantenimiento" }, { silencioso:!!silencioso });
+  if(navigator.onLine && tokenSesion() && (admin || codigo)){
+    const resp = await llamarServidor(Object.assign({ tipo:"control_mantenimiento" }, admin ? {} : { codigo }), { silencioso:!!silencioso });
     if(resp && resp.ok){
       deServidor = { parametros:resp.parametros || [], mantenimientos:(resp.mantenimientos || []).map(mantenimientoDesdeServidor),
                      lecturas:resp.lecturas || {}, fallas:resp.fallas || [], checklists:resp.checklists || [],
                      actualizado:new Date().toLocaleString("es-PE"), ts:Date.now() };
-      try{ localStorage.setItem("cache_control_mtto", JSON.stringify(deServidor)); }catch(e){}
+      if(admin){ try{ localStorage.setItem("cache_control_mtto", JSON.stringify(deServidor)); }catch(e){} }
     }
   }
-  if(!deServidor){
+  if(!deServidor && admin){
     try{ deServidor = JSON.parse(localStorage.getItem("cache_control_mtto") || "null"); }catch(e){ deServidor = null; }
   }
   controlDatos = deServidor || { parametros:[], mantenimientos:[], lecturas:{}, actualizado:null };
@@ -172,7 +176,7 @@ async function actualizarAlertaMantenimiento(refrescar){
   const s = sesionActual();
   const el = document.getElementById("alerta-mantenimiento");
   if(!el) return;
-  if(!(s.rol === "admin" || s.rol === "tecnico" || s.es_jefe_area)){ el.style.display = "none"; return; }
+  if(s.rol !== "admin"){ el.style.display = "none"; return; }   // alertas: solo admin
   try{ await asegurarPlanesMtto(); }catch(e){ return; }
   // El aviso del inicio se refresca por detrás, sin tapar la pantalla.
   if(refrescar) await cargarControlMantenimiento(true);
@@ -216,8 +220,10 @@ function renderControlUnidades(){
     `<div class="tarjeta chk-aviso">Sin conexión con el servidor: se muestra lo guardado en este celular.</div>`;
 
   const orden = { "VENCIDO":0, "PRÓXIMO":1, "AL DÍA":2, "SIN REGISTRO":3 };
+  const buscar = (document.getElementById("mtto-buscar").value || "").trim().toLowerCase().split(/\s+/).filter(Boolean);
   const lista = estados
     .filter(r => !filtro || (filtro === "alerta" ? (r.estado === "VENCIDO" || r.estado === "PRÓXIMO") : r.estado === filtro))
+    .filter(r => { const t = `${r.eq.codigo} ${r.eq.descripcion} ${r.eq.plan} ${r.eq.area}`.toLowerCase(); return buscar.every(p => t.includes(p)); })
     .sort((a, b) => (orden[a.estado] - orden[b.estado]) || ((a.falta ?? 1e9) - (b.falta ?? 1e9)));
   const s = sesionActual();
   const puedeRegistrar = s.rol === "admin" || s.rol === "tecnico";
@@ -290,6 +296,7 @@ function htmlFallaPendiente(f, codigo, s){
       ${puedeAtender(s) && f.CLAVE ? `<div class="ficha-acciones">
         <button class="btn btn-primario mtto-btn" onclick="resolverFallaDesdeFicha(${jsArg(f.CLAVE)}, ${jsArg(codigo)})">✔ Resolver</button>
         ${equipoMtto(codigo) ? `<button class="btn btn-secundario mtto-btn" onclick="cerrarModal();abrirFormMantenimiento(${jsArg(codigo)}, { correctivo:true, falla:${jsArg(f.ID_FALLA)} })">🔧 Correctivo</button>` : ""}
+        ${s.rol === "admin" ? `<button class="btn btn-secundario mtto-btn" onclick="abrirAsignarTecnico(${jsArg(f.CLAVE)}, ${jsArg(codigo)})">👷 ${f.TECNICO_RESPONSABLE ? "Cambiar técnico" : "Asignar técnico"}</button>` : ""}
       </div>` : ""}
     </div>`;
 }
@@ -334,10 +341,12 @@ function abrirFichaEquipo(codigo){
         </div>
         <span class="badge ${m.sincronizado ? (m.vb_nombre ? "criticidad-baja" : "") : "pendiente"}">${m.sincronizado ? (m.vb_nombre ? "✓ V°B° " + esc(primerNombre(m.vb_nombre)) : "Falta V°B°") : "Pendiente de enviar"}</span>
       </div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">
+      ${htmlRepuestosPedidos(m)}
+      <div class="ficha-botones">
         <button class="btn btn-secundario mtto-btn" onclick="verMantenimiento(${jsArg(m.id)})">Ver</button>
         ${m.tipo === "Preventivo" ? `<button class="btn btn-secundario mtto-btn" onclick="exportarFormatoMantenimiento(${jsArg(m.id)})">⬇ Formato Excel</button>` : ""}
         ${s.rol === "admin" && m.sincronizado && !m.vb_nombre ? `<button class="btn btn-secundario mtto-btn" onclick="darVistoBuenoMantenimiento(${jsArg(m.id)}, ${jsArg(codigo)})">Dar V°B°</button>` : ""}
+        ${htmlBotonesAdminMantenimiento(m, s)}
       </div>
     </div>`).join("");
 
@@ -409,9 +418,111 @@ function verMantenimiento(id){
     ${m.vb_nombre ? `<div class="modal-fila"><b>Visto bueno</b>${esc(m.vb_nombre)} · ${esc(m.vb_fecha)}</div>` : ""}
     ${materiales ? `<div style="font-weight:700;font-size:13.5px;margin-top:12px;">Materiales</div>${materiales}` : ""}
     ${inspeccion ? `<div style="font-weight:700;font-size:13.5px;margin-top:12px;">Inspección</div>${inspeccion}` : ""}
+    ${htmlRepuestosPedidos(m)}
+    ${m.editado_por ? `<div class="subtexto" style="margin-top:8px;">Corregido por ${esc(m.editado_por)}</div>` : ""}
     ${(m.fotos || []).length ? fotosHtmlAdmin(m.fotos.join("|"), 70) : ""}
+    <div class="ficha-botones">${htmlBotonesAdminMantenimiento(m, sesionActual())}</div>
     <button class="btn btn-primario" style="margin-top:14px;" onclick="verUnidadMantenimiento(${jsArg(m.codigo)})">Volver</button>
   `);
+}
+
+/* Lista corta de los repuestos que pidió el técnico (y si ya hay requerimiento). */
+function htmlRepuestosPedidos(m){
+  const lista = m.repuestos || [];
+  if(!lista.length) return "";
+  const total = lista.reduce((s, x) => s + (Number(x.cantidad) || 0) * (Number(x.precio) || 0), 0);
+  return `<div class="ficha-repuestos">
+    <div style="font-weight:700;font-size:13px;">🛒 Repuestos pedidos (${lista.length}) · S/ ${total.toFixed(2)}
+      ${m.requerimiento ? `<span class="badge criticidad-baja">Req. ${esc(m.requerimiento)}</span>` : `<span class="badge criticidad-media">Por conseguir</span>`}</div>
+    ${lista.map(x => `<div class="subtexto">• ${esc(x.cantidad)} ${esc(x.um)} ${esc(x.nombre)}${x.codigo ? ` (${esc(x.codigo)})` : " (sin código)"}${x.para ? ` — ${esc(x.para)}` : ""}</div>`).join("")}
+  </div>`;
+}
+
+/* Solo los admin corrigen, borran o piden los repuestos. */
+function htmlBotonesAdminMantenimiento(m, s){
+  if(s.rol !== "admin" || !m.sincronizado) return "";
+  return `
+    <button class="btn btn-secundario mtto-btn" onclick="abrirEditarMantenimiento(${jsArg(m.id)})">✏️ Editar</button>
+    ${(m.repuestos || []).length && !m.requerimiento ? `<button class="btn btn-secundario mtto-btn" onclick="generarRequerimientoMantenimiento(${jsArg(m.id)}, this)">🛒 Generar requerimiento</button>` : ""}
+    <button class="btn btn-texto mtto-btn" style="color:var(--rojo-texto,#c0392b);" onclick="eliminarMantenimientoAdmin(${jsArg(m.id)})">🗑 Eliminar</button>`;
+}
+
+function abrirEditarMantenimiento(id){
+  const m = controlDatos.mantenimientos.find(x => x.id === id);
+  if(!m) return;
+  cerrarModal();
+  abrirFormMantenimiento(m.codigo, { edicion:m, correctivo:m.tipo === "Correctivo", falla:m.falla_id });
+}
+
+function eliminarMantenimientoAdmin(id){
+  const m = controlDatos.mantenimientos.find(x => x.id === id);
+  if(!m) return;
+  abrirModal(`
+    <div class="modal-titulo"><span>Eliminar mantenimiento</span><button class="modal-cerrar" onclick="cerrarModal()">×</button></div>
+    <p class="subtexto"><b>${esc(m.n_ot || "")}</b> · ${esc(m.codigo)} · ${esc(m.tipo === "Preventivo" ? m.pm : "Correctivo")} · ${esc(m.fecha)}</p>
+    <p class="subtexto" style="margin-top:8px;">Se borra el mantenimiento, su actividad (OT), sus materiales e inspección y, si sigue abierta, la falla de sus hallazgos. El N° de OT no se vuelve a usar. No se puede deshacer.</p>
+    <div style="display:flex;gap:8px;margin-top:14px;">
+      <button class="btn btn-secundario" style="flex:1;" onclick="abrirFichaEquipo(${jsArg(m.codigo)})">Cancelar</button>
+      <button class="btn btn-primario" style="flex:1;background:var(--rojo-600,#c0392b);" id="btn-elim-mto" onclick="confirmarEliminarMantenimiento(${jsArg(id)})">Sí, eliminar</button>
+    </div>
+  `);
+}
+
+async function confirmarEliminarMantenimiento(id){
+  const m = controlDatos.mantenimientos.find(x => x.id === id);
+  const boton = document.getElementById("btn-elim-mto");
+  if(boton){ boton.disabled = true; boton.textContent = "Eliminando..."; }
+  const resp = await llamarServidor({ tipo:"eliminar_mantenimiento", id });
+  mostrarToast((resp && resp.mensaje) || "No se pudo eliminar", !!(resp && resp.ok));
+  if(resp && resp.ok){
+    try{ await borrarDeStore("mantenimientos", id); }catch(e){}
+    await cargarControlMantenimiento();
+    if(m) abrirFichaEquipo(m.codigo); else cerrarModal();
+  }else if(boton){ boton.disabled = false; boton.textContent = "Sí, eliminar"; }
+}
+
+async function generarRequerimientoMantenimiento(id, boton){
+  const m = controlDatos.mantenimientos.find(x => x.id === id);
+  if(boton){ boton.disabled = true; boton.textContent = "Generando..."; }
+  const resp = await llamarServidor({ tipo:"generar_requerimiento_mantenimiento", id });
+  mostrarToast((resp && resp.mensaje) || "No se pudo generar", !!(resp && resp.ok));
+  if(resp && resp.ok){ await cargarControlMantenimiento(); if(m) abrirFichaEquipo(m.codigo); }
+  else if(boton){ boton.disabled = false; boton.textContent = "🛒 Generar requerimiento"; }
+}
+
+/* ---------- Admin: asignar el técnico que corrige una falla ---------- */
+async function abrirAsignarTecnico(clave, codigo){
+  const f = (controlDatos.fallas || []).find(x => x.CLAVE === clave) || (typeof fallaAdminPorClave === "function" ? fallaAdminPorClave(clave) : null);
+  if(!f) return;
+  abrirModal(`<div class="modal-titulo"><span>👷 Asignar técnico</span><button class="modal-cerrar" onclick="cerrarModal()">×</button></div><div class="subtexto">Cargando técnicos...</div>`);
+  const resp = await llamarServidor({ tipo:"cupos" }, { silencioso:true });
+  const personas = (resp && resp.ok ? resp.cupos : []).filter(u => !u.disponible && u.nombre && (u.rol === "tecnico" || u.rol === "admin"))
+    .sort((a, b) => (a.rol === b.rol ? 0 : a.rol === "tecnico" ? -1 : 1) || a.nombre.localeCompare(b.nombre, "es"));
+  abrirModal(`
+    <div class="modal-titulo"><span>👷 Asignar técnico</span><button class="modal-cerrar" onclick="cerrarModal()">×</button></div>
+    <p class="subtexto"><b>${esc(f.ID_FALLA || "")}</b> · ${esc(f.EQUIPO || "")}</p>
+    <div class="subtexto" style="margin:6px 0 10px;white-space:pre-line;">${esc(String(f.DESCRIPCION || "").slice(0, 200))}</div>
+    <div class="campo"><label>Técnico que la corrige</label>
+      <select id="asig-tecnico">
+        <option value="">— Sin asignar —</option>
+        ${personas.map(u => `<option value="${esc(u.nombre)}" ${u.nombre === f.TECNICO_RESPONSABLE ? "selected" : ""}>${esc(u.nombre)}${u.rol === "admin" ? " (admin)" : ""}</option>`).join("")}
+      </select></div>
+    <div class="ficha-nota">Solo ese técnico la verá en su celular para resolverla.</div>
+    <button class="btn btn-primario" id="btn-asignar" style="margin-top:12px;" onclick="confirmarAsignarTecnico(${jsArg(clave)}, ${jsArg(codigo || "")})">Guardar</button>
+  `);
+}
+
+async function confirmarAsignarTecnico(clave, codigo){
+  const f = (controlDatos.fallas || []).find(x => x.CLAVE === clave) || (typeof fallaAdminPorClave === "function" ? fallaAdminPorClave(clave) : null);
+  const tecnico = document.getElementById("asig-tecnico").value;
+  const boton = document.getElementById("btn-asignar");
+  boton.disabled = true; boton.textContent = "Guardando...";
+  const resp = await llamarServidor({ tipo:"asignar_tecnico_falla", clave, id_falla:f ? f.ID_FALLA : "", tecnico });
+  mostrarToast((resp && resp.mensaje) || "No se pudo asignar", !!(resp && resp.ok));
+  if(!(resp && resp.ok)){ boton.disabled = false; boton.textContent = "Guardar"; return; }
+  if(f) f.TECNICO_RESPONSABLE = tecnico;
+  if(codigo){ await cargarControlMantenimiento(); abrirFichaEquipo(codigo); }
+  else { cerrarModal(); if(typeof abrirPanelAdmin === "function"){ await abrirPanelAdmin(); irA("pantalla-admin-fallas"); } }
 }
 
 async function darVistoBuenoMantenimiento(id, codigo){
@@ -424,13 +535,17 @@ async function darVistoBuenoMantenimiento(id, codigo){
 /* opciones.correctivo: abrir directo como correctivo; opciones.falla: la
    falla (N°) que ese correctivo resuelve (viene de la ficha del equipo). */
 let mtoFallaElegida = "";
+let mtoEditando = null;     // mantenimiento que el admin está corrigiendo (null = nuevo)
+let mtoRepuestos = [];      // repuestos que se piden: {codigo, nombre, um, cantidad, precio, para}
 async function abrirFormMantenimiento(codigo, opciones){
   opciones = opciones || {};
   mtoFallaElegida = opciones.falla || "";
+  mtoEditando = opciones.edicion || null;
   try{ await Promise.all([asegurarPlanesMtto(), asegurarMateriales()]); }catch(e){ mostrarToast(e.message, false); return; }
   document.getElementById("mto-equipo").innerHTML = `<option value="">Selecciona la unidad</option>` +
     EQUIPOS_MTTO.map(e => `<option value="${esc(e.codigo)}">${esc(e.codigo)} - ${esc(e.descripcion)}</option>`).join("");
   document.getElementById("mto-equipo").value = codigo || "";
+  document.getElementById("mto-equipo").disabled = !!mtoEditando;
   document.getElementById("mto-fecha").value = hoyIso();
   ["mto-lectura", "mto-hora-inicio", "mto-hora-fin", "mto-trabajo", "mto-cambios", "mto-observaciones", "mto-material-nuevo"]
     .forEach(id => { document.getElementById(id).value = ""; });
@@ -438,14 +553,148 @@ async function abrirFormMantenimiento(codigo, opciones){
   document.getElementById("mto-error").classList.remove("activo");
   fotosTemp.mantenimiento = [];
   renderFotoPreviews("mantenimiento", "mto-foto-previews");
+  mtoMateriales = [];
+  mtoRepuestos = [];
+  renderRepuestosMantenimiento();
   const lista = document.getElementById("mto-lista-materiales");
   if(!lista.childElementCount){
     lista.innerHTML = CATALOGO_MATERIALES.map(m => `<option value="${esc(m.nombre)}"></option>`).join("");
   }
+  document.getElementById("mto-titulo-pantalla").textContent = mtoEditando ? "Editar " + (mtoEditando.n_ot || "mantenimiento") : "Registrar mantenimiento";
+  document.getElementById("mto-btn-guardar").textContent = mtoEditando ? "Guardar cambios" : "Guardar mantenimiento";
+  const fotosAct = document.getElementById("mto-fotos-actuales");
+  fotosAct.style.display = mtoEditando && (mtoEditando.fotos || []).length ? "block" : "none";
+  fotosAct.textContent = mtoEditando ? `Ya tiene ${(mtoEditando.fotos || []).length} foto(s) guardada(s): se mantienen. Las que agregues se suman.` : "";
   mtoTipo = opciones.correctivo ? "Correctivo" : "Preventivo";
   elegirTipoMantenimiento(mtoTipo, true);
   irA("pantalla-form-mantenimiento");
-  cambioEquipoMantenimiento();
+  await cambioEquipoMantenimiento();
+  if(mtoEditando) cargarEdicionMantenimiento(mtoEditando);
+}
+
+/* Volver: el admin regresa al control (o a la ficha si editaba); el técnico al inicio. */
+function salirFormMantenimiento(){
+  const editado = mtoEditando;
+  mtoEditando = null;
+  document.getElementById("mto-equipo").disabled = false;
+  if(!esAdminSesion()) return irA("pantalla-menu");
+  abrirControlUnidades().then(() => { if(editado) abrirFichaEquipo(editado.codigo); });
+}
+
+/* Llena el formulario con un mantenimiento ya guardado (para corregirlo). */
+function cargarEdicionMantenimiento(m){
+  document.getElementById("mto-fecha").value = isoDesdePE(m.fecha) || hoyIso();
+  document.getElementById("mto-lectura").value = m.lectura !== "" && m.lectura != null ? m.lectura : "";
+  document.getElementById("mto-hora-inicio").value = m.hora_inicio || "";
+  document.getElementById("mto-hora-fin").value = m.hora_fin || "";
+  document.getElementById("mto-trabajo").value = m.trabajo || "";
+  document.getElementById("mto-cambios").value = m.cambios_fuera_plan || "";
+  document.getElementById("mto-observaciones").value = m.observaciones || "";
+  if(m.tipo === "Preventivo" && m.pm) document.getElementById("mto-pm").value = m.pm;
+  mtoMateriales = (m.materiales || []).map(x => Object.assign({}, x));
+  mtoInspeccion = (m.inspeccion || []).map(x => Object.assign({}, x));
+  mtoRepuestos = (m.repuestos || []).map(x => Object.assign({}, x));
+  renderMaterialesMantenimiento();
+  renderInspeccionMantenimiento();
+  mtoInspeccion.forEach((t, i) => {
+    if(t.resultado) marcarInspeccion(i, t.resultado);
+    const obs = document.getElementById("mto-ins-obs-" + i);
+    if(obs) obs.value = t.obs || "";
+  });
+  renderRepuestosMantenimiento();
+  if(m.tipo === "Correctivo" && m.falla_id){
+    const sel = document.getElementById("mto-falla");
+    if(![...sel.options].some(o => o.value === m.falla_id)) sel.innerHTML += `<option value="${esc(m.falla_id)}">${esc(m.falla_id)}</option>`;
+    sel.value = m.falla_id;
+  }
+}
+
+/* ---------- Repuestos que se piden (catálogo o a mano) ---------- */
+function renderRepuestosMantenimiento(){
+  const cont = document.getElementById("mto-repuestos");
+  if(!cont) return;
+  const total = mtoRepuestos.reduce((s, x) => s + (Number(x.cantidad) || 0) * (Number(x.precio) || 0), 0);
+  cont.innerHTML = mtoRepuestos.length ? mtoRepuestos.map((x, i) => `
+    <div class="mtto-material">
+      <div class="mtto-material-texto">
+        <b>${esc(x.nombre)}</b>
+        <small>${x.codigo ? "cód. " + esc(x.codigo) : "sin código"} · S/ ${(Number(x.precio) || 0).toFixed(2)} / ${esc(x.um)}${x.para ? ` · para: ${esc(x.para)}` : ""}</small>
+      </div>
+      <div class="mtto-material-controles">
+        <input type="number" min="0" step="1" value="${esc(x.cantidad)}" style="width:70px;" oninput="mtoRepuestos[${i}].cantidad = Number(this.value) || 0; actualizarTotalRepuestos()">
+        <button type="button" class="btn btn-texto" style="width:auto;margin:0;padding:6px 8px;color:var(--rojo-texto);" onclick="mtoRepuestos.splice(${i}, 1); renderRepuestosMantenimiento()">✕</button>
+      </div>
+    </div>`).join("") + `<div class="mtto-total">Total estimado: <b id="mto-total-repuestos">S/ ${total.toFixed(2)}</b></div>`
+    : `<div class="subtexto">Sin repuestos pedidos.</div>`;
+}
+function actualizarTotalRepuestos(){
+  const el = document.getElementById("mto-total-repuestos");
+  if(el) el.textContent = "S/ " + mtoRepuestos.reduce((s, x) => s + (Number(x.cantidad) || 0) * (Number(x.precio) || 0), 0).toFixed(2);
+}
+
+/* Buscador del catálogo (el mismo de requerimientos). "para": la observación
+   NO OK que corrige (opcional). */
+let repuestoPara = "";
+function abrirBuscadorRepuesto(para){
+  repuestoPara = para || "";
+  abrirModal(`
+    <div class="modal-titulo"><span>🛒 Agregar repuesto</span><button class="modal-cerrar" onclick="cerrarModal()">×</button></div>
+    ${repuestoPara ? `<div class="ficha-nota" style="margin-bottom:8px;">Para corregir: <b>${esc(repuestoPara)}</b></div>` : ""}
+    <div class="campo"><label>Buscar producto (nombre o código)</label>
+      <input type="text" id="rep-buscar" placeholder="Ej.: muelle, pata de arranque, 2510…" oninput="buscarRepuesto()" autocomplete="off"></div>
+    <div id="rep-resultados"></div>
+  `);
+  setTimeout(() => { const el = document.getElementById("rep-buscar"); if(el) el.focus(); }, 100);
+}
+function buscarRepuesto(){
+  const q = document.getElementById("rep-buscar").value.trim();
+  const cont = document.getElementById("rep-resultados");
+  if(q.length < 2){ cont.innerHTML = `<div class="subtexto">Escribe al menos 2 letras.</div>`; return; }
+  const palabras = q.toLowerCase().split(/\s+/);
+  const hallados = CATALOGO_MATERIALES.filter(m => {
+    const t = (m.nombre + " " + m.codigo).toLowerCase();
+    return palabras.every(p => t.includes(p));
+  }).slice(0, 30);
+  cont.innerHTML = hallados.map((m, i) => `
+    <div class="dash-fila" onclick="elegirRepuestoCatalogo(${CATALOGO_MATERIALES.indexOf(m)})">
+      <div style="flex:1;"><b>${esc(m.nombre)}</b><div class="subtexto">cód. ${esc(m.codigo)} · S/ ${Number(m.precio).toFixed(2)} / ${esc(m.um)}</div></div>
+    </div>`).join("") + `
+    <div class="dash-fila" onclick="repuestoManual(${jsArg(q)})">
+      <div style="flex:1;"><b>➕ No está en la lista: agregar «${esc(q)}» a mano</b><div class="subtexto">Escribirás el nombre completo y el precio; queda sin código.</div></div>
+    </div>`;
+}
+function elegirRepuestoCatalogo(idx){
+  const m = CATALOGO_MATERIALES[idx];
+  formularioRepuesto({ codigo:m.codigo, nombre:m.nombre, um:m.um, precio:m.precio, cantidad:1 }, false);
+}
+function repuestoManual(texto){
+  formularioRepuesto({ codigo:"", nombre:String(texto || "").toUpperCase(), um:"UND", precio:"", cantidad:1 }, true);
+}
+function formularioRepuesto(x, manual){
+  abrirModal(`
+    <div class="modal-titulo"><span>${manual ? "Producto nuevo (sin código)" : "Repuesto del catálogo"}</span><button class="modal-cerrar" onclick="cerrarModal()">×</button></div>
+    ${repuestoPara ? `<div class="ficha-nota" style="margin-bottom:8px;">Para corregir: <b>${esc(repuestoPara)}</b></div>` : ""}
+    <div class="campo"><label>Nombre completo del producto</label><input type="text" id="rep-nombre" value="${esc(x.nombre)}" ${manual ? "" : "readonly"}></div>
+    <div class="campo"><label>Código</label><input type="text" value="${esc(x.codigo || "(sin código)")}" readonly></div>
+    <div class="fila-2">
+      <div class="campo"><label>Cantidad</label><input type="number" min="1" step="1" id="rep-cantidad" value="${esc(x.cantidad)}"></div>
+      <div class="campo"><label>Unidad</label><input type="text" id="rep-um" value="${esc(x.um)}" ${manual ? "" : "readonly"}></div>
+    </div>
+    <div class="campo"><label>Precio unitario (S/)${manual ? " — a tu criterio" : ""}</label><input type="number" min="0" step="0.01" id="rep-precio" value="${esc(x.precio)}" ${manual ? "" : "readonly"}></div>
+    <button class="btn btn-primario" onclick="confirmarRepuesto(${jsArg(x.codigo || "")})">Agregar a la lista</button>
+  `);
+}
+function confirmarRepuesto(codigo){
+  const nombre = document.getElementById("rep-nombre").value.trim();
+  const cantidad = Number(document.getElementById("rep-cantidad").value) || 0;
+  const precio = Number(document.getElementById("rep-precio").value);
+  if(!nombre){ mostrarToast("Escribe el nombre completo del producto.", false); return; }
+  if(cantidad <= 0){ mostrarToast("Indica la cantidad.", false); return; }
+  if(document.getElementById("rep-precio").value === "" || isNaN(precio) || precio < 0){ mostrarToast("Indica el precio (aunque sea estimado).", false); return; }
+  mtoRepuestos.push({ codigo, nombre, um:document.getElementById("rep-um").value.trim() || "UND", cantidad, precio, para:repuestoPara });
+  cerrarModal();
+  renderRepuestosMantenimiento();
+  mostrarToast("Repuesto agregado", true);
 }
 
 function elegirTipoMantenimiento(tipo, sinRecargar){
@@ -467,7 +716,8 @@ async function cambioEquipoMantenimiento(){
   const info = document.getElementById("mto-info-unidad");
   const selPm = document.getElementById("mto-pm");
   if(!eq){ info.style.display = "none"; selPm.innerHTML = ""; renderPlanMantenimiento(); return; }
-  if(!controlDatos.actualizado && !controlDatos.mantenimientos.length) await cargarControlMantenimiento();
+  if(!esAdminSesion()) await cargarControlMantenimiento(false, eq.codigo);   // técnico: solo esta unidad
+  else if(!controlDatos.actualizado && !controlDatos.mantenimientos.length) await cargarControlMantenimiento();
   const r = estadoUnidad(eq);
   info.style.display = "block";
   info.innerHTML = `<div class="fila1"><b>${esc(eq.plan)}</b><span class="badge mtto-estado ${CLASE_ESTADO[r.estado]}">${esc(r.estado)}</span></div>
@@ -566,6 +816,7 @@ function renderInspeccionMantenimiento(){
         <button type="button" data-res="NO OK" onclick="marcarInspeccion(${i}, 'NO OK')">NO OK</button>
       </div>
       <textarea class="chk-obs" id="mto-ins-obs-${i}" rows="2" placeholder="¿Qué encontraste? (obligatorio)" style="display:none;" oninput="mtoInspeccion[${i}].obs = this.value"></textarea>
+      <button type="button" class="btn btn-secundario mtto-btn" id="mto-ins-rep-${i}" style="display:none;margin-top:6px;" onclick="abrirBuscadorRepuesto(${jsArg(t.sistema + " · " + t.tarea)})">🛒 Pedir repuesto para esto</button>
     </div>`;
   }).join("");
 }
@@ -579,6 +830,7 @@ function marcarInspeccion(i, res){
     if(b.dataset.res === res) b.classList.add("activo", res === "OK" ? "marca-C" : "marca-NC");
   });
   document.getElementById("mto-ins-obs-" + i).style.display = res === "NO OK" ? "block" : "none";
+  document.getElementById("mto-ins-rep-" + i).style.display = res === "NO OK" ? "block" : "none";
 }
 
 function marcarInspeccionOk(){ mtoInspeccion.forEach((t, i) => { if(!t.resultado) marcarInspeccion(i, "OK"); }); }
@@ -633,10 +885,12 @@ async function guardarMantenimiento(){
     }
   }
 
+  if(eq.control !== "MESES" && !(await lecturaMantenimientoConfirmada(eq, lectura, fechaIso))) return;
+
   const s = sesionActual();
   const ahora = new Date();
   const registro = {
-    id:"MTO-" + ahora.getTime() + "-" + Math.random().toString(16).slice(2, 6),
+    id: mtoEditando ? mtoEditando.id : "MTO-" + ahora.getTime() + "-" + Math.random().toString(16).slice(2, 6),
     tipo:mtoTipo, codigo:eq.codigo, equipo:eq.descripcion, area:eq.area, criticidad:eq.criticidad,
     plan:eq.plan, control:eq.control, pm: preventivo ? pm : "",
     fecha:peDesdeIso(fechaIso), lectura: isNaN(lectura) ? "" : lectura,
@@ -649,9 +903,31 @@ async function guardarMantenimiento(){
     observaciones:document.getElementById("mto-observaciones").value.trim(),
     trabajo, falla_id: preventivo ? "" : document.getElementById("mto-falla").value,
     cerrar_falla: !preventivo && document.getElementById("mto-cerrar-falla").checked,
+    repuestos:mtoRepuestos.map(x => ({ codigo:x.codigo || "", nombre:x.nombre, um:x.um || "UND", cantidad:Number(x.cantidad) || 0,
+      precio:Number(x.precio) || 0, para:x.para || "" })).filter(x => x.nombre && x.cantidad > 0),
     fotos:[...fotosTemp.mantenimiento], tecnico:s.nombre || "—", dni:s.dni || "—", n_ot:"",
     creado:ahora.getTime(), sincronizado:false
   };
+
+  // Admin corrigiendo: se guarda directo en el servidor (y vuelve a pedir V°B°).
+  if(mtoEditando){
+    if(!navigator.onLine) return errorMantenimiento("Necesitas internet para guardar la corrección.");
+    const boton = document.getElementById("mto-btn-guardar");
+    boton.disabled = true; boton.textContent = "Guardando...";
+    registro.tecnico = mtoEditando.tecnico;
+    registro.fotos_mantener = mtoEditando.fotos || [];
+    const resp = await llamarServidor({ tipo:"editar_mantenimiento", registro });
+    boton.disabled = false; boton.textContent = "Guardar cambios";
+    if(!(resp && resp.ok)) return errorMantenimiento((resp && resp.mensaje) || "No se pudo guardar la corrección.");
+    mostrarToast(resp.mensaje || "Mantenimiento corregido", true);
+    fotosTemp.mantenimiento = [];
+    const codigo = mtoEditando.codigo;
+    mtoEditando = null;
+    document.getElementById("mto-equipo").disabled = false;
+    await abrirControlUnidades();
+    abrirFichaEquipo(codigo);
+    return;
+  }
   await guardarEnStore("mantenimientos", registro);
 
   let siguiente = "";
@@ -665,14 +941,62 @@ async function guardarMantenimiento(){
   }
   const noOk = registro.inspeccion.filter(t => t.resultado === "NO OK").length;
   abrirModal(`
-    <div class="modal-titulo"><span>Mantenimiento guardado</span><button class="modal-cerrar" onclick="cerrarModal(); abrirControlUnidades();">×</button></div>
+    <div class="modal-titulo"><span>Mantenimiento guardado</span><button class="modal-cerrar" onclick="cerrarModal(); salirFormMantenimiento();">×</button></div>
     <p class="subtexto">${esc(eq.codigo)} · ${esc(preventivo ? pm : "Correctivo")} · ${esc(registro.fecha)}</p>
     ${siguiente ? `<div class="tarjeta" style="margin:12px 0;"><div class="subtexto">Siguiente mantenimiento</div><div style="font-weight:800;font-size:16px;">${esc(siguiente)}</div></div>` : ""}
     ${noOk ? `<p class="subtexto">Se encontraron <b>${noOk} tarea(s) NO OK</b>: al sincronizar se creará una falla para que se corrija.</p>` : ""}
+    ${registro.repuestos.length ? `<p class="subtexto">Pediste <b>${registro.repuestos.length} repuesto(s)</b>: el administrador generará el requerimiento.</p>` : ""}
     <p class="subtexto">El N° de OT lo asigna el servidor al sincronizar.</p>
-    <button class="btn btn-primario" style="margin-top:12px;" onclick="cerrarModal(); abrirControlUnidades();">Listo</button>
+    <button class="btn btn-primario" style="margin-top:12px;" onclick="cerrarModal(); salirFormMantenimiento();">Listo</button>
   `);
   if(navigator.onLine) sincronizarTodo();
+}
+
+/* Km / horómetro del mantenimiento: si es menor que lo ya registrado o da un
+   salto muy grande, se pide confirmar (evita errores de tipeo como 511,515). */
+function lecturaMantenimientoConfirmada(eq, lectura, fechaIso){
+  const otros = controlDatos.mantenimientos.filter(m => m.codigo === eq.codigo && (!mtoEditando || m.id !== mtoEditando.id)
+    && m.lectura !== "" && m.lectura != null && Number(m.lectura) > 0);
+  const ultMto = ordenarMantenimientos(otros).pop();
+  const lect = controlDatos.lecturas[eq.codigo];
+  const u = UNIDAD_CONTROL[eq.control];
+  const avisos = [];
+  if(ultMto && lectura < Number(ultMto.lectura)){
+    avisos.push(`Es <b>menor</b> que el mantenimiento anterior (${esc(ultMto.pm || "Correctivo")} a ${miles(ultMto.lectura)} ${u}, ${esc(ultMto.fecha)}).`);
+  }
+  const ref = lect ? Number(lect.lectura) : (ultMto ? Number(ultMto.lectura) : null);
+  // Al corregir, la última lectura puede ser la misma que se está arreglando.
+  if(!mtoEditando && ref != null && !isNaN(ref) && ref > 0){
+    const fRef = lect ? fechaDesdePE(lect.fecha) : fechaDesdePE(ultMto.fecha);
+    const dias = Math.max(1, Math.round(((new Date(fechaIso + "T12:00:00")) - (fRef || new Date())) / 86400000));
+    const maximo = eq.control === "KM" ? Math.max(300, 300 * dias) : 24 * dias + 24;
+    if(lectura - ref > maximo) avisos.push(`Sube <b>${miles(lectura - ref)} ${u}</b> desde la última lectura (${miles(ref)} ${u}): es demasiado para ${dias} día(s).`);
+  }
+  // Preventivo nuevo: el km debe estar cerca de cuando le tocaba.
+  if(!mtoEditando && mtoTipo === "Preventivo"){
+    const r = estadoUnidad(eq);
+    if(r.proximoA != null && lectura < r.proximoA - Number(eq.intervalo) * 0.5){
+      avisos.push(`Según el control, el ${esc(String(r.proximo).split(" - ")[0])} le toca a los <b>${miles(r.proximoA)} ${u}</b> (base: ${esc(r.base.origen.toLowerCase())}, ${miles(r.base.lectura)} ${u}). Con este km el cálculo se cruzaría.`);
+    }
+  }
+  if(!avisos.length) return Promise.resolve(true);
+  return confirmarLecturaRara(`${miles(lectura)} ${u}`, avisos);
+}
+
+/* Ventana "¿Seguro?" para una lectura rara. Devuelve true si confirma. */
+function confirmarLecturaRara(textoLectura, avisos){
+  return new Promise(resolve => {
+    window._respLecturaRara = ok => { cerrarModal(); resolve(ok); };
+    abrirModal(`
+      <div class="modal-titulo"><span>⚠ Revisa la lectura</span><button class="modal-cerrar" onclick="_respLecturaRara(false)">×</button></div>
+      <p style="font-size:18px;font-weight:800;margin:6px 0;">${esc(textoLectura)}</p>
+      ${avisos.map(a => `<p class="subtexto">${a}</p>`).join("")}
+      <p class="subtexto">¿Seguro que está bien escrita?</p>
+      <div style="display:flex;gap:8px;margin-top:12px;">
+        <button class="btn btn-secundario" style="flex:1;" onclick="_respLecturaRara(false)">Corregir</button>
+        <button class="btn btn-primario" style="flex:1;" onclick="_respLecturaRara(true)">Sí, está bien</button>
+      </div>`);
+  });
 }
 
 /* ---------- Pantalla: punto de partida (admin) ---------- */
@@ -687,6 +1011,18 @@ async function abrirPuntoPartida(){
     const porMeses = eq.control === "MESES";
     const u = UNIDAD_CONTROL[eq.control];
     const id = eq.codigo;
+    // Si ya tiene un PM registrado en la app, ese manda: el punto de partida
+    // ya no se usa (cargar otro km cruzaría los cálculos).
+    const pms = ordenarMantenimientos(controlDatos.mantenimientos.filter(m => m.codigo === eq.codigo && m.tipo === "Preventivo"));
+    if(pms.length){
+      const ult = pms[pms.length - 1];
+      return `
+      <div class="tarjeta mtto-partida" style="margin-bottom:12px;">
+        <div style="font-weight:800;font-size:14px;">${esc(eq.codigo)} · ${esc(eq.descripcion)}</div>
+        <div class="ficha-nota" style="margin-top:8px;">✔ Ya tiene <b>${esc(ult.pm)}</b> registrado en la app (${ult.lectura !== "" ? esc(miles(ult.lectura)) + " " + esc(u) + " · " : ""}${esc(ult.fecha)} · ${esc(ult.n_ot || "")}). El punto de partida ya no se usa: si un km está mal, <b>edita ese mantenimiento</b> desde la ficha.</div>
+        <button class="btn btn-secundario" style="margin-top:8px;" onclick="abrirFichaEquipo(${jsArg(eq.codigo)})">Ver ficha</button>
+      </div>`;
+    }
     return `
     <div class="tarjeta mtto-partida" style="margin-bottom:12px;">
       <div style="font-weight:800;font-size:14px;">${esc(eq.codigo)} · ${esc(eq.descripcion)}</div>

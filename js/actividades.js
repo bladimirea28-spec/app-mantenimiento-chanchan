@@ -196,7 +196,7 @@ async function guardarMtto(){
 
 async function renderListaMtto(){
   const cont = document.getElementById("lista-mtto");
-  const registros = await leerStore("actividades");
+  const registros = soloMisRegistros(await leerStore("actividades"));
   if(registros.length===0){
     cont.innerHTML = `<div class="vacio">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14.7 6.3a4 4 0 1 1-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 1 1 5.4-5.4l3.6-3.6-3-3-3.6 3.6z"/></svg>

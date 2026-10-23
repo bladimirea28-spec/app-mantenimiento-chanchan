@@ -177,9 +177,23 @@ function primerNombre(nombreCompleto){
   return (nombreCompleto||"").trim().split(/\s+/)[0] || nombreCompleto;
 }
 
+/* ============ ROLES ============
+   Solo los admin ven, corrigen y quitan datos de otros. Operadores,
+   supervisores de área y técnicos solo llenan y ven lo suyo. */
+function esAdminSesion(){
+  try{ return JSON.parse(localStorage.getItem("sesion_activa") || "{}").rol === "admin"; }catch(e){ return false; }
+}
+/* De una lista del celular, deja solo los registros de quien inició sesión
+   (el admin ve todos). */
+function soloMisRegistros(lista){
+  const s = JSON.parse(localStorage.getItem("sesion_activa") || "{}");
+  if(s.rol === "admin") return lista;
+  return lista.filter(r => String(r.dni || "") === String(s.dni || ""));
+}
+
 /* ============ VERSIÓN Y ACTUALIZACIÓN DE LA APP ============
    VERSION_APP debe ser igual al número de CACHE_NAME en sw.js. */
-const VERSION_APP = "v19";
+const VERSION_APP = "v20";
 
 function mostrarVersionApp(){
   document.querySelectorAll(".txt-version-app").forEach(el => { el.textContent = "(versión " + VERSION_APP + ")"; });

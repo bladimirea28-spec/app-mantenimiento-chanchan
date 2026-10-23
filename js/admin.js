@@ -326,8 +326,16 @@ function fotosHtmlAdmin(fotosTexto, tamano){
   const fotos = String(fotosTexto||"").split("|").map(f=>urlSegura(f)).filter(Boolean);
   if(!fotos.length) return "";
   return `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">${
-    fotos.map(f=>`<a href="${f}" target="_blank" rel="noopener"><img src="${f}" style="width:${tamano}px;height:${tamano}px;object-fit:cover;border-radius:8px;border:1px solid var(--linea);"></a>`).join("")
+    fotos.map(f=>`<a href="${f}" target="_blank" rel="noopener"><img src="${miniaturaFoto(f)}" loading="lazy" alt="Foto" style="width:${tamano}px;height:${tamano}px;object-fit:cover;border-radius:8px;border:1px solid var(--linea);"></a>`).join("")
   }</div>`;
+}
+
+/* El enlace "drive.google.com/thumbnail" muestra una imagen genérica si el
+   celular no tiene sesión de Google; la versión lh3 sí carga la foto real
+   (y a 400 px pesa poco). El toque abre la foto original. */
+function miniaturaFoto(url){
+  const m = String(url||"").match(/drive\.google\.com\/(?:thumbnail\?id=|uc\?(?:export=\w+&)?id=|file\/d\/|open\?id=)([\w-]{10,})/);
+  return m ? `https://lh3.googleusercontent.com/d/${m[1]}=w400` : url;
 }
 
 function renderizarListadoActividadesAdmin(){
@@ -452,6 +460,7 @@ function verDetalleFallaAdmin(clave){
     <div class="ficha-nota" style="margin-top:12px;"><b>¿Cómo se cierra?</b> Con <b>Resolver</b> se anota la causa y la acción correctiva (trabajo rápido). Si hubo cambio de repuestos o un trabajo mayor, usa <b>Correctivo</b>: queda como mantenimiento con su OT y costo, y la falla se cierra sola.</div>
     <div style="display:flex;gap:8px;margin-top:10px;">
       <button class="btn btn-primario" style="flex:1;margin-top:0;" onclick="resolverFallaAdmin(${jsArg(r.CLAVE)})">✔ Resolver</button>
+      <button class="btn btn-secundario" style="flex:1;margin-top:0;" onclick="abrirAsignarTecnico(${jsArg(r.CLAVE)}, '')">👷 ${r.TECNICO_RESPONSABLE ? "Cambiar técnico" : "Asignar técnico"}</button>
       ${codigoDeTextoEquipo(r.EQUIPO) && typeof EQUIPOS_MTTO !== "undefined" && equipoMtto(codigoDeTextoEquipo(r.EQUIPO)) ? `<button class="btn btn-secundario" style="flex:1;margin-top:0;" onclick="cerrarModal();abrirFormMantenimiento(${jsArg(codigoDeTextoEquipo(r.EQUIPO))}, { correctivo:true, falla:${jsArg(r.ID_FALLA)} })">🔧 Correctivo</button>` : ""}
     </div>` : ""}
     <div style="display:flex;gap:8px;margin-top:10px;">
@@ -1032,7 +1041,7 @@ function verDetalleRequerimientoAdmin(correlativo){
       <div class="subtexto" style="margin-top:4px;">Cantidad: ${esc(it.cantidad||"—")} ${esc(it.um)} · P. Unit: S/ ${(Number(it.precio_unitario)||0).toFixed(2)} · Total: S/ ${(Number(it.precio_total)||0).toFixed(2)}</div>
       ${it.especificaciones?`<div class="subtexto" style="margin-top:2px;">Especificaciones: ${esc(it.especificaciones)}</div>`:""}
       <div class="subtexto" style="margin-top:2px;">Equipo: ${esc(it.equipo||"—")} ${it.equipoCodigo?`· CECO: ${esc(it.equipoCodigo)}`:""}</div>
-      ${urlSegura(it.foto)?`<div style="margin-top:6px;"><a href="${urlSegura(it.foto)}" target="_blank" rel="noopener"><img src="${urlSegura(it.foto)}" style="width:70px;height:70px;object-fit:cover;border-radius:8px;border:1px solid var(--linea);"></a></div>`:""}
+      ${urlSegura(it.foto)?`<div style="margin-top:6px;"><a href="${urlSegura(it.foto)}" target="_blank" rel="noopener"><img src="${miniaturaFoto(urlSegura(it.foto))}" loading="lazy" style="width:70px;height:70px;object-fit:cover;border-radius:8px;border:1px solid var(--linea);"></a></div>`:""}
     </div>
   `).join("") : "<p class=\"subtexto\">Sin materiales.</p>";
   abrirModal(`

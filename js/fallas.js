@@ -162,7 +162,7 @@ async function guardarFallaOperador(){
 
 async function renderListaFallas(){
   const cont = document.getElementById("lista-fallas");
-  const registros = await leerStore("fallas");
+  const registros = soloMisRegistros(await leerStore("fallas"));
   if(registros.length===0){
     cont.innerHTML = `<div class="vacio">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 9v4M12 17h.01M10.3 3.9L2.5 17a1.8 1.8 0 0 0 1.5 2.7h16a1.8 1.8 0 0 0 1.5-2.7L13.7 3.9a1.8 1.8 0 0 0-3.4 0z"/></svg>
@@ -235,7 +235,7 @@ async function actualizarResumenInicio(){
   const pendientes = await contarPendientes();
   document.getElementById("resumen-pendientes-sync").textContent = pendientes;
 
-  const acts = await leerStore("actividades");
+  const acts = soloMisRegistros(await leerStore("actividades"));
   const haceUnaSemana = Date.now() - 7*24*60*60*1000;
   const actsSemana = acts.filter(r=>(r.creado||0) >= haceUnaSemana).length;
   document.getElementById("resumen-actividades-semana").textContent = actsSemana;
@@ -246,8 +246,8 @@ function renderFallasAbiertas(){
   if(fallasAbiertasCache.length===0){
     cont.innerHTML = `<div class="vacio">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 12l2 2 4-4M12 3l8 4.5v9L12 21l-8-4.5v-9z"/></svg>
-      <div style="font-weight:700;color:var(--tinta-900);margin-bottom:4px;">No hay fallas abiertas</div>
-      <div class="subtexto">Todo al día por ahora.</div>
+      <div style="font-weight:700;color:var(--tinta-900);margin-bottom:4px;">${esAdminSesion() ? "No hay fallas abiertas" : "No tienes fallas asignadas"}</div>
+      <div class="subtexto">${esAdminSesion() ? "Todo al día por ahora." : "Aquí aparecen las fallas que el administrador te asigne para corregir."}</div>
     </div>`;
     return;
   }

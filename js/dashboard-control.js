@@ -120,6 +120,21 @@ function renderDashboardControl(){
         : `<div class="subtexto">No hay fallas ni hallazgos pendientes. 👍</div>`}
     </div>`;
 
+  // Repuestos que pidieron los técnicos y aún no tienen requerimiento.
+  const porConseguir = controlDatos.mantenimientos.filter(m => (m.repuestos || []).length && !m.requerimiento);
+  if(porConseguir.length){
+    const totalRep = porConseguir.reduce((s, m) => s + m.repuestos.reduce((t, x) => t + (Number(x.cantidad) || 0) * (Number(x.precio) || 0), 0), 0);
+    html += `<div class="tarjeta dash-bloque">
+      <div class="dash-titulo" style="margin-top:0;">🛒 Repuestos por conseguir (${porConseguir.length}) · ${soles(totalRep)}</div>
+      ${porConseguir.slice(0, 8).map(m => `<div class="dash-fila" onclick="abrirFichaEquipo(${jsArg(m.codigo)})">
+        <span class="badge criticidad-media">${m.repuestos.length}</span>
+        <div style="flex:1;"><b>${esc(m.codigo)} · ${esc(m.n_ot || "")}</b>
+          <div class="subtexto">${esc(m.repuestos.map(x => x.nombre).join(", ").slice(0, 110))}</div></div>
+      </div>`).join("")}
+      <div class="subtexto" style="margin-top:6px;">Toca la unidad y usa «Generar requerimiento».</div>
+    </div>`;
+  }
+
   html += `<div class="dash-titulo">Mantenimientos del período</div>
     <div class="kpi-grid kpi-grid-3">
       ${tarjetaKpi(prev.length, "Preventivos", "verde")}

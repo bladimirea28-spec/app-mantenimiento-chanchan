@@ -149,7 +149,7 @@ async function abrirChecklists(){
         <div class="subtexto"><span class="badge">Próximamente</span></div>
       </div>
     </div>`).join("");
-  const puedeVerSemana = sesion.rol === "admin" || sesion.rol === "tecnico" || sesion.es_jefe_area;
+  const puedeVerSemana = sesion.rol === "admin";   // vista semanal y V°B°: solo admin
   document.getElementById("btn-checklist-semanal").style.display = puedeVerSemana ? "flex" : "none";
   irA("pantalla-checklists");
   renderChecklistsRecientes();
@@ -311,7 +311,26 @@ function revisarLecturaChecklist(){
     ayuda.textContent = `Ojo: es menor que el último registrado (${chkUltimaLectura.lectura} ${unidad} el ${chkUltimaLectura.fecha || "—"}). Revisa que esté bien escrito.`;
     ayuda.classList.add("alerta");
     confirmar.style.display = "flex";
+  }else if(!isNaN(valor) && saltoLecturaChecklist(valor)){
+    ayuda.textContent = `Ojo: sube ${saltoLecturaChecklist(valor)} desde el último registrado (${chkUltimaLectura.lectura} ${unidad} el ${chkUltimaLectura.fecha || "—"}). ¿Está bien escrito?`;
+    ayuda.classList.add("alerta");
+    confirmar.style.display = "flex";
   }
+}
+
+/* Un salto muy grande casi siempre es un error de tipeo (ej. 234,364 km en
+   vez de 23,436). Máximo normal: 300 km o 24 h por día desde la última. */
+function saltoLecturaChecklist(valor){
+  if(!chkUltimaLectura) return "";
+  const ult = Number(chkUltimaLectura.lectura);
+  if(isNaN(ult) || ult <= 0) return "";
+  const km = chkPlantilla && lecturaActualChecklist().unidad === "km";
+  const m = String(chkUltimaLectura.fecha || "").match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  const f = m ? new Date(+m[3], +m[2] - 1, +m[1]) : new Date();
+  const dias = Math.max(1, Math.round((Date.now() - f.getTime()) / 86400000));
+  const maximo = km ? Math.max(300, 300 * dias) : 24 * dias + 24;
+  const sube = valor - ult;
+  return sube > maximo ? `${Math.round(sube).toLocaleString("es-PE")} ${km ? "km" : "h"}` : "";
 }
 
 function errorChecklist(mensaje){
@@ -346,6 +365,10 @@ async function guardarChecklist(){
   if(chkUltimaLectura && lectura < Number(chkUltimaLectura.lectura) && !document.getElementById("chk-confirmar-lectura-check").checked){
     revisarLecturaChecklist();
     return errorChecklist(`El ${lecturaDe(p, eq.nombre).etiqueta.toLowerCase()} es menor que el último registrado. Corrígelo o confirma que es correcto.`);
+  }
+  if(saltoLecturaChecklist(lectura) && !document.getElementById("chk-confirmar-lectura-check").checked){
+    revisarLecturaChecklist();
+    return errorChecklist(`El ${lecturaDe(p, eq.nombre).etiqueta.toLowerCase()} sube ${saltoLecturaChecklist(lectura)} de golpe. Corrígelo o confirma que es correcto.`);
   }
 
   const faltantes = chkRespuestas.map((r, i) => r.marca ? -1 : i).filter(i => i >= 0);

@@ -184,6 +184,17 @@ function entrarAMenu(usuario){
   tabbar.classList.toggle("visible", esTecnicoOAdmin);
   document.getElementById("tab-panel-admin").style.display = esAdmin ? "flex" : "none";
 
+  // El técnico solo registra mantenimientos (no ve el control de todas las
+  // unidades ni sus alertas): el botón lo lleva directo a registrar.
+  const btnControl = document.getElementById("btn-control-mtto");
+  if(btnControl){
+    btnControl.onclick = esAdmin ? abrirControlUnidades : () => abrirFormMantenimiento();
+    document.getElementById("menu-titulo-control").textContent = esAdmin ? "Control de mantenimiento" : "Registrar mantenimiento";
+    document.getElementById("menu-subtexto-control").textContent = esAdmin ? "Preventivos por horómetro / km y correctivos" : "Preventivo o correctivo de una unidad";
+  }
+  const alerta = document.getElementById("alerta-mantenimiento");
+  if(alerta && !esAdmin) alerta.style.display = "none";
+
   irA("pantalla-menu");
 
   if(esTecnicoOAdmin){
