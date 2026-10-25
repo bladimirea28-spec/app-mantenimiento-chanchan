@@ -101,6 +101,8 @@ async function llamarServidor(payload, opciones){
     });
     const data = await resp.json();
     if(data && data.sesion_invalida) manejarSesionVencida();
+    // Un cambio hecho por el usuario deja viejas las consultas guardadas.
+    if(data && data.ok && payload && CONSULTAS_DE_LECTURA.indexOf(payload.tipo) === -1 && !silencioso) marcarDatosCambiados();
     return data;
   }catch(err){
     console.error("Error llamando al servidor:", err);
@@ -108,6 +110,100 @@ async function llamarServidor(payload, opciones){
   }finally{
     if(!silencioso) ocultarCargando();
   }
+}
+
+/* ============ CONSULTAS AL INSTANTE ============
+   Las pantallas no esperan a Google: muestran al instante la última
+   respuesta guardada en el celular y piden la nueva por detrás. Cuando llega
+   y trae cambios, la pantalla se vuelve a pintar sola (alActualizar).
+   Si el usuario cambia algo (guardar, editar, eliminar…), lo guardado se da
+   por viejo y la siguiente consulta espera la respuesta nueva. */
+const CONSULTAS_DE_LECTURA = ["control_mantenimiento", "listado", "listado_requerimientos", "listado_solicitudes_actividad",
+  "listado_checklists", "listado_fallas_abiertas", "lecturas_equipos", "listado_dispositivos", "cupos", "existen_registros"];
+const _respuestasMemoria = {};
+const _consultasEnCurso = {};
+let _actualizandoFondo = 0;
+
+function versionDatosLocal(){ return Number(localStorage.getItem("version_datos_local") || 0); }
+function marcarDatosCambiados(){ localStorage.setItem("version_datos_local", String(versionDatosLocal() + 1)); }
+function claveConsulta(payload){
+  const s = JSON.parse(localStorage.getItem("sesion_activa") || "{}");
+  return (s.dni || "") + "|" + JSON.stringify(payload);
+}
+function indicadorActualizando(delta){
+  _actualizandoFondo = Math.max(0, _actualizandoFondo + delta);
+  let el = document.getElementById("indicador-actualizando");
+  if(!el){
+    el = document.createElement("div");
+    el.id = "indicador-actualizando";
+    el.innerHTML = `<span class="punto-giro"></span>Actualizando…`;
+    document.body.appendChild(el);
+  }
+  el.classList.toggle("visible", _actualizandoFondo > 0);
+}
+
+/* Pide al servidor una sola vez aunque varias pantallas lo pidan a la vez. */
+function pedirYGuardar(payload, clave, silencioso){
+  if(_consultasEnCurso[clave]) return _consultasEnCurso[clave];
+  const version = versionDatosLocal();
+  _consultasEnCurso[clave] = llamarServidor(payload, { silencioso }).then(resp => {
+    if(resp && resp.ok){
+      resp._recibido = Date.now();
+      const obj = { k:clave, t:resp._recibido, v:version, resp };
+      _respuestasMemoria[clave] = obj;
+      if(typeof guardarRespuesta === "function") guardarRespuesta(obj);
+    }
+    return resp;
+  }).finally(() => { delete _consultasEnCurso[clave]; });
+  return _consultasEnCurso[clave];
+}
+
+async function leerConsultaGuardada(clave){
+  let g = _respuestasMemoria[clave];
+  if(!g && typeof leerRespuestaGuardada === "function" && typeof db !== "undefined" && db) g = await leerRespuestaGuardada(clave);
+  if(g) _respuestasMemoria[clave] = g;
+  return g && g.v === versionDatosLocal() ? g : null;
+}
+
+/* opciones.frescura: ms en que lo guardado se usa sin volver a preguntar.
+   opciones.alActualizar(resp): se llama si la respuesta nueva cambió algo. */
+async function consultaRapida(payload, opciones){
+  opciones = opciones || {};
+  const clave = claveConsulta(payload);
+  const guardado = await leerConsultaGuardada(clave);
+  if(guardado){
+    const viejo = Date.now() - guardado.t > (opciones.frescura || 20000);
+    if(viejo && navigator.onLine && tokenSesion()){
+      indicadorActualizando(1);
+      pedirYGuardar(payload, clave, true).then(resp => {
+        const sinHora = o => JSON.stringify(Object.assign({}, o, { _recibido:0 }));
+        if(resp && resp.ok && opciones.alActualizar && sinHora(resp) !== sinHora(guardado.resp)) opciones.alActualizar(resp);
+      }).finally(() => indicadorActualizando(-1));
+    }
+    return guardado.resp;
+  }
+  return pedirYGuardar(payload, clave, !!opciones.silencioso);
+}
+
+/* Al entrar: trae por detrás lo que se va a usar, para que todo abra al instante. */
+function precargarDatos(){
+  const s = JSON.parse(localStorage.getItem("sesion_activa") || "{}");
+  if(!s.token || !navigator.onLine) return;
+  const enReposo = window.requestIdleCallback ? (f => requestIdleCallback(f, { timeout:1000 })) : (f => setTimeout(f, 300));
+  enReposo(() => {
+    asegurarPlanesMtto().catch(() => {});
+    asegurarMateriales().catch(() => {});
+    const pedir = p => pedirYGuardar(p, claveConsulta(p), true).catch(() => {});
+    if(s.rol === "admin"){
+      if(typeof cargarControlMantenimiento === "function") cargarControlMantenimiento(true).catch(() => {});
+      pedir({ tipo:"listado", dni_admin:s.dni });
+      pedir({ tipo:"listado_requerimientos", dni_admin:s.dni });
+      pedir({ tipo:"listado_solicitudes_actividad", dni_admin:s.dni });
+      pedir({ tipo:"listado_checklists" });
+    }
+    if(s.rol === "admin" || s.rol === "tecnico") pedir({ tipo:"listado_fallas_abiertas", dni:s.dni, nombre:s.nombre, rol:s.rol });
+    pedir({ tipo:"listado_requerimientos", dni:s.dni });
+  });
 }
 
 /* ============ LIMPIEZA DE TEXTOS PARA MOSTRAR EN PANTALLA ============
@@ -193,7 +289,7 @@ function soloMisRegistros(lista){
 
 /* ============ VERSIÓN Y ACTUALIZACIÓN DE LA APP ============
    VERSION_APP debe ser igual al número de CACHE_NAME en sw.js. */
-const VERSION_APP = "v21";
+const VERSION_APP = "v22";
 
 function mostrarVersionApp(){
   document.querySelectorAll(".txt-version-app").forEach(el => { el.textContent = "(versión " + VERSION_APP + ")"; });

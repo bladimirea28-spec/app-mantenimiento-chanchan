@@ -290,12 +290,15 @@ async function guardarRequerimiento(){
 }
 
 /* ============ MIS REQUERIMIENTOS (historial propio del técnico) ============ */
-async function abrirMisRequerimientos(){
-  irA("pantalla-mis-requerimientos");
+async function abrirMisRequerimientos(enFondo){
+  if(!enFondo) irA("pantalla-mis-requerimientos");
   const cont = document.getElementById("mis-req-lista");
-  cont.innerHTML = `<div class="subtexto">Cargando...</div>`;
+  if(!cont.childElementCount) cont.innerHTML = `<div class="subtexto">Cargando...</div>`;
   const sesion = JSON.parse(localStorage.getItem("sesion_activa")||"{}");
-  const resp = await llamarServidor({ tipo:"listado_requerimientos", dni: sesion.dni });
+  const resp = await consultaRapida({ tipo:"listado_requerimientos", dni: sesion.dni }, {
+    silencioso:true,
+    alActualizar: () => { if(pantallaVisible("pantalla-mis-requerimientos")) abrirMisRequerimientos(true); }
+  });
   if(!resp || !resp.ok){
     cont.innerHTML = `<div class="subtexto">${esc((resp && resp.mensaje) || "No se pudo cargar.")}</div>`;
     return;

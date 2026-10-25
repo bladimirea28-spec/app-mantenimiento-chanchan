@@ -493,7 +493,10 @@ async function verSemanaChecklist(){
   cont.innerHTML = `<div class="subtexto">Cargando...</div>`;
 
   let registros = [], vistos = [], aviso = "";
-  const resp = navigator.onLine ? await llamarServidor({ tipo:"listado_checklists", plantilla:p.id, semana }) : null;
+  const resp = await consultaRapida({ tipo:"listado_checklists", plantilla:p.id, semana }, {
+    silencioso:true,
+    alActualizar: () => { if(semanaChecklist && semanaChecklist.semana === semana && semanaChecklist.clave === clave) verSemanaChecklist(); }
+  });
   if(resp && resp.ok){
     registros = (resp.checklists || []).map(checklistDesdeServidor);
     vistos = (resp.vistos_buenos || []).filter(v => String(v.EQUIPO_CLAVE) === clave);

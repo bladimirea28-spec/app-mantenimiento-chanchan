@@ -3,16 +3,30 @@ let adminDatosCache = { actividades: [], fallas: [], requerimientos: [] };
 
 async function abrirPanelAdmin(){
   irA("pantalla-admin");
-  document.getElementById("admin-cargando").style.display = "block";
-  document.getElementById("admin-contenido").style.display = "none";
-
   const sesion = JSON.parse(localStorage.getItem("sesion_activa")||"{}");
-  const resp = await llamarServidor({ tipo:"listado", dni_admin: sesion.dni });
-  if(!resp.ok){
-    document.getElementById("admin-cargando").textContent = resp.mensaje || "No se pudo cargar la información.";
+  if(!adminDatosCache.actividades.length && !adminDatosCache.fallas.length){
+    document.getElementById("admin-cargando").textContent = "Cargando...";
+    document.getElementById("admin-cargando").style.display = "block";
+    document.getElementById("admin-contenido").style.display = "none";
+  }
+  // Al instante con lo guardado; si llega algo nuevo del servidor, se repinta.
+  const resp = await consultaRapida({ tipo:"listado", dni_admin: sesion.dni }, {
+    silencioso:true,
+    alActualizar: nuevo => pintarPanelAdmin(nuevo, sesion, true)
+  });
+  if(!resp || !resp.ok){
+    document.getElementById("admin-cargando").style.display = "block";
+    document.getElementById("admin-contenido").style.display = "none";
+    document.getElementById("admin-cargando").textContent = (resp && resp.mensaje) || "No se pudo cargar la información.";
     return;
   }
-  adminDatosCache = { actividades: resp.actividades||[], fallas: resp.fallas||[] };
+  pintarPanelAdmin(resp, sesion, false);
+}
+
+/* soloDatos: repintado de fondo (no recarga las listas que ya se pidieron). */
+function pintarPanelAdmin(resp, sesion, soloDatos){
+  const reqPrevios = adminDatosCache.requerimientos || [];
+  adminDatosCache = { actividades: resp.actividades||[], fallas: resp.fallas||[], requerimientos: reqPrevios };
 
   actualizarKpisAdmin();
 
@@ -30,18 +44,25 @@ async function abrirPanelAdmin(){
   selFiltro.innerHTML = `<option value="">Todos</option>` +
     [...nombresFallas].sort().map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join("");
 
-  cargarDispositivosAdmin(sesion);
-
-  document.getElementById("admin-filtro-fecha-desde").value = "";
-  document.getElementById("admin-filtro-fecha-hasta").value = "";
+  if(!soloDatos){
+    cargarDispositivosAdmin(sesion);
+    document.getElementById("admin-filtro-fecha-desde").value = "";
+    document.getElementById("admin-filtro-fecha-hasta").value = "";
+  }
 
   const abiertasBadge = adminDatosCache.fallas.filter(r => String(r.ESTADO||"Abierta")!=="Resuelta");
   document.getElementById("admin-badge-actividades").textContent = `${adminDatosCache.actividades.length} registradas`;
   document.getElementById("admin-badge-fallas").textContent = `${abiertasBadge.length} abiertas de ${adminDatosCache.fallas.length}`;
 
-  cargarSolicitudesAdmin(sesion);
-  cargarRequerimientosAdmin(sesion);
-  cargarChecklistsAdmin();
+  if(!soloDatos){
+    cargarSolicitudesAdmin(sesion);
+    cargarRequerimientosAdmin(sesion);
+    cargarChecklistsAdmin();
+  }else{
+    // Si está viendo una lista del panel, se actualiza en su sitio.
+    if(pantallaVisible("pantalla-admin-actividades")) renderizarListadoActividadesAdmin();
+    if(pantallaVisible("pantalla-admin-fallas")){ renderizarListadoFallasAdmin(); actualizarAnalisisPeriodo(); }
+  }
 
   document.getElementById("admin-cargando").style.display = "none";
   document.getElementById("admin-contenido").style.display = "block";
@@ -49,8 +70,9 @@ async function abrirPanelAdmin(){
 
 async function cargarRequerimientosAdmin(sesion){
   const cont = document.getElementById("admin-requerimientos-lista");
-  cont.textContent = "Cargando...";
-  const resp = await llamarServidor({ tipo:"listado_requerimientos", dni_admin: sesion.dni });
+  if(!cont.childElementCount) cont.textContent = "Cargando...";
+  const resp = await consultaRapida({ tipo:"listado_requerimientos", dni_admin: sesion.dni }, {
+    silencioso:true, alActualizar: () => cargarRequerimientosAdmin(sesion) });
   if(!resp || !resp.ok){
     adminDatosCache.requerimientos = [];
     cont.textContent = (resp && resp.mensaje) || "No se pudo cargar.";
@@ -96,8 +118,9 @@ async function cargarRequerimientosAdmin(sesion){
 
 async function cargarSolicitudesAdmin(sesion){
   const cont = document.getElementById("admin-solicitudes-lista");
-  cont.textContent = "Cargando...";
-  const resp = await llamarServidor({ tipo:"listado_solicitudes_actividad", dni_admin: sesion.dni });
+  if(!cont.childElementCount) cont.textContent = "Cargando...";
+  const resp = await consultaRapida({ tipo:"listado_solicitudes_actividad", dni_admin: sesion.dni }, {
+    silencioso:true, alActualizar: () => cargarSolicitudesAdmin(sesion) });
   if(!resp || !resp.ok){
     cont.textContent = (resp && resp.mensaje) || "No se pudo cargar.";
     return;
@@ -586,8 +609,9 @@ async function exportarExcel(){
 
 async function cargarDispositivosAdmin(sesion){
   const cont = document.getElementById("admin-dispositivos-lista");
-  cont.textContent = "Cargando...";
-  const resp = await llamarServidor({ tipo:"listado_dispositivos", dni_admin: sesion.dni });
+  if(!cont.childElementCount) cont.textContent = "Cargando...";
+  const resp = await consultaRapida({ tipo:"listado_dispositivos", dni_admin: sesion.dni }, {
+    silencioso:true, alActualizar: () => cargarDispositivosAdmin(sesion) });
   if(!resp || !resp.ok){
     cont.textContent = (resp && resp.mensaje) || "No se pudo cargar.";
     return;
@@ -827,7 +851,10 @@ let chkEditando = null;
 
 async function cargarChecklistsAdmin(){
   const badge = document.getElementById("admin-badge-checklists");
-  const resp = await llamarServidor({ tipo:"listado_checklists" });
+  const resp = await consultaRapida({ tipo:"listado_checklists" }, {
+    silencioso:true,
+    alActualizar: async () => { await cargarChecklistsAdmin(); if(pantallaVisible("pantalla-admin-checklists")) renderizarChecklistsAdmin(); }
+  });
   if(!resp || !resp.ok){
     checklistsAdminCache = [];
     if(badge) badge.textContent = (resp && resp.mensaje) || "No se pudo cargar.";

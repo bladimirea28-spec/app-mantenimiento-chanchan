@@ -1,7 +1,7 @@
 /* ============ ALMACENAMIENTO LOCAL (IndexedDB) ============ */
 let db;
 const DB_NAME = "mantenimiento_chanchan";
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 
 function abrirDB(){
   return new Promise((resolve,reject)=>{
@@ -22,6 +22,10 @@ function abrirDB(){
       }
       if(!d.objectStoreNames.contains("mantenimientos")){
         d.createObjectStore("mantenimientos",{keyPath:"id"});
+      }
+      // Última respuesta del servidor de cada consulta (para abrir al instante).
+      if(!d.objectStoreNames.contains("respuestas")){
+        d.createObjectStore("respuestas",{keyPath:"k"});
       }
     };
     req.onsuccess = (e)=>{ db = e.target.result; resolve(db); };
@@ -45,6 +49,22 @@ function borrarDeStore(store, id){
     tx.oncomplete = ()=>resolve();
     tx.onerror = (e)=>reject(e);
   });
+}
+
+function leerRespuestaGuardada(k){
+  return new Promise(resolve => {
+    try{
+      const req = db.transaction("respuestas","readonly").objectStore("respuestas").get(k);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => resolve(null);
+    }catch(e){ resolve(null); }
+  });
+}
+function guardarRespuesta(obj){
+  try{ db.transaction("respuestas","readwrite").objectStore("respuestas").put(obj); }catch(e){}
+}
+function borrarRespuestasGuardadas(){
+  try{ db.transaction("respuestas","readwrite").objectStore("respuestas").clear(); }catch(e){}
 }
 
 function leerStore(store){

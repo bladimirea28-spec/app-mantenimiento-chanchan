@@ -203,6 +203,7 @@ function entrarAMenu(usuario){
   actualizarAlertaMantenimiento(true);
   abrirEquipoDelEnlace(usuario);   // si se entró escaneando el QR de un equipo
   limpiarCopiasBorradas();         // por detrás: quita copias de registros borrados
+  precargarDatos();                // por detrás: deja listo lo que se va a abrir
 }
 
 async function guardarCorreoAdmin(){
@@ -243,6 +244,13 @@ function manejarSesionVencida(){
 
 function limpiarSesionLocal(){
   localStorage.removeItem("sesion_activa");
+  // Lo guardado para abrir al instante es de esta persona: se borra al salir.
+  for(const k in _respuestasMemoria) delete _respuestasMemoria[k];
+  borrarRespuestasGuardadas();
+  localStorage.removeItem("cache_control_mtto");
+  if(typeof controlDatos !== "undefined") controlDatos = { parametros:[], mantenimientos:[], lecturas:{}, fallas:[], checklists:[], actualizado:null };
+  if(typeof adminDatosCache !== "undefined") adminDatosCache = { actividades:[], fallas:[], requerimientos:[] };
+  if(typeof fallasAbiertasCache !== "undefined") fallasAbiertasCache = [];
   document.getElementById("login-usuario").value="";
   document.getElementById("login-clave").value="";
   cerrarModal();

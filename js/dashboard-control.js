@@ -8,8 +8,11 @@ const NOMBRES_MES = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Se
 
 async function abrirDashboardControl(){
   irA("pantalla-admin-dashboard-control");
-  document.getElementById("dash-contenido").innerHTML = `<div class="subtexto">Cargando...</div>`;
-  try{ await cargarControlMantenimiento(); }catch(e){ document.getElementById("dash-contenido").innerHTML = `<div class="subtexto">${esc(e.message)}</div>`; return; }
+  if(controlDatos.actualizado) renderDashboardControl();   // lo que ya hay, al instante
+  else document.getElementById("dash-contenido").innerHTML = `<div class="subtexto">Cargando...</div>`;
+  try{
+    await cargarControlMantenimiento(true, null, () => { if(pantallaVisible("pantalla-admin-dashboard-control")) renderDashboardControl(); });
+  }catch(e){ document.getElementById("dash-contenido").innerHTML = `<div class="subtexto">${esc(e.message)}</div>`; return; }
   renderDashboardControl();
 }
 

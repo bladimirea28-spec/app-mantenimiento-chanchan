@@ -96,22 +96,25 @@ function mantenimientoDesdeServidor(f){
 
 /* El admin trae todo. Un técnico trae solo la unidad que va a registrar
    (codigo): qué PM le toca, su plan y sus propias fallas de esa unidad. */
-async function cargarControlMantenimiento(silencioso, codigo){
+/* alActualizar: si se mostró lo guardado en el celular y luego llega del
+   servidor algo distinto, se vuelve a armar controlDatos y se llama. */
+async function cargarControlMantenimiento(silencioso, codigo, alActualizar){
   await asegurarPlanesMtto();
   const admin = esAdminSesion();
-  let deServidor = null;
-  if(navigator.onLine && tokenSesion() && (admin || codigo)){
-    const resp = await llamarServidor(Object.assign({ tipo:"control_mantenimiento" }, admin ? {} : { codigo }), { silencioso:!!silencioso });
-    if(resp && resp.ok){
-      deServidor = { parametros:resp.parametros || [], mantenimientos:(resp.mantenimientos || []).map(mantenimientoDesdeServidor),
-                     lecturas:resp.lecturas || {}, fallas:resp.fallas || [], checklists:resp.checklists || [],
-                     actualizado:new Date().toLocaleString("es-PE"), ts:Date.now() };
-      if(admin){ try{ localStorage.setItem("cache_control_mtto", JSON.stringify(deServidor)); }catch(e){} }
-    }
+  let resp = null;
+  if(tokenSesion() && (admin || codigo)){
+    resp = await consultaRapida(Object.assign({ tipo:"control_mantenimiento" }, admin ? {} : { codigo }), {
+      silencioso:true,
+      alActualizar: async nuevo => { await armarControlDatos(nuevo); if(alActualizar) alActualizar(); }
+    });
   }
-  if(!deServidor && admin){
-    try{ deServidor = JSON.parse(localStorage.getItem("cache_control_mtto") || "null"); }catch(e){ deServidor = null; }
-  }
+  return armarControlDatos(resp && resp.ok ? resp : null);
+}
+
+async function armarControlDatos(resp){
+  const deServidor = resp ? { parametros:resp.parametros || [], mantenimientos:(resp.mantenimientos || []).map(mantenimientoDesdeServidor),
+    lecturas:Object.assign({}, resp.lecturas || {}), fallas:resp.fallas || [], checklists:resp.checklists || [],
+    actualizado:new Date(resp._recibido || Date.now()).toLocaleString("es-PE"), ts:resp._recibido || Date.now() } : null;
   controlDatos = deServidor || { parametros:[], mantenimientos:[], lecturas:{}, actualizado:null };
   controlDatos.fallas = controlDatos.fallas || [];
   controlDatos.checklists = (controlDatos.checklists || []).slice();
@@ -218,11 +221,8 @@ async function actualizarAlertaMantenimiento(refrescar){
   if(!el) return;
   if(s.rol !== "admin"){ el.style.display = "none"; return; }   // alertas: solo admin
   try{ await asegurarPlanesMtto(); }catch(e){ return; }
-  // El aviso del inicio se refresca por detrás, sin tapar la pantalla.
-  if(refrescar) await cargarControlMantenimiento(true);
-  else if(!controlDatos.actualizado){
-    try{ const c = JSON.parse(localStorage.getItem("cache_control_mtto") || "null"); if(c) controlDatos = c; }catch(e){}
-  }
+  // El aviso del inicio sale al instante con lo guardado y se refresca por detrás.
+  if(refrescar || !controlDatos.actualizado) await cargarControlMantenimiento(true, null, () => actualizarAlertaMantenimiento(false));
   const estados = estadosDeUnidades();
   const vencidas = estados.filter(r => r.estado === "VENCIDO");
   const proximas = estados.filter(r => r.estado === "PRÓXIMO");
@@ -249,11 +249,17 @@ async function abrirControlUnidades(){
   }
   document.getElementById("btn-mtto-qr").style.display = s.rol === "admin" ? "flex" : "none";
   irA("pantalla-control-unidades");
-  document.getElementById("mtto-lista-unidades").innerHTML = `<div class="subtexto">Cargando...</div>`;
-  await cargarControlMantenimiento();
+  if(!controlDatos.actualizado) document.getElementById("mtto-lista-unidades").innerHTML = `<div class="subtexto">Cargando...</div>`;
+  else renderControlUnidades();   // lo que ya hay en memoria, al instante
+  await cargarControlMantenimiento(true, null, () => {
+    if(pantallaVisible("pantalla-control-unidades")) renderControlUnidades();
+    actualizarAlertaMantenimiento(false);
+  });
   renderControlUnidades();
   actualizarAlertaMantenimiento(false);
 }
+
+function pantallaVisible(id){ const el = document.getElementById(id); return !!el && el.classList.contains("activa"); }
 
 function renderControlUnidades(){
   const estados = estadosDeUnidades();
@@ -814,8 +820,11 @@ async function cambioEquipoMantenimiento(){
   const selPm = document.getElementById("mto-pm");
   ajustarFormMantenimiento();
   if(!eq){ info.style.display = "none"; selPm.innerHTML = ""; renderPlanMantenimiento(); return; }
-  if(!esAdminSesion()) await cargarControlMantenimiento(false, eq.codigo);   // técnico: solo esta unidad
-  else if(!controlDatos.actualizado && !controlDatos.mantenimientos.length) await cargarControlMantenimiento();
+  info.style.display = "block";
+  info.innerHTML = `<div class="subtexto">Consultando la unidad…</div>`;
+  if(!esAdminSesion()) await cargarControlMantenimiento(true, eq.codigo);   // técnico: solo esta unidad
+  else if(!controlDatos.actualizado && !controlDatos.mantenimientos.length) await cargarControlMantenimiento(true);
+  if(document.getElementById("mto-equipo").value !== eq.codigo) return;   // cambió de unidad mientras tanto
   const r = estadoUnidad(eq);
   info.style.display = "block";
   if(eq.sinPlan){

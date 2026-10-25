@@ -196,15 +196,19 @@ let fallaEnResolucion = null;
 
 async function cargarFallasAbiertas(){
   const cont = document.getElementById("fallas-abiertas-lista");
-  cont.innerHTML = Array.from({length:3}).map(()=>`
+  if(!fallasAbiertasCache.length) cont.innerHTML = Array.from({length:3}).map(()=>`
     <div class="skeleton-item">
       <div class="skeleton skeleton-linea" style="width:40%;"></div>
       <div class="skeleton skeleton-linea corta"></div>
     </div>
   `).join("");
+  else renderFallasAbiertas();   // lo que ya hay, al instante
 
   const sesion = JSON.parse(localStorage.getItem("sesion_activa")||"{}");
-  const resp = await llamarServidor({ tipo:"listado_fallas_abiertas", dni: sesion.dni, nombre: sesion.nombre, rol: sesion.rol });
+  const resp = await consultaRapida({ tipo:"listado_fallas_abiertas", dni: sesion.dni, nombre: sesion.nombre, rol: sesion.rol }, {
+    silencioso:true,
+    alActualizar: nuevo => { fallasAbiertasCache = nuevo.fallas || []; if(pantallaVisible("pantalla-fallas-abiertas")) renderFallasAbiertas(); actualizarBadgeAlertas(); }
+  });
   if(!resp || !resp.ok){
     cont.innerHTML = `<div class="vacio"><div class="subtexto">${esc((resp && resp.mensaje) || "No se pudo cargar. Revisa tu conexión.")}</div></div>`;
     return;
