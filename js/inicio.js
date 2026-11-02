@@ -62,6 +62,7 @@ window.addEventListener("offline", actualizarEstadoConexion);
 
     mostrarVersionApp();
     ocultarCargando();   // la app ya se puede usar; lo de abajo va por detrás
+    ocultarSplash();
     if("serviceWorker" in navigator){
       // Cuando se instala una versión nueva, la app se recarga una vez sola
       // para usarla de inmediato (solo si ya había una versión anterior).
@@ -80,5 +81,6 @@ window.addEventListener("offline", actualizarEstadoConexion);
     }
   }finally{
     ocultarCargando();
+    ocultarSplash();
   }
 })();

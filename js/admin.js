@@ -685,13 +685,33 @@ async function confirmarRestablecerPin(slotId){
 }
 
 /* ============ MODAL GENÉRICO ============ */
+/* La ventana sube desde abajo; al cerrar baja (0.17 s) y recién se vacía.
+   Si se abre otra mientras baja, se cancela el cierre y solo cambia el contenido. */
+let _timerCerrarModal = null;
 function abrirModal(html){
-  document.getElementById("modal-caja").innerHTML = html;
-  document.getElementById("modal-overlay").classList.add("mostrar");
+  clearTimeout(_timerCerrarModal);
+  const ov = document.getElementById("modal-overlay");
+  const caja = document.getElementById("modal-caja");
+  const yaAbierta = ov.classList.contains("mostrar") && !ov.classList.contains("cerrando");
+  ov.classList.remove("cerrando");
+  caja.innerHTML = html;
+  if(!yaAbierta) caja.scrollTop = 0;
+  ov.classList.add("mostrar");
 }
 function cerrarModal(){
-  document.getElementById("modal-overlay").classList.remove("mostrar");
-  document.getElementById("modal-caja").innerHTML = "";
+  const ov = document.getElementById("modal-overlay");
+  const caja = document.getElementById("modal-caja");
+  if(!ov.classList.contains("mostrar") || typeof SIN_MOVIMIENTO === "undefined" || SIN_MOVIMIENTO){
+    ov.classList.remove("mostrar", "cerrando");
+    caja.innerHTML = "";
+    return;
+  }
+  ov.classList.add("cerrando");
+  clearTimeout(_timerCerrarModal);
+  _timerCerrarModal = setTimeout(() => {
+    ov.classList.remove("mostrar", "cerrando");
+    caja.innerHTML = "";
+  }, 170);
 }
 
 /* ============ PIN DE ACCESO: REGISTROS DE MANTENIMIENTO ============

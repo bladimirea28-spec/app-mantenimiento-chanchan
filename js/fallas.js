@@ -243,6 +243,7 @@ async function actualizarResumenInicio(){
   const haceUnaSemana = Date.now() - 7*24*60*60*1000;
   const actsSemana = acts.filter(r=>(r.creado||0) >= haceUnaSemana).length;
   document.getElementById("resumen-actividades-semana").textContent = actsSemana;
+  animarNumeros(document.getElementById("resumen-inicio"));
 }
 
 function renderFallasAbiertas(){

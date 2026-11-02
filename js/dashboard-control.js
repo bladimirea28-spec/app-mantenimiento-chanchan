@@ -252,6 +252,7 @@ function renderDashboardControl(){
     <div class="subtexto" style="margin-top:10px;text-align:center;">${controlDatos.actualizado ? "Actualizado: " + esc(controlDatos.actualizado) : "Sin conexión: datos guardados en el celular."}</div>`;
 
   cont.innerHTML = html;
+  animarNumeros(cont);
   const badge = document.getElementById("admin-badge-control");
   if(badge) badge.textContent = `${cuenta("VENCIDO")} vencido(s) · ${cuenta("PRÓXIMO")} próximo(s)`;
 }

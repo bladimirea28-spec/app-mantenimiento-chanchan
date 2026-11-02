@@ -267,6 +267,7 @@ function renderControlUnidades(){
   const cuenta = e => estados.filter(r => r.estado === e).length;
   document.getElementById("mtto-resumen").innerHTML = ["VENCIDO", "PRÓXIMO", "AL DÍA", "SIN REGISTRO"]
     .map(e => `<div class="mtto-chip ${CLASE_ESTADO[e]}"><b>${cuenta(e)}</b>${e === "SIN REGISTRO" ? "Sin 1er mtto." : e.charAt(0) + e.slice(1).toLowerCase()}</div>`).join("");
+  animarNumeros(document.getElementById("mtto-resumen"));
   document.getElementById("mtto-aviso").innerHTML = controlDatos.actualizado ? "" :
     `<div class="tarjeta chk-aviso">Sin conexión con el servidor: se muestra lo guardado en este celular.</div>`;
 

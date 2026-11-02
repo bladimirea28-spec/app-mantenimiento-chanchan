@@ -1,5 +1,5 @@
 // Al publicar, subir este número y VERSION_APP en js/config.js (el mismo).
-const CACHE_NAME = "mantenimiento-chanchan-v22";
+const CACHE_NAME = "mantenimiento-chanchan-v23";
 const ARCHIVOS_BASE = [
   "./",
   "./index.html",
@@ -14,6 +14,7 @@ const ARCHIVOS_BASE = [
   "./datos/planes-mantenimiento.js",
   "./plantillas/CONTROL_MANTENIMIENTO.xlsx",
   "./js/config.js",
+  "./js/movimiento.js",
   "./js/almacenamiento.js",
   "./js/navegacion-login.js",
   "./js/actividades.js",
@@ -73,6 +74,10 @@ self.addEventListener("fetch", (event) => {
     const guardado = esPagina
       ? (await cache.match("./index.html")) || (await cache.match("./"))
       : await cache.match(req, { ignoreSearch: true });
+    // Archivos de la app ya guardados: directo, sin volver a pedirlos (cada
+    // versión nueva cambia CACHE_NAME y se instalan todos frescos). Así la
+    // señal del celular queda libre para los datos del servidor.
+    if (guardado && !esPagina) return guardado;
     const fresco = esPagina
       ? fetch("./index.html", { cache: "no-cache" })
       : fetch(new Request(req, { cache: "no-cache" }));

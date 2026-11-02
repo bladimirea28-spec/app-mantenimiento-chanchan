@@ -35,8 +35,10 @@ function esPantallaFormulario(id){
 function irA(idPantalla){
   // Llegó una versión nueva mientras llenaba un formulario: se usa al salir.
   if(window.__recargarAlVolver && !esPantallaFormulario(idPantalla)){ location.reload(); return; }
+  const anterior = (document.querySelector(".pantalla.activa") || {}).id;
   document.querySelectorAll(".pantalla").forEach(p=>p.classList.remove("activa"));
   document.getElementById(idPantalla).classList.add("activa");
+  animarEntradaPantalla(idPantalla, anterior);
   if(idPantalla === "pantalla-lista-mtto") renderListaMtto();
   if(idPantalla === "pantalla-lista-fallas") renderListaFallas();
   if(idPantalla === "pantalla-fallas-abiertas") cargarFallasAbiertas();

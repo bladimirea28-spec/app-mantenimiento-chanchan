@@ -515,3 +515,92 @@
     .chk-tabla tbody th{min-width:118px;max-width:130px;font-size:11px;}
     .chk-tabla th,.chk-tabla td{padding:6px 4px;}
   }
+
+  /* =====================================================================
+     MOVIMIENTO: transiciones cortas (≈0.25 s) que solo mueven y aclaran
+     (transform + opacity), así el celular las dibuja suaves sin frenar.
+     ===================================================================== */
+  :root{ --curva:cubic-bezier(.2,.8,.2,1); }
+
+  /* Cambio de pantalla: adelante entra desde la derecha, atrás desde la izquierda. */
+  .pantalla.entra-adelante{animation:entra-adelante .24s var(--curva) both;}
+  .pantalla.entra-atras{animation:entra-atras .24s var(--curva) both;}
+  .pantalla.entra-suave{animation:entra-suave .22s ease-out both;}
+  @keyframes entra-adelante{from{opacity:0;transform:translate3d(32px,0,0);}to{opacity:1;transform:none;}}
+  @keyframes entra-atras{from{opacity:0;transform:translate3d(-32px,0,0);}to{opacity:1;transform:none;}}
+  @keyframes entra-suave{from{opacity:0;transform:translate3d(0,10px,0);}to{opacity:1;transform:none;}}
+
+  /* Cascada: al entrar a una pantalla, sus tarjetas aparecen una tras otra. */
+  .cascada .registro-item,.cascada .modulo-btn,.cascada .kpi-card,.cascada .resumen-tile,
+  .cascada .ficha-falla,.cascada .ficha-chk,.cascada .dash-fila,.cascada .contenido > .tarjeta,
+  .cascada .mtto-chip,.cascada .mtto-categoria-titulo,.cascada .skeleton-item{
+    animation:sube .34s var(--curva) both;
+  }
+  .cascada :is(.registro-item,.modulo-btn,.kpi-card,.resumen-tile,.ficha-falla,.ficha-chk,.dash-fila,.tarjeta,.mtto-chip,.mtto-categoria-titulo):nth-child(2){animation-delay:.03s;}
+  .cascada :is(.registro-item,.modulo-btn,.kpi-card,.resumen-tile,.ficha-falla,.ficha-chk,.dash-fila,.tarjeta,.mtto-chip,.mtto-categoria-titulo):nth-child(3){animation-delay:.06s;}
+  .cascada :is(.registro-item,.modulo-btn,.kpi-card,.resumen-tile,.ficha-falla,.ficha-chk,.dash-fila,.tarjeta,.mtto-chip,.mtto-categoria-titulo):nth-child(4){animation-delay:.09s;}
+  .cascada :is(.registro-item,.modulo-btn,.kpi-card,.resumen-tile,.ficha-falla,.ficha-chk,.dash-fila,.tarjeta,.mtto-chip,.mtto-categoria-titulo):nth-child(5){animation-delay:.12s;}
+  .cascada :is(.registro-item,.modulo-btn,.kpi-card,.resumen-tile,.ficha-falla,.ficha-chk,.dash-fila,.tarjeta,.mtto-chip,.mtto-categoria-titulo):nth-child(6){animation-delay:.15s;}
+  .cascada :is(.registro-item,.modulo-btn,.kpi-card,.resumen-tile,.ficha-falla,.ficha-chk,.dash-fila,.tarjeta,.mtto-chip,.mtto-categoria-titulo):nth-child(7){animation-delay:.18s;}
+  .cascada :is(.registro-item,.modulo-btn,.kpi-card,.resumen-tile,.ficha-falla,.ficha-chk,.dash-fila,.tarjeta,.mtto-chip,.mtto-categoria-titulo):nth-child(n+8){animation-delay:.21s;}
+  @keyframes sube{from{opacity:0;transform:translate3d(0,14px,0);}to{opacity:1;transform:none;}}
+
+  /* Ventanas (fichas, detalles): suben desde abajo como una hoja. */
+  #modal-overlay.mostrar{animation:fondo-entra .2s ease-out both;}
+  #modal-overlay.mostrar #modal-caja{animation:hoja-sube .3s var(--curva) both;}
+  #modal-overlay.cerrando{animation:fondo-sale .17s ease-in both;}
+  #modal-overlay.cerrando #modal-caja{animation:hoja-baja .17s ease-in both;}
+  @keyframes fondo-entra{from{background:rgba(0,0,0,0);}to{background:rgba(0,0,0,.5);}}
+  @keyframes fondo-sale{from{background:rgba(0,0,0,.5);}to{background:rgba(0,0,0,0);}}
+  @keyframes hoja-sube{from{transform:translate3d(0,100%,0);}to{transform:none;}}
+  @keyframes hoja-baja{from{transform:none;}to{transform:translate3d(0,100%,0);}}
+  @media (min-width:560px){
+    @keyframes hoja-sube{from{opacity:0;transform:scale(.96) translate3d(0,12px,0);}to{opacity:1;transform:none;}}
+    @keyframes hoja-baja{from{opacity:1;transform:none;}to{opacity:0;transform:scale(.97);}}
+  }
+  /* Asa de la hoja (como en las apps del celular). */
+  #modal-caja::before{content:"";display:block;width:38px;height:4px;border-radius:4px;background:var(--linea);margin:-8px auto 12px;}
+  @media (min-width:560px){ #modal-caja::before{display:none;} }
+
+  /* Toques: los botones y tarjetas se hunden un poco al presionarlos. */
+  .btn,.modulo-btn,.tab-item,.registro-item[onclick],.dash-fila,.mtto-chip,.btn-volver,.foto-btn{
+    transition:transform .12s var(--curva), filter .15s ease, background-color .15s ease;
+  }
+  .btn:active,.btn-volver:active,.foto-btn:active{transform:scale(.97);}
+  .modulo-btn:active,.registro-item[onclick]:active,.dash-fila:active{transform:scale(.985);}
+  .tab-item:active{transform:scale(.92);}
+  .tab-item.activo svg{animation:tab-salta .32s var(--curva);}
+  @keyframes tab-salta{0%{transform:scale(.8);}60%{transform:scale(1.12);}100%{transform:scale(1);}}
+  #toast{transition:opacity .22s ease, transform .3s var(--curva);}
+
+  /* Inicio animado: fondo verde con el logo; desaparece apenas la app está lista. */
+  #splash{position:fixed;inset:0;z-index:1000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+    background:radial-gradient(120% 80% at 50% 30%, #2A6339 0%, #1F4D2C 45%, #12301B 100%);
+    animation:splash-fuera .3s ease 4s forwards;}   /* respaldo: nunca se queda pegado */
+  #splash .splash-logo{width:190px;max-width:62%;padding:16px 20px;border-radius:22px;background:#fff;
+    box-shadow:0 18px 40px rgba(0,0,0,.28);animation:logo-entra .5s var(--curva) both;}
+  #splash .splash-logo img{width:100%;height:auto;display:block;}
+  #splash .splash-txt{color:#E8A93B;font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;animation:entra-suave .45s .12s var(--curva) both;}
+  #splash.fuera{animation:splash-fuera .28s ease forwards;}
+  @keyframes logo-entra{from{opacity:0;transform:scale(.86) translate3d(0,10px,0);}to{opacity:1;transform:none;}}
+  @keyframes splash-fuera{to{opacity:0;transform:scale(1.04);visibility:hidden;}}
+
+  /* Login: cabecera verde curva y tarjeta que sube. */
+  .pantalla-login{position:relative;background:var(--bg);overflow:hidden;}
+  .pantalla-login::before{content:"";position:absolute;left:-10%;right:-10%;top:0;height:50%;
+    background:linear-gradient(160deg,var(--verde-950) 0%,var(--verde-800) 70%,#2A6339 100%);
+    border-radius:0 0 50% 50% / 0 0 18% 18%;}
+  .pantalla-login::after{content:"";position:absolute;width:260px;height:260px;border-radius:50%;right:-90px;top:-70px;
+    background:radial-gradient(circle,rgba(232,169,59,.22) 0%,rgba(232,169,59,0) 70%);}
+  .pantalla-login > *{position:relative;z-index:1;}
+  #pantalla-login.activa .login-cabecera{animation:entra-suave .5s .05s var(--curva) both;}
+  #pantalla-login.activa .login-tarjeta{animation:tarjeta-sube .55s .12s var(--curva) both;}
+  @keyframes tarjeta-sube{from{opacity:0;transform:translate3d(0,40px,0);}to{opacity:1;transform:none;}}
+
+  /* Listas largas: el celular solo dibuja lo que está en pantalla. */
+  .mtto-unidad{content-visibility:auto;contain-intrinsic-size:auto 190px;}
+
+  /* Si el celular pide menos movimiento, todo aparece sin animar. */
+  @media (prefers-reduced-motion: reduce){
+    *,*::before,*::after{animation-duration:.01ms !important;animation-delay:0s !important;transition-duration:.01ms !important;}
+  }
