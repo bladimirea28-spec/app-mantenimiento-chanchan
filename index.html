@@ -24,9 +24,26 @@
 })();
 </script>
 <!-- Inicio animado: se ve al instante (antes de cargar la app) y se va solo. -->
-<div id="splash" aria-hidden="true">
+<div id="splash" class="inicio" aria-hidden="true">
+  <svg class="splash-eng" viewBox="0 0 200 200">
+    <defs>
+      <filter id="splash-brillo" x="-30%" y="-30%" width="160%" height="160%">
+        <feGaussianBlur stdDeviation="3" result="b"/>
+        <feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+      <linearGradient id="splash-metal" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#FFE2A3"/><stop offset=".45" stop-color="#E8A93B"/><stop offset=".55" stop-color="#B8791A"/><stop offset="1" stop-color="#F3C76B"/>
+      </linearGradient>
+    </defs>
+    <path class="splash-relleno" fill-rule="evenodd"/>
+    <path class="splash-borde"/>
+  </svg>
+  <canvas class="splash-chispas"></canvas>
   <div class="splash-logo"><img src="img/logo.png" alt=""></div>
-  <div class="splash-txt">Sistema de Mantenimiento</div>
+  <div class="splash-marca">
+    <div class="splash-nombre"></div>
+    <div class="splash-txt">Sistema de Mantenimiento</div>
+  </div>
 </div>
 <div id="app">
 

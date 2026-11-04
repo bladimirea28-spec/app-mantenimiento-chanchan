@@ -574,15 +574,44 @@
   #toast{transition:opacity .22s ease, transform .3s var(--curva);}
 
   /* Inicio animado: fondo verde con el logo; desaparece apenas la app está lista. */
-  #splash{position:fixed;inset:0;z-index:1000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
-    background:radial-gradient(120% 80% at 50% 30%, #2A6339 0%, #1F4D2C 45%, #12301B 100%);
-    animation:splash-fuera .3s ease 4s forwards;}   /* respaldo: nunca se queda pegado */
-  #splash .splash-logo{width:190px;max-width:62%;padding:16px 20px;border-radius:22px;background:#fff;
-    box-shadow:0 18px 40px rgba(0,0,0,.28);animation:logo-entra .5s var(--curva) both;}
+  /* Entrada "Chispa de soldadura": una chispa ámbar dibuja un engranaje de
+     neón soltando chispas, se llena de metal y del centro sale el logo. */
+  #splash{position:fixed;inset:0;z-index:1000;overflow:hidden;cursor:pointer;
+    background:radial-gradient(120% 70% at 50% 42%,#173523 0%,#0C1C12 55%,#050B07 100%);
+    animation:splash-fuera .3s ease 6s forwards;}   /* respaldo: nunca se queda pegado */
+  #splash .splash-chispas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3;}
+  #splash .splash-eng{position:absolute;left:50%;top:42%;width:min(74vw,330px);transform:translate(-50%,-50%) rotate(40deg) scale(1.55);
+    opacity:.16;overflow:visible;z-index:1;transition:transform .9s var(--curva),opacity .6s ease;}
+  #splash .splash-borde{fill:none;stroke:#E8A93B;stroke-width:2.4;stroke-linejoin:round;filter:url(#splash-brillo);}
+  #splash .splash-relleno{fill:url(#splash-metal);transition:opacity .35s ease;}
+  #splash .splash-logo{position:absolute;left:50%;top:42%;width:min(62vw,270px);padding:14px 16px;border-radius:20px;background:#fff;z-index:4;overflow:hidden;
+    transform:translate(-50%,-50%);box-shadow:0 22px 50px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.4);
+    transition:transform .55s cubic-bezier(.2,1.2,.3,1),opacity .3s ease;}
   #splash .splash-logo img{width:100%;height:auto;display:block;}
-  #splash .splash-txt{color:#E8A93B;font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;animation:entra-suave .45s .12s var(--curva) both;}
-  #splash.fuera{animation:splash-fuera .28s ease forwards;}
-  @keyframes logo-entra{from{opacity:0;transform:scale(.86) translate3d(0,10px,0);}to{opacity:1;transform:none;}}
+  #splash .splash-logo::after{content:"";position:absolute;inset:-20% -60%;background:linear-gradient(105deg,transparent 40%,rgba(255,255,255,.95) 50%,transparent 60%);transform:translateX(-100%);}
+  #splash.brillo .splash-logo::after{transition:transform .8s ease;transform:translateX(100%);}
+  #splash .splash-marca{position:absolute;left:0;right:0;top:61%;z-index:4;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;}
+  #splash .splash-nombre{color:#fff;font-size:17px;font-weight:800;letter-spacing:.18em;white-space:nowrap;}
+  #splash .splash-nombre span{display:inline-block;transition:opacity .35s ease,transform .45s var(--curva),filter .35s ease;transition-delay:calc(var(--i)*28ms);}
+  #splash .splash-txt{color:#E8A93B;font-size:10.5px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;transition:opacity .5s ease .25s,letter-spacing .8s var(--curva) .2s;}
+  /* Estado inicial (antes de animar) */
+  #splash.inicio .splash-eng{transform:translate(-50%,-50%);opacity:1;}
+  #splash.inicio .splash-relleno{opacity:0;}
+  #splash.inicio .splash-borde{opacity:0;}
+  #splash.inicio.dibujando .splash-borde{opacity:1;}
+  #splash.inicio .splash-logo{transform:translate(-50%,-50%) scale(.6);opacity:0;}
+  #splash.inicio .splash-nombre span{opacity:0;transform:translateY(10px);filter:blur(4px);}
+  #splash.inicio .splash-txt{opacity:0;letter-spacing:.32em;}
+  /* Pasos de la animación */
+  #splash.inicio.lleno .splash-relleno{opacity:1;animation:splash-glitch .45s steps(2) 1;}
+  #splash.inicio.lleno .splash-eng{transform:translate(-50%,-50%) rotate(28deg);}
+  #splash.inicio.logo .splash-eng{transform:translate(-50%,-50%) rotate(40deg) scale(1.55);opacity:.16;}
+  #splash.inicio.logo .splash-logo{transform:translate(-50%,-50%);opacity:1;
+    box-shadow:0 22px 50px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.4),0 0 70px rgba(232,169,59,.45);}
+  #splash.inicio.texto .splash-nombre span{opacity:1;transform:none;filter:none;}
+  #splash.inicio.texto .splash-txt{opacity:1;letter-spacing:.22em;}
+  #splash.fuera{animation:splash-fuera .3s ease forwards;}
+  @keyframes splash-glitch{0%{filter:drop-shadow(5px 0 0 #3FE0FF) drop-shadow(-5px 0 0 #FF6A3D);}50%{filter:drop-shadow(-4px 1px 0 #3FE0FF) drop-shadow(4px -1px 0 #FF6A3D);}100%{filter:none;}}
   @keyframes splash-fuera{to{opacity:0;transform:scale(1.04);visibility:hidden;}}
 
   /* Login: cabecera verde curva y tarjeta que sube. */
