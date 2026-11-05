@@ -113,13 +113,10 @@ js/excel-control.js   → Llena la plantilla (REGISTRO, EQUIPOS, CONSULTA,
 
 ## Pendiente / próximos pasos
 
-- Migración pedida por el jefe: app + base de datos 100 % Microsoft
-  (Power Apps + Dataverse). Tablas "Actividades Mantenimiento" e "Historial Fallas"
-  ya creadas en el entorno personal de Dataverse.
-- Flujo de Power Automate "Recibir Registro App Mantenimiento": corregir campos con
-  el método de Expresión (`triggerBody()?['registro']?['campo']`), agregar Fotos,
-  agregar paso Respuesta `{"ok": true}`, probar y cambiar la URL en `js/config.js`.
-- Regla aprendida en Power Automate: guardar después de cada bloque agregado.
+- Base de datos: **solo Google Sheets** (desde 04/11/2026). Se dejó de usar
+  Power Apps / Dataverse / Power Automate. Volver a conectar algo de Microsoft o
+  de la empresa solo si TI lo aprueba y lo configura con sus propias cuentas.
+- Power BI, cuando se quiera: conectarlo directo a la hoja de Google.
 
 ## Historial
 
