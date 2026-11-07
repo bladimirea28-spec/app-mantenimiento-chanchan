@@ -55,7 +55,6 @@ function pintarPanelAdmin(resp, sesion, soloDatos){
   document.getElementById("admin-badge-fallas").textContent = `${abiertasBadge.length} abiertas de ${adminDatosCache.fallas.length}`;
 
   if(!soloDatos){
-    cargarSolicitudesAdmin(sesion);
     cargarRequerimientosAdmin(sesion);
     cargarChecklistsAdmin();
   }else{
@@ -114,33 +113,6 @@ async function cargarRequerimientosAdmin(sesion){
       </div>
     </div>`;
   }).join("");
-}
-
-async function cargarSolicitudesAdmin(sesion){
-  const cont = document.getElementById("admin-solicitudes-lista");
-  if(!cont.childElementCount) cont.textContent = "Cargando...";
-  const resp = await consultaRapida({ tipo:"listado_solicitudes_actividad", dni_admin: sesion.dni }, {
-    silencioso:true, alActualizar: () => cargarSolicitudesAdmin(sesion) });
-  if(!resp || !resp.ok){
-    cont.textContent = (resp && resp.mensaje) || "No se pudo cargar.";
-    return;
-  }
-  const pendientes = (resp.solicitudes||[]).filter(s => String(s.ESTADO||"Pendiente")==="Pendiente");
-  const badgeSol = document.getElementById("admin-badge-solicitudes");
-  if(badgeSol) badgeSol.textContent = `${pendientes.length} pendiente(s)`;
-  if(pendientes.length===0){
-    cont.textContent = "No hay solicitudes pendientes.";
-    return;
-  }
-  cont.innerHTML = pendientes.map(s=>`
-    <div class="registro-item">
-      <div style="font-weight:700;font-size:14px;">${esc(s.EQUIPO)} · ${esc(s.AREA)} ${s.ORIGEN==='Admin'?'<span class="badge" style="margin-left:6px;">Generada por Admin</span>':''}</div>
-      <div class="subtexto" style="margin-top:2px;">Pedido por ${esc(s.SOLICITADO_POR)} · Prioridad ${esc(s.PRIORIDAD)}</div>
-      <div class="desc">${esc(s.DETALLE)}</div>
-      ${s.COMENTARIOS?`<div class="subtexto" style="margin-top:4px;">${esc(s.COMENTARIOS)}</div>`:''}
-      <div class="meta">${esc(s.ID_SOLICITUD)} · culminar antes de ${esc(s.FECHA_TENTATIVA||'—')} · pedido el ${esc(s.FECHA)}</div>
-    </div>
-  `).join("");
 }
 
 function topPorConteo(lista, campo, top){
@@ -548,65 +520,7 @@ function calcularAnchosColumnas(filas, columnas){
   });
 }
 
-async function exportarExcel(){
-  try{ await asegurarXLSX(); }catch(e){ mostrarToast(e.message, false); return; }
-  const quitarFotos = (arr) => arr.map(r=>{
-    const copia = Object.assign({}, r);
-    delete copia.FOTOS;
-    return copia;
-  });
-  const libro = XLSX.utils.book_new();
-  // Por ahora solo se exportan los Requerimientos (a pedido). Actividades y
-  // Fallas se dejan listas para re-habilitar más adelante:
-  // XLSX.utils.book_append_sheet(libro, XLSX.utils.json_to_sheet(quitarFotos(adminDatosCache.actividades)), "Actividades");
-  // XLSX.utils.book_append_sheet(libro, XLSX.utils.json_to_sheet(quitarFotos(adminDatosCache.fallas)), "Fallas");
-
-  const filasReq = [];
-  (adminDatosCache.requerimientos||[]).forEach(r=>{
-    const items = (r.ITEMS && r.ITEMS.length) ? r.ITEMS : [{}];
-    items.forEach(it=>{
-      filasReq.push({
-        CORRELATIVO: r.CORRELATIVO || r.ID,
-        FECHA: soloFechaExcel(r.FECHA),
-        PRIORIDAD: r.PRIORIDAD || "",
-        TECNICO: r.TECNICO,
-        MOTIVO: r.MOTIVO,
-        N_ITEM: it.numero || "",
-        CANTIDAD: it.cantidad || "",
-        UM: it.um || "",
-        CODIGO_PRODUCTO: it.codigo || "",
-        MATERIAL: it.nombre || "",
-        ESPECIFICACIONES: it.especificaciones || "",
-        CODIGO_ACTIVO: it.equipoCodigo || "",
-        EQUIPO: it.equipo || "",
-        PRECIO_UNITARIO: it.precio_unitario || "",
-        PRECIO_TOTAL: it.precio_total || "",
-        FOTO: it.foto || "",
-        COMENTARIOS: r.COMENTARIOS || ""
-      });
-    });
-  });
-  const hojaReq = XLSX.utils.json_to_sheet(filasReq);
-  const columnasReq = filasReq.length ? Object.keys(filasReq[0]) : [];
-  const colFoto = columnasReq.indexOf("FOTO");
-  if(colFoto > -1){
-    filasReq.forEach((fila, i)=>{
-      if(fila.FOTO){
-        const celda = XLSX.utils.encode_cell({ r: i + 1, c: colFoto });
-        if(hojaReq[celda]){
-          hojaReq[celda].l = { Target: fila.FOTO, Tooltip: "Ver foto" };
-          hojaReq[celda].v = "Ver foto";
-        }
-      }
-    });
-  }
-  hojaReq['!cols'] = calcularAnchosColumnas(filasReq, columnasReq);
-  XLSX.utils.book_append_sheet(libro, hojaReq, "Requerimientos");
-
-  const fecha = new Date().toISOString().slice(0,10);
-  XLSX.writeFile(libro, `Mantenimiento_ChanChan_${fecha}.xlsx`);
-}
-
+/* exportarExcel (Exportar todo) está en js/exportar-excel.js */
 async function cargarDispositivosAdmin(sesion){
   const cont = document.getElementById("admin-dispositivos-lista");
   if(!cont.childElementCount) cont.textContent = "Cargando...";
@@ -623,38 +537,50 @@ async function cargarDispositivosAdmin(sesion){
     cont.textContent = "Todavía no hay dispositivos registrados.";
     return;
   }
-  cont.innerHTML = usuarios.map(u=>`
+  const btnMini = "margin-top:0;width:auto;padding:8px 12px;font-size:12px;";
+  cont.innerHTML = usuarios.map(u=>{
+    const celulares = Array.isArray(u.celulares) ? u.celulares : null;
+    const max = u.max_celulares || 3;
+    const lista = celulares
+      ? (celulares.length ? celulares.map(c => `
+          <div class="celular-fila">
+            <span>📱 ${esc(c.info || "Celular")} <span class="subtexto">· …${esc(String(c.dispositivo_id||"").slice(-6))}${c.ultimo_ingreso ? " · " + esc(c.ultimo_ingreso) : ""}</span></span>
+            <button type="button" class="btn btn-secundario" style="${btnMini}" onclick="liberarDispositivoUI(${jsArg(u.slot_id)}, this, ${jsArg(c.dispositivo_id)})">Liberar</button>
+          </div>`).join("") : `<div class="subtexto" style="margin-top:6px;">Sin celulares con sesión abierta.</div>`)
+      : `<div class="desc">${esc(u.dispositivo_info || "Dispositivo desconocido")} · ID …${esc((u.dispositivo_id||"").slice(-6))}</div>`;
+    return `
     <div class="registro-item">
       <div class="fila1">
         <div>
           <div style="font-weight:700;font-size:14px;">${esc(u.nombre||"—")}</div>
-          <div class="subtexto" style="margin-top:2px;">${esc(u.cargo||u.rol)}</div>
+          <div class="subtexto" style="margin-top:2px;">${esc(u.cargo||u.rol)}${u.tiene_pin === false ? " · Sin PIN todavía" : ""}</div>
         </div>
-        <span class="badge">${esc(u.fecha_registro)}</span>
+        ${celulares ? `<span class="badge ${celulares.length >= max ? "criticidad-alta" : ""}">${celulares.length} de ${max} celulares</span>` : `<span class="badge">${esc(u.fecha_registro)}</span>`}
       </div>
-      <div class="desc">${esc(u.dispositivo_info || "Dispositivo desconocido")} · ID …${esc((u.dispositivo_id||"").slice(-6))}${u.tiene_pin === false ? " · Sin PIN todavía" : ""}</div>
+      ${lista}
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
-        <button type="button" class="btn btn-secundario" style="margin-top:0;width:auto;padding:9px 14px;font-size:12.5px;" onclick="liberarDispositivoUI(${jsArg(u.slot_id)}, this)">Liberar este dispositivo</button>
-        <button type="button" class="btn btn-secundario" style="margin-top:0;width:auto;padding:9px 14px;font-size:12.5px;" onclick="restablecerPinUI(${jsArg(u.slot_id)}, ${jsArg(u.nombre)})">Restablecer PIN</button>
+        ${celulares && celulares.length > 1 ? `<button type="button" class="btn btn-secundario" style="${btnMini}" onclick="liberarDispositivoUI(${jsArg(u.slot_id)}, this)">Liberar todos</button>` : ""}
+        ${!celulares ? `<button type="button" class="btn btn-secundario" style="${btnMini}" onclick="liberarDispositivoUI(${jsArg(u.slot_id)}, this)">Liberar este dispositivo</button>` : ""}
+        <button type="button" class="btn btn-secundario" style="${btnMini}" onclick="restablecerPinUI(${jsArg(u.slot_id)}, ${jsArg(u.nombre)})">Restablecer PIN</button>
       </div>
-    </div>
-  `).join("");
+    </div>`;
+  }).join("");
 }
 
-async function liberarDispositivoUI(slotId, boton){
+/* dispositivoId: libera solo ese celular; sin él, todos los de la cuenta. */
+async function liberarDispositivoUI(slotId, boton, dispositivoId){
   const sesion = JSON.parse(localStorage.getItem("sesion_activa")||"{}");
+  const textoAntes = boton ? boton.textContent : "";
   if(boton){ boton.disabled = true; boton.textContent = "Liberando..."; }
 
-  const resp = await llamarServidor({
-    tipo:"liberar_dispositivo",
-    dni_admin: sesion.dni,
-    slot_id: slotId
-  });
-  mostrarToast(resp.mensaje || (resp.ok? "Dispositivo liberado":"No se pudo liberar"), resp.ok);
+  const datos = { tipo:"liberar_dispositivo", dni_admin: sesion.dni, slot_id: slotId };
+  if(dispositivoId) datos.dispositivo_id = dispositivoId;
+  const resp = await llamarServidor(datos);
+  mostrarToast(resp.mensaje || (resp.ok? "Celular liberado":"No se pudo liberar"), resp.ok);
   if(resp.ok){
     cargarDispositivosAdmin(sesion);
   } else if(boton){
-    boton.disabled = false; boton.textContent = "Liberar este dispositivo";
+    boton.disabled = false; boton.textContent = textoAntes;
   }
 }
 
@@ -902,26 +828,165 @@ async function cargarChecklistsAdmin(){
   if(document.getElementById("pantalla-admin-checklists").classList.contains("activa")) renderizarChecklistsAdmin();
 }
 
-function renderizarChecklistsAdmin(){
-  const cont = document.getElementById("admin-lista-checklists");
-  if(!cont) return;
+/* ---------- Checklists ordenados por semana y mes + gráfico ----------
+   La semana actual se ve abierta; las semanas pasadas del mes quedan
+   cerradas debajo y los meses anteriores son desplegables con sus semanas.
+   Una semana pertenece al mes donde cae su jueves (donde están la mayoría
+   de sus días). Solo se dibujan los checklists de lo que está abierto. */
+const MESES_NOMBRE = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Setiembre","Octubre","Noviembre","Diciembre"];
+let chkGraficoPeriodo = "mes";
+const chkGruposAbiertos = new Set();
+
+function fechaDeChecklist(c){
+  const d = parsearFechaPE(c.fecha) || (c.fecha ? new Date(c.fecha) : null);
+  return d && !isNaN(d) ? d : null;
+}
+function mesDeSemanaChk(lunes){ const j = new Date(lunes); j.setDate(j.getDate() + 3); return { anio:j.getFullYear(), mes:j.getMonth() }; }
+function marcasDeChecklist(c){
+  const r = c.respuestas || [];
+  return { nc:r.filter(x => x.marca === "NC").length, obs:r.filter(x => x.marca === "O").length };
+}
+function checklistsAdminFiltrados(){
   const formato = document.getElementById("admin-filtro-chk-formato").value;
   const equipo = document.getElementById("admin-filtro-chk-equipo").value;
   const estado = document.getElementById("admin-filtro-chk-estado").value;
-  const lista = checklistsAdminCache.filter(c => {
+  return checklistsAdminCache.filter(c => {
     if(formato && c.plantilla !== formato) return false;
     if(equipo && c.equipo_clave !== equipo) return false;
-    const nc = (c.respuestas || []).filter(r => r.marca === "NC").length;
-    const obs = (c.respuestas || []).filter(r => r.marca === "O").length;
-    if(estado === "nc" && !(nc || obs)) return false;
+    const m = marcasDeChecklist(c);
+    if(estado === "nc" && !(m.nc || m.obs)) return false;
     if(estado === "no" && c.puede_utilizar !== "NO") return false;
     return true;
   });
-  if(lista.length === 0){
-    cont.innerHTML = `<div class="vacio"><div class="subtexto">No hay checklists para este filtro.</div></div>`;
-    return;
+}
+
+function cambiarPeriodoGraficoChk(p){ chkGraficoPeriodo = p; pintarGraficoChecklists(); }
+function elegirEquipoGraficoChk(clave){
+  const sel = document.getElementById("admin-filtro-chk-equipo");
+  sel.value = sel.value === clave ? "" : clave;
+  renderizarChecklistsAdmin();
+}
+function pintarGraficoChecklists(){
+  const cont = document.getElementById("admin-chk-grafico");
+  if(!cont) return;
+  const formato = document.getElementById("admin-filtro-chk-formato").value;
+  const elegido = document.getElementById("admin-filtro-chk-equipo").value;
+  const lunesHoy = lunesDe(new Date()), mesHoy = mesDeSemanaChk(lunesHoy);
+  const porEquipo = {};
+  checklistsAdminCache.forEach(c => {
+    if(formato && c.plantilla !== formato) return;
+    const f = fechaDeChecklist(c); if(!f) return;
+    const lunes = lunesDe(f);
+    if(chkGraficoPeriodo === "semana"){ if(lunes.getTime() !== lunesHoy.getTime()) return; }
+    else { const m = mesDeSemanaChk(lunes); if(m.anio !== mesHoy.anio || m.mes !== mesHoy.mes) return; }
+    const m = marcasDeChecklist(c);
+    if(!m.nc && !m.obs) return;
+    const k = c.equipo_clave || c.equipo;
+    porEquipo[k] = porEquipo[k] || { clave:k, nombre:c.equipo, nc:0, obs:0 };
+    porEquipo[k].nc += m.nc; porEquipo[k].obs += m.obs;
+  });
+  const filas = Object.values(porEquipo).sort((a, b) => (b.nc + b.obs) - (a.nc + a.obs)).slice(0, 6);
+  const domingo = new Date(lunesHoy); domingo.setDate(domingo.getDate() + 6);
+  const periodo = chkGraficoPeriodo === "semana"
+    ? `Semana ${semanaISO(lunesHoy).split("-S")[1]} · del ${fechaCorta(lunesHoy)} al ${fechaCorta(domingo)}`
+    : `${MESES_NOMBRE[mesHoy.mes]} ${mesHoy.anio}`;
+  const max = Math.max(1, ...filas.map(x => x.nc + x.obs));
+  cont.innerHTML = `
+    <div class="chk-graf-cab">
+      <b>Unidades con más observaciones</b>
+      <div class="chk-segmento">
+        <button type="button" class="${chkGraficoPeriodo === "semana" ? "activo" : ""}" onclick="cambiarPeriodoGraficoChk('semana')">Semana</button>
+        <button type="button" class="${chkGraficoPeriodo === "mes" ? "activo" : ""}" onclick="cambiarPeriodoGraficoChk('mes')">Mes</button>
+      </div>
+    </div>
+    <div class="subtexto" style="font-size:12.5px;">${esc(periodo)}</div>
+    ${filas.length ? `<div class="chk-barras">${filas.map(x => {
+      const total = x.nc + x.obs;
+      return `<button type="button" class="chk-barra-fila ${elegido === x.clave ? "elegida" : ""}" onclick="elegirEquipoGraficoChk(${jsArg(x.clave)})" title="${esc(x.nombre)}: ${x.nc} NC, ${x.obs} observados">
+        <span class="chk-barra-nombre">${esc(x.nombre)}</span>
+        <span class="chk-barra-pista" style="width:${(total / max * 100).toFixed(1)}%"><span class="seg-nc" style="width:${(x.nc / total * 100).toFixed(1)}%"></span><span class="seg-o" style="width:${(x.obs / total * 100).toFixed(1)}%"></span></span>
+        <span class="chk-barra-num">${total}</span></button>`;
+    }).join("")}</div>
+    <div class="chk-leyenda"><span><i class="seg-nc"></i>NC (no conforme)</span><span><i class="seg-o"></i>Observado</span></div>
+    <div class="subtexto" style="font-size:11.5px;margin-top:4px;">Toca una barra para ver solo esa unidad.</div>`
+    : `<div class="subtexto" style="padding:10px 0 2px;">Sin observaciones en este período.</div>`}`;
+}
+
+function alternarGrupoChk(id){
+  if(chkGruposAbiertos.has(id)) chkGruposAbiertos.delete(id); else chkGruposAbiertos.add(id);
+  renderizarChecklistsAdmin();
+}
+function resumenGrupoChk(lista){
+  const conNc = lista.filter(c => marcasDeChecklist(c).nc).length;
+  return `${lista.length} checklist(s) · ` + (conNc ? `<span style="color:var(--rojo-texto);font-weight:700;">${conNc} con NC</span>` : "sin NC");
+}
+const CHEVRON_GRUPO = `<svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 6l6 6-6 6"/></svg>`;
+function grupoSemanaChk(lunes, lista, esActual){
+  const id = "sem-" + lunes.getTime(), abierto = chkGruposAbiertos.has(id);
+  const domingo = new Date(lunes); domingo.setDate(domingo.getDate() + 6);
+  const titulo = (esActual ? "Esta semana · " : "") + "Semana " + semanaISO(lunes).split("-S")[1];
+  const cuerpo = !abierto ? "" : (lista.length ? lista.map(tarjetaChecklistAdmin).join("")
+    : `<div class="vacio"><div class="subtexto">Sin checklists esta semana para este filtro.</div></div>`);
+  return `<div class="grupo-chk ${abierto ? "abierto" : ""}">
+    <button type="button" class="grupo-chk-cab ${esActual ? "actual" : ""}" onclick="alternarGrupoChk('${id}')">${CHEVRON_GRUPO}
+      <span class="txt"><span class="tit">${titulo}</span><span class="subtexto">del ${fechaCorta(lunes)} al ${fechaCorta(domingo)} · ${resumenGrupoChk(lista)}</span></span>
+    </button>
+    <div class="grupo-chk-cuerpo">${cuerpo}</div>
+  </div>`;
+}
+
+function renderizarChecklistsAdmin(){
+  const cont = document.getElementById("admin-lista-checklists");
+  if(!cont) return;
+  pintarGraficoChecklists();
+  const lista = checklistsAdminFiltrados();
+  const lunesHoy = lunesDe(new Date()), mesHoy = mesDeSemanaChk(lunesHoy);
+  const idActual = "sem-" + lunesHoy.getTime();
+  // La semana en curso empieza abierta (también cuando cambia la semana).
+  if(!chkGruposAbiertos.has("_vista-" + idActual)){ chkGruposAbiertos.add("_vista-" + idActual); chkGruposAbiertos.add(idActual); }
+
+  const semanas = new Map(), sinFecha = [];
+  lista.forEach(c => {
+    const f = fechaDeChecklist(c);
+    if(!f){ sinFecha.push(c); return; }
+    const k = lunesDe(f).getTime();
+    if(!semanas.has(k)) semanas.set(k, []);
+    semanas.get(k).push(c);
+  });
+  const claves = [...semanas.keys()].sort((a, b) => b - a);
+  let html = grupoSemanaChk(lunesHoy, semanas.get(lunesHoy.getTime()) || [], true);
+
+  const esteMes = k => { const m = mesDeSemanaChk(new Date(k)); return m.anio === mesHoy.anio && m.mes === mesHoy.mes; };
+  const delMes = claves.filter(k => k !== lunesHoy.getTime() && esteMes(k));
+  if(delMes.length){
+    html += `<div class="etiqueta-grupo-chk">Antes en ${MESES_NOMBRE[mesHoy.mes].toLowerCase()}</div>`;
+    delMes.forEach(k => html += grupoSemanaChk(new Date(k), semanas.get(k), false));
   }
-  cont.innerHTML = lista.map(c => {
+  const meses = new Map();
+  claves.forEach(k => {
+    if(k === lunesHoy.getTime() || esteMes(k)) return;
+    const m = mesDeSemanaChk(new Date(k)), km = m.anio * 12 + m.mes;
+    if(!meses.has(km)) meses.set(km, { m, semanas:[] });
+    meses.get(km).semanas.push(k);
+  });
+  if(meses.size) html += `<div class="etiqueta-grupo-chk">Meses anteriores</div>`;
+  [...meses.keys()].sort((a, b) => b - a).forEach(km => {
+    const { m, semanas:sems } = meses.get(km), id = "mes-" + km, abierto = chkGruposAbiertos.has(id);
+    const todos = sems.flatMap(k => semanas.get(k));
+    html += `<div class="grupo-chk ${abierto ? "abierto" : ""}">
+      <button type="button" class="grupo-chk-cab mes" onclick="alternarGrupoChk('${id}')">${CHEVRON_GRUPO}
+        <span class="txt"><span class="tit">${MESES_NOMBRE[m.mes]} ${m.anio}</span><span class="subtexto">${sems.length} semana(s) · ${resumenGrupoChk(todos)}</span></span>
+      </button>
+      <div class="grupo-chk-cuerpo sangria">${abierto ? sems.map(k => grupoSemanaChk(new Date(k), semanas.get(k), false)).join("") : ""}</div>
+    </div>`;
+  });
+  if(sinFecha.length){
+    html += `<div class="etiqueta-grupo-chk">Sin fecha</div>` + sinFecha.map(tarjetaChecklistAdmin).join("");
+  }
+  cont.innerHTML = html;
+}
+
+function tarjetaChecklistAdmin(c){
     const p = plantillaPorId(c.plantilla);
     const nc = (c.respuestas || []).filter(r => r.marca === "NC").length;
     const obs = (c.respuestas || []).filter(r => r.marca === "O").length;
@@ -946,7 +1011,6 @@ function renderizarChecklistsAdmin(){
         <button type="button" class="btn btn-texto" style="width:auto;flex:1;padding:9px 10px;font-size:12.5px;color:var(--rojo-texto,#c0392b);" onclick="eliminarChecklistAdmin(${id})">Eliminar</button>
       </div>
     </div>`;
-  }).join("");
 }
 
 function verDetalleChecklistAdmin(id){

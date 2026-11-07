@@ -118,7 +118,7 @@ async function llamarServidor(payload, opciones){
    y trae cambios, la pantalla se vuelve a pintar sola (alActualizar).
    Si el usuario cambia algo (guardar, editar, eliminar…), lo guardado se da
    por viejo y la siguiente consulta espera la respuesta nueva. */
-const CONSULTAS_DE_LECTURA = ["control_mantenimiento", "listado", "listado_requerimientos", "listado_solicitudes_actividad",
+const CONSULTAS_DE_LECTURA = ["control_mantenimiento", "listado", "listado_requerimientos",
   "listado_checklists", "listado_fallas_abiertas", "lecturas_equipos", "listado_dispositivos", "cupos", "existen_registros"];
 const _respuestasMemoria = {};
 const _consultasEnCurso = {};
@@ -198,7 +198,6 @@ function precargarDatos(){
       if(typeof cargarControlMantenimiento === "function") cargarControlMantenimiento(true).catch(() => {});
       pedir({ tipo:"listado", dni_admin:s.dni });
       pedir({ tipo:"listado_requerimientos", dni_admin:s.dni });
-      pedir({ tipo:"listado_solicitudes_actividad", dni_admin:s.dni });
       pedir({ tipo:"listado_checklists" });
     }
     if(s.rol === "admin" || s.rol === "tecnico") pedir({ tipo:"listado_fallas_abiertas", dni:s.dni, nombre:s.nombre, rol:s.rol });
@@ -289,7 +288,7 @@ function soloMisRegistros(lista){
 
 /* ============ VERSIÓN Y ACTUALIZACIÓN DE LA APP ============
    VERSION_APP debe ser igual al número de CACHE_NAME en sw.js. */
-const VERSION_APP = "v24";
+const VERSION_APP = "v25";
 
 function mostrarVersionApp(){
   document.querySelectorAll(".txt-version-app").forEach(el => { el.textContent = "(versión " + VERSION_APP + ")"; });

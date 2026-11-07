@@ -19,8 +19,6 @@ const TABS_POR_PANTALLA = {
   "pantalla-admin-requerimientos": "tab-panel-admin",
   "pantalla-admin-checklists": "tab-panel-admin",
   "pantalla-admin-dashboard-control": "tab-panel-admin",
-  "pantalla-admin-solicitudes": "tab-panel-admin",
-  "pantalla-admin-generar-solicitud": "tab-panel-admin",
   "pantalla-admin-dispositivos": "tab-panel-admin",
   "pantalla-fallas-abiertas": "tab-alertas",
   "pantalla-resolver-falla": "tab-alertas",
@@ -162,8 +160,125 @@ function guardarSesionYEntrar(usuario, token){
     token: token || ""
   };
   localStorage.setItem("sesion_activa", JSON.stringify(sesion));
+  recordarCuenta(sesion);
   entrarAMenu(sesion);
 }
+
+/* ============ CUENTAS GUARDADAS EN ESTE CELULAR ============
+   Siempre: intro → pantalla de ingreso → inicio. Si alguien ya entró antes
+   en este celular, aparece en "¿Quién ingresa?" y entra con un toque (usa
+   su sesión guardada: no se guarda el PIN y funciona sin señal). Hasta 3
+   cuentas por celular (en riego o sanidad lo comparten varias personas). */
+const MAX_CUENTAS_CELULAR = 3;
+let cuentaElegidaDni = null;
+
+function leerCuentas(){
+  try{ const l = JSON.parse(localStorage.getItem("cuentas_guardadas") || "[]"); return Array.isArray(l) ? l.filter(c => c && c.dni) : []; }
+  catch(e){ return []; }
+}
+function guardarCuentas(lista){ localStorage.setItem("cuentas_guardadas", JSON.stringify(lista.slice(0, MAX_CUENTAS_CELULAR))); }
+function cerrarSesionEnServidor(token){
+  if(!token || !navigator.onLine) return;
+  fetch(obtenerSyncUrl(), { method:"POST", headers:{ "Content-Type":"text/plain;charset=utf-8" },
+    body:JSON.stringify({ tipo:"cerrar_sesion", token }) }).catch(() => {});
+}
+function recordarCuenta(sesion){
+  if(!sesion || !sesion.dni) return;
+  const lista = leerCuentas().filter(c => c.dni !== sesion.dni);
+  lista.unshift(Object.assign({}, sesion, { ultimo:Date.now() }));
+  // La más antigua sale de la lista y deja libre su cupo de celular.
+  lista.slice(MAX_CUENTAS_CELULAR).forEach(c => cerrarSesionEnServidor(c.token));
+  guardarCuentas(lista);
+  cuentaElegidaDni = sesion.dni;
+}
+function actualizarCuentaGuardada(sesion){
+  const lista = leerCuentas();
+  const i = lista.findIndex(c => c.dni === sesion.dni);
+  if(i !== -1){ lista[i] = Object.assign({}, lista[i], sesion); guardarCuentas(lista); }
+}
+
+/* Arranque y vuelta al ingreso: muestra las cuentas guardadas o el formulario. */
+function prepararIngreso(){
+  // Quien venía de una versión anterior (sesión abierta) queda como cuenta guardada.
+  const anterior = localStorage.getItem("sesion_activa");
+  if(anterior){
+    try{ const s = JSON.parse(anterior); if(s && s.dni && !leerCuentas().some(c => c.dni === s.dni)) recordarCuenta(s); }catch(e){}
+    localStorage.removeItem("sesion_activa");
+  }
+  if(leerCuentas().length) mostrarCuentasGuardadas();
+  else mostrarFormularioIngreso();
+}
+
+function inicialesDe(nombre){
+  return String(nombre || "?").trim().split(/\s+/).slice(0, 2).map(p => p[0] || "").join("").toUpperCase();
+}
+function mostrarCuentasGuardadas(){
+  const lista = leerCuentas();
+  if(!lista.length){ mostrarFormularioIngreso(); return; }
+  if(!lista.some(c => c.dni === cuentaElegidaDni)) cuentaElegidaDni = lista[0].dni;
+  document.getElementById("login-lista-cuentas").innerHTML = lista.map(c => `
+    <div class="cuenta-guardada ${c.dni === cuentaElegidaDni ? "elegida" : ""}" role="button" tabindex="0"
+      onclick="elegirCuentaGuardada(${jsArg(c.dni)})" onkeydown="if(event.key==='Enter') elegirCuentaGuardada(${jsArg(c.dni)})">
+      <span class="cuenta-av">${esc(inicialesDe(c.nombre))}</span>
+      <span class="cuenta-tx"><b>${esc(c.nombre || "—")}</b><span>${esc(c.cargo || c.rol || "")} · DNI ••••${esc(String(c.dni).slice(-4))}</span></span>
+      <span class="cuenta-chk"></span>
+      <button type="button" class="cuenta-olvidar" aria-label="Olvidar esta cuenta en este celular" title="Olvidar en este celular"
+        onclick="event.stopPropagation(); pedirOlvidarCuenta(${jsArg(c.dni)})">×</button>
+    </div>`).join("");
+  document.getElementById("login-vista-cuentas").style.display = "block";
+  document.getElementById("login-vista-form").style.display = "none";
+  const btn = document.getElementById("btn-ingresar-cuenta");
+  btn.disabled = false; btn.textContent = "Ingresar";
+}
+function elegirCuentaGuardada(dni){ cuentaElegidaDni = dni; mostrarCuentasGuardadas(); }
+
+function mostrarFormularioIngreso(dni, mensaje){
+  document.getElementById("login-vista-cuentas").style.display = "none";
+  document.getElementById("login-vista-form").style.display = "block";
+  document.getElementById("btn-volver-cuentas").style.display = leerCuentas().length ? "flex" : "none";
+  document.getElementById("login-usuario").value = dni || "";
+  document.getElementById("login-clave").value = "";
+  const err = document.getElementById("login-error");
+  if(mensaje){ err.textContent = mensaje; err.classList.add("activo"); } else err.classList.remove("activo");
+  setTimeout(() => { const el = document.getElementById(dni ? "login-clave" : "login-usuario"); if(el && pantallaVisible("pantalla-login")) el.focus(); }, 60);
+}
+
+function ingresarConCuentaGuardada(){
+  const c = leerCuentas().find(x => x.dni === cuentaElegidaDni);
+  if(!c){ mostrarFormularioIngreso(); return; }
+  if(!c.token){
+    // La sesión venció o un admin la cerró: pide el PIN una vez más.
+    mostrarFormularioIngreso(c.dni, "Por seguridad, vuelve a escribir tu PIN.");
+    return;
+  }
+  const sesion = Object.assign({}, c);
+  delete sesion.ultimo;
+  sesion.dispositivo_id = obtenerDispositivoId();
+  localStorage.setItem("sesion_activa", JSON.stringify(sesion));
+  recordarCuenta(sesion);
+  entrarAMenu(sesion);
+}
+
+function pedirOlvidarCuenta(dni){
+  const c = leerCuentas().find(x => x.dni === dni);
+  if(!c) return;
+  abrirModal(`
+    <div class="modal-titulo"><span>Olvidar cuenta</span><button class="modal-cerrar" onclick="cerrarModal()">×</button></div>
+    <p class="subtexto">¿Quitar a <b>${esc(c.nombre)}</b> de este celular? La próxima vez tendrá que escribir su DNI y PIN. Sus registros no se borran.</p>
+    <div style="display:flex;gap:8px;margin-top:14px;">
+      <button class="btn btn-secundario" style="flex:1;" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn btn-primario" style="flex:1;" onclick="olvidarCuenta(${jsArg(dni)}); cerrarModal(); prepararIngreso();">Sí, olvidar</button>
+    </div>`);
+}
+function olvidarCuenta(dni){
+  const lista = leerCuentas();
+  const c = lista.find(x => x.dni === dni);
+  if(c) cerrarSesionEnServidor(c.token);   // libera su cupo de celular
+  guardarCuentas(lista.filter(x => x.dni !== dni));
+}
+
+/* Perfil → "Cambiar de cuenta": vuelve al ingreso sin olvidar a nadie. */
+function cambiarDeCuenta(){ limpiarSesionLocal(); }
 
 function entrarAMenu(usuario){
   const esAdmin = usuario.rol === "admin";
@@ -179,7 +294,6 @@ function entrarAMenu(usuario){
   document.getElementById("bloque-perfil-inline").style.display = esOperador ? "block" : "none";
   document.getElementById("btn-reportar-falla-operador").style.display = esOperador ? "flex" : "none";
   document.getElementById("btn-checklist-operador").style.display = esOperador ? "flex" : "none";
-  document.getElementById("btn-solicitar-actividad").style.display = (esOperador && usuario.es_jefe_area) ? "flex" : "none";
   document.getElementById("tarjeta-pedir-correo").style.display = (esAdmin && !usuario.correo) ? "block" : "none";
 
   const tabbar = document.getElementById("tabbar-principal");
@@ -219,29 +333,33 @@ async function guardarCorreoAdmin(){
   }
   sesion.correo = correo;
   localStorage.setItem("sesion_activa", JSON.stringify(sesion));
+  actualizarCuentaGuardada(sesion);
   document.getElementById("tarjeta-pedir-correo").style.display = "none";
   mostrarToast("Correo guardado", true);
 }
 
+/* Perfil → "Cerrar sesión": cierra la llave en el servidor (libera el cupo
+   de celular) y olvida la cuenta en este celular. */
 function cerrarSesion(){
-  // Avisa al servidor para que esa llave deje de servir (si no hay
-  // internet no pasa nada: igual se cierra la sesión en el celular).
-  if(tokenSesion() && navigator.onLine){
-    fetch(obtenerSyncUrl(), {
-      method:"POST",
-      headers:{"Content-Type":"text/plain;charset=utf-8"},
-      body: JSON.stringify({ tipo:"cerrar_sesion", token: tokenSesion() })
-    }).catch(()=>{});
-  }
+  const s = JSON.parse(localStorage.getItem("sesion_activa") || "{}");
+  if(s.dni) olvidarCuenta(s.dni);
+  else cerrarSesionEnServidor(tokenSesion());
   limpiarSesionLocal();
 }
 
-/* El servidor avisó que la sesión ya no vale (venció, la cerró un admin o
-   es una sesión de antes de esta versión). Se vuelve a pedir el DNI. */
+/* El servidor avisó que la sesión ya no vale (venció o la cerró un admin).
+   La cuenta sigue en la lista, pero al tocarla pedirá el PIN otra vez. */
 function manejarSesionVencida(){
-  if(!localStorage.getItem("sesion_activa")) return;
+  const guardada = localStorage.getItem("sesion_activa");
+  if(!guardada) return;
+  let dni = "";
+  try{ dni = JSON.parse(guardada).dni || ""; }catch(e){}
+  const lista = leerCuentas();
+  const c = lista.find(x => x.dni === dni);
+  if(c){ c.token = ""; guardarCuentas(lista); }
   limpiarSesionLocal();
-  mostrarToast("Por seguridad, vuelve a ingresar con tu DNI", false);
+  mostrarFormularioIngreso(dni, "Por seguridad, vuelve a escribir tu PIN.");
+  mostrarToast("Por seguridad, vuelve a ingresar con tu PIN", false);
 }
 
 function limpiarSesionLocal(){
@@ -258,13 +376,7 @@ function limpiarSesionLocal(){
   cerrarModal();
   document.getElementById("tabbar-principal").classList.remove("visible");
   irA("pantalla-login");
-}
-
-function revisarSesionGuardada(){
-  const guardada = localStorage.getItem("sesion_activa");
-  if(guardada){
-    entrarAMenu(JSON.parse(guardada));
-  }
+  prepararIngreso();
 }
 
 /* ============ TÉCNICO RESPONSABLE (lista de personas activas) ============

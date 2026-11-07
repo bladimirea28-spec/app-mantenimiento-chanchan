@@ -25,7 +25,10 @@ js/navegacion-login.js→ Cambio de pantallas, login, técnico responsable,
 js/actividades.js     → Autocompletado de equipos, Actividades de Mantenimiento,
                         duración automática, integrantes, evidencia fotográfica
 js/fallas.js          → Historial de Fallas y Fallas Abiertas (ver/resolver)
-js/solicitudes.js     → Solicitud de actividad (jefes) y solicitud generada por admin
+js/entrada.js         → Intro animada "Diagnóstico" (verde claro). Se carga justo
+                        después del #splash, antes que el resto de la app
+js/exportar-excel.js  → Botones "⬇ Excel" de cada apartado y "Exportar todo"
+                        (tablas limpias para Power BI)
 js/requerimientos.js  → Requerimientos de materiales, borrador local, mis requerimientos
 js/sincronizacion.js  → Envío de registros a Google Sheets
 js/admin.js           → Panel de administración, análisis por período y gráficos,
@@ -118,11 +121,26 @@ js/excel-control.js   → Llena la plantilla (REGISTRO, EQUIPOS, CONSULTA,
   de la empresa solo si TI lo aprueba y lo configura con sus propias cuentas.
 - Power BI, cuando se quiera: conectarlo directo a la hoja de Google.
 
+## Ingreso y celulares (v25, servidor v28)
+
+- Siempre: intro → pantalla de ingreso → inicio. El celular recuerda hasta 3
+  cuentas (`cuentas_guardadas` en localStorage, con su token; nunca el PIN):
+  tocar el nombre + Ingresar entra con un toque, también sin señal. El PIN se
+  pide solo la primera vez en ese celular o si la sesión venció.
+- Servidor: una cuenta puede tener sesión en hasta `MAX_CELULARES` (3)
+  celulares. El admin libera uno en Panel → Dispositivos.
+- Excel para Power BI: una tabla por hoja desde A1, fechas reales, códigos como
+  texto, nombres de columnas fijos (agregar columnas nuevas siempre al final) y
+  nombre de archivo fijo (ChanChan_*.xlsx).
+
 ## Historial
 
 - 2026-10-04: index.html (466 KB, 4079 líneas) dividido en archivos separados
   (CSS, 10 módulos JS, catálogos de datos y logo como PNG). Funcionamiento verificado
   igual al original. index.html quedó en ~67 KB.
+- 2026-11-06 (v25): se quitó el módulo de solicitudes; checklists del admin por
+  semana/mes con gráfico de observaciones; Excel por apartado; intro
+  "Diagnóstico" fluida; ingreso con cuentas guardadas y tope de 3 celulares.
 - 2026-10-14: seguridad en la app: textos limpiados con esc()/jsArg()/urlSegura()
   en todas las listas y en el panel admin (evita que un texto ejecute código),
   PIN guardado como SHA-256, sw.js v3 y sin cachear los POST al servidor.

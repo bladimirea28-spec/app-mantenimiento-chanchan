@@ -1,5 +1,5 @@
 // Al publicar, subir este número y VERSION_APP en js/config.js (el mismo).
-const CACHE_NAME = "mantenimiento-chanchan-v24";
+const CACHE_NAME = "mantenimiento-chanchan-v25";
 const ARCHIVOS_BASE = [
   "./",
   "./index.html",
@@ -13,13 +13,13 @@ const ARCHIVOS_BASE = [
   "./datos/checklists.js",
   "./datos/planes-mantenimiento.js",
   "./plantillas/CONTROL_MANTENIMIENTO.xlsx",
+  "./js/entrada.js",
   "./js/config.js",
   "./js/movimiento.js",
   "./js/almacenamiento.js",
   "./js/navegacion-login.js",
   "./js/actividades.js",
   "./js/fallas.js",
-  "./js/solicitudes.js",
   "./js/requerimientos.js",
   "./js/checklists.js",
   "./js/control-mantenimiento.js",
@@ -28,6 +28,7 @@ const ARCHIVOS_BASE = [
   "./js/dashboard-control.js",
   "./js/sincronizacion.js",
   "./js/admin.js",
+  "./js/exportar-excel.js",
   "./js/inicio.js",
   // Librerías para exportar a Excel: se cargan solo al exportar, pero se
   // guardan aquí para que también funcionen sin señal.

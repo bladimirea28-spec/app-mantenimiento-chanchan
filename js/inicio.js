@@ -33,7 +33,6 @@ window.addEventListener("offline", actualizarEstadoConexion);
     iniciarAutocompleteEquipo("mtto-equipo","mtto-equipo-lista");
     iniciarAutocompleteEquipo("falla-equipo","falla-equipo-lista");
     iniciarAutocompleteEquipo("oper-falla-equipo","oper-falla-equipo-lista");
-    iniciarAutocompleteEquipo("solicitud-equipo","solicitud-equipo-lista");
     iniciarAutocompleteMaterial();
     iniciarAutocompleteEquipo("req-item-equipo","req-item-equipo-lista");
     iniciarFotoItemRequerimiento();
@@ -43,11 +42,6 @@ window.addEventListener("offline", actualizarEstadoConexion);
     iniciarFotoInput("falla","falla-foto-galeria","falla-foto-previews");
     iniciarFotoInput("falla_operador","oper-falla-foto-camara","oper-falla-foto-previews");
     iniciarFotoInput("falla_operador","oper-falla-foto-galeria","oper-falla-foto-previews");
-    iniciarFotoInput("solicitud","solicitud-foto-camara","solicitud-foto-previews");
-    iniciarFotoInput("solicitud","solicitud-foto-galeria","solicitud-foto-previews");
-    iniciarFotoInput("solicitud_admin","admsol-foto-camara","admsol-foto-previews");
-    iniciarFotoInput("solicitud_admin","admsol-foto-galeria","admsol-foto-previews");
-    iniciarAutocompleteEquipo("admsol-equipo","admsol-equipo-lista");
     iniciarFotoInput("checklist","chk-foto-camara","chk-foto-previews");
     iniciarFotoInput("checklist","chk-foto-galeria","chk-foto-previews");
     iniciarFotoInput("mantenimiento","mto-foto-camara","mto-foto-previews");
@@ -57,8 +51,9 @@ window.addEventListener("offline", actualizarEstadoConexion);
     document.getElementById("mtto-fechahora-fin").addEventListener("change", actualizarDuracionMtto);
     document.getElementById("mtto-total-horas").addEventListener("input", ()=>{ mttoHorasEditadoManual = true; });
     actualizarEstadoConexion();
-    revisarSesionGuardada();
-    cargarTecnicosResponsables();
+    prepararIngreso();   // siempre: intro → ingreso (cuentas guardadas o DNI + PIN) → inicio
+    // Lo que va al servidor espera a que termine la intro, para que no la trabe.
+    (window.entradaCerrada || Promise.resolve()).then(() => cargarTecnicosResponsables());
 
     mostrarVersionApp();
     ocultarCargando();   // la app ya se puede usar; lo de abajo va por detrás

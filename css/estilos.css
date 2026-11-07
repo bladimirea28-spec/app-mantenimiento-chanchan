@@ -573,46 +573,76 @@
   @keyframes tab-salta{0%{transform:scale(.8);}60%{transform:scale(1.12);}100%{transform:scale(1);}}
   #toast{transition:opacity .22s ease, transform .3s var(--curva);}
 
-  /* Inicio animado: fondo verde con el logo; desaparece apenas la app está lista. */
-  /* Entrada "Chispa de soldadura": una chispa ámbar dibuja un engranaje de
-     neón soltando chispas, se llena de metal y del centro sale el logo. */
-  #splash{position:fixed;inset:0;z-index:1000;overflow:hidden;cursor:pointer;
-    background:radial-gradient(120% 70% at 50% 42%,#173523 0%,#0C1C12 55%,#050B07 100%);
-    animation:splash-fuera .3s ease 6s forwards;}   /* respaldo: nunca se queda pegado */
-  #splash .splash-chispas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3;}
-  #splash .splash-eng{position:absolute;left:50%;top:42%;width:min(74vw,330px);transform:translate(-50%,-50%) rotate(40deg) scale(1.55);
-    opacity:.16;overflow:visible;z-index:1;transition:transform .9s var(--curva),opacity .6s ease;}
-  #splash .splash-borde{fill:none;stroke:#E8A93B;stroke-width:2.4;stroke-linejoin:round;filter:url(#splash-brillo);}
-  #splash .splash-relleno{fill:url(#splash-metal);transition:opacity .35s ease;}
-  #splash .splash-logo{position:absolute;left:50%;top:42%;width:min(62vw,270px);padding:14px 16px;border-radius:20px;background:#fff;z-index:4;overflow:hidden;
-    transform:translate(-50%,-50%);box-shadow:0 22px 50px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.4);
-    transition:transform .55s cubic-bezier(.2,1.2,.3,1),opacity .3s ease;}
-  #splash .splash-logo img{width:100%;height:auto;display:block;}
-  #splash .splash-logo::after{content:"";position:absolute;inset:-20% -60%;background:linear-gradient(105deg,transparent 40%,rgba(255,255,255,.95) 50%,transparent 60%);transform:translateX(-100%);}
-  #splash.brillo .splash-logo::after{transition:transform .8s ease;transform:translateX(100%);}
-  #splash .splash-marca{position:absolute;left:0;right:0;top:61%;z-index:4;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;}
-  #splash .splash-nombre{color:#fff;font-size:17px;font-weight:800;letter-spacing:.18em;white-space:nowrap;}
-  #splash .splash-nombre span{display:inline-block;transition:opacity .35s ease,transform .45s var(--curva),filter .35s ease;transition-delay:calc(var(--i)*28ms);}
-  #splash .splash-txt{color:#E8A93B;font-size:10.5px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;transition:opacity .5s ease .25s,letter-spacing .8s var(--curva) .2s;}
-  /* Estado inicial (antes de animar) */
-  #splash.inicio .splash-eng{transform:translate(-50%,-50%);opacity:1;}
-  #splash.inicio .splash-relleno{opacity:0;}
-  #splash.inicio .splash-borde{opacity:0;}
-  #splash.inicio.dibujando .splash-borde{opacity:1;}
-  #splash.inicio .splash-logo{transform:translate(-50%,-50%) scale(.6);opacity:0;}
-  #splash.inicio .splash-nombre span{opacity:0;transform:translateY(10px);filter:blur(4px);}
-  #splash.inicio .splash-txt{opacity:0;letter-spacing:.32em;}
-  /* Pasos de la animación */
-  #splash.inicio.lleno .splash-relleno{opacity:1;animation:splash-glitch .45s steps(2) 1;}
-  #splash.inicio.lleno .splash-eng{transform:translate(-50%,-50%) rotate(28deg);}
-  #splash.inicio.logo .splash-eng{transform:translate(-50%,-50%) rotate(40deg) scale(1.55);opacity:.16;}
-  #splash.inicio.logo .splash-logo{transform:translate(-50%,-50%);opacity:1;
-    box-shadow:0 22px 50px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.4),0 0 70px rgba(232,169,59,.45);}
-  #splash.inicio.texto .splash-nombre span{opacity:1;transform:none;filter:none;}
-  #splash.inicio.texto .splash-txt{opacity:1;letter-spacing:.22em;}
-  #splash.fuera{animation:splash-fuera .3s ease forwards;}
-  @keyframes splash-glitch{0%{filter:drop-shadow(5px 0 0 #3FE0FF) drop-shadow(-5px 0 0 #FF6A3D);}50%{filter:drop-shadow(-4px 1px 0 #3FE0FF) drop-shadow(4px -1px 0 #FF6A3D);}100%{filter:none;}}
-  @keyframes splash-fuera{to{opacity:0;transform:scale(1.04);visibility:hidden;}}
+  /* Entrada "Diagnóstico" (verde claro): ver js/entrada.js. Solo transform/opacity
+     para que la anime la tarjeta de video aunque la app esté cargando. */
+  #splash{position:fixed;inset:0;z-index:1000;overflow:hidden;cursor:pointer;contain:strict;isolation:isolate;
+    --neon:#4CE39A;--neon-2:#B4F7D4;--tenue:rgba(76,227,154,.17);--grid:rgba(76,227,154,.11);--f3:#030B06;--halo:rgba(76,227,154,.55);
+    background:radial-gradient(120% 70% at 50% 42%,#14402B 0%,#0A1F14 55%,#030B06 100%);
+    animation:splash-fuera .35s ease 9s forwards;}   /* respaldo: nunca se queda pegada */
+  #splash > *{position:absolute;}
+  #splash .pieza{left:50%;top:42%;width:min(74vw,330px);transform:translate(-50%,-50%);overflow:visible;will-change:transform,opacity;}
+  #splash .c-neon{stroke:var(--neon);} #splash .c-neon2{stroke:var(--neon-2);} #splash .c-tenue{stroke:var(--tenue);} #splash .c-grid{stroke:var(--grid);}
+  #splash .dib{stroke-dasharray:1;stroke-dashoffset:1;}
+  #splash .plano,#splash .tramo,#splash .relleno,#splash .anillo-flash{opacity:0;}
+  #splash .chispas{inset:0;width:100%;height:100%;pointer-events:none;z-index:3;}
+  #splash .escaner{left:50%;top:42%;border-radius:50%;overflow:hidden;transform:translate(-50%,-50%);opacity:0;z-index:2;pointer-events:none;}
+  #splash .barra{position:absolute;left:0;right:0;top:0;height:100%;transform:translateY(-100%);will-change:transform;
+    background:linear-gradient(to bottom,transparent 82%,rgba(76,227,154,.3) 97%,var(--neon-2) 99.4%,transparent 100%);}
+  #splash .pct{left:50%;top:42%;transform:translate(-50%,-50%);z-index:2;width:min(30vw,130px);height:min(15vw,66px);pointer-events:none;}
+  #splash .pct span{position:absolute;inset:0;display:grid;place-items:center;color:#fff;font-weight:800;font-size:calc(var(--s,1) * 17px);
+    text-shadow:0 0 6px var(--f3),0 0 3px var(--f3);opacity:0;font-variant-numeric:tabular-nums;}
+  #splash .lista{left:0;right:0;top:64%;z-index:4;display:flex;flex-direction:column;align-items:center;gap:7px;}
+  #splash .item{width:min(60vw,260px);display:flex;justify-content:space-between;font-size:11.5px;font-weight:800;letter-spacing:.16em;color:#E3ECE7;opacity:0;}
+  #splash .item .ok{color:var(--neon-2);letter-spacing:.06em;}
+  #splash .halo{left:50%;top:42%;width:min(90vw,400px);aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;z-index:3;opacity:0;pointer-events:none;
+    background:radial-gradient(circle,var(--halo) 0%,transparent 62%);will-change:transform,opacity;}
+  #splash .logo-card{left:50%;top:42%;width:min(62vw,270px);padding:12px 14px;border-radius:18px;background:#fff;z-index:4;overflow:hidden;
+    transform:translate(-50%,-50%) scale(.6);opacity:0;will-change:transform,opacity;box-shadow:0 22px 50px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.4);}
+  #splash .logo-card img{width:100%;height:auto;display:block;}
+  #splash .logo-card::after{content:"";position:absolute;inset:-20% -60%;transform:translateX(-100%);will-change:transform;
+    background:linear-gradient(105deg,transparent 40%,rgba(255,255,255,.95) 50%,transparent 60%);}
+  #splash .marca{left:0;right:0;top:61%;z-index:4;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;}
+  #splash .nombre{color:#fff;font-size:16px;font-weight:800;letter-spacing:.18em;white-space:nowrap;}
+  #splash .nombre span{display:inline-block;opacity:0;}
+  #splash .sub{color:var(--neon);font-size:10.5px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;opacity:0;}
+  #splash.corre .plano{animation:spl-ap .5s ease both;}
+  #splash.corre .dib{animation:spl-dibujar .6s cubic-bezier(.25,.8,.4,1) both;}
+  #splash.corre .escaner{animation:spl-escaner 1.7s linear .2s both;}
+  #splash.corre .barra{animation:spl-barrer .7s ease-in-out .2s 3 alternate both;}
+  #splash.corre .tramo{animation:spl-ap .2s ease-out calc(.6s + var(--i) * .24s) both;}
+  #splash.corre .item{animation:spl-item .28s cubic-bezier(.2,.9,.25,1) calc(.6s + var(--i) * .24s) both;}
+  #splash.corre .pct span{animation:spl-ventana var(--dur) linear var(--del) none;}
+  #splash.corre .pct span.fin{animation:spl-ventana-fin .35s linear 1.8s forwards;}
+  #splash.corre .anillo-flash{animation:spl-destello .4s ease-out 1.8s both;}
+  #splash.corre .relleno{animation:spl-ap .3s ease 1.8s both;}
+  #splash.corre .lista{animation:spl-sale .25s ease 1.95s both;}
+  #splash.corre .pieza{animation:spl-atras .9s cubic-bezier(.2,.9,.25,1) 2s both;}
+  #splash.corre .halo{animation:spl-halo .7s ease-out 2s both;}
+  #splash.corre .logo-card{animation:spl-logo .55s cubic-bezier(.2,1.2,.3,1) 2s both;}
+  #splash.corre .logo-card::after{animation:spl-brillo .8s ease 2.35s both;}
+  #splash.corre .nombre span{animation:spl-letra .45s cubic-bezier(.2,.9,.25,1) calc(2.45s + var(--i) * 28ms) both;}
+  #splash.corre .sub{animation:spl-ap .5s ease 2.75s both;}
+  /* Celular con "reducir movimiento": el final quieto, sin animar. */
+  #splash.quieta .pieza{transform:translate(-50%,-50%) rotate(20deg) scale(1.55);opacity:.16;}
+  #splash.quieta .relleno,#splash.quieta .tramo,#splash.quieta .plano,#splash.quieta .logo-card,#splash.quieta .nombre span,#splash.quieta .sub,#splash.quieta .halo{opacity:1;}
+  #splash.quieta .logo-card{transform:translate(-50%,-50%);}
+  #splash.quieta .lista,#splash.quieta .pct{display:none;}
+  #splash.fuera{animation:splash-fuera .35s ease forwards;pointer-events:none;}
+  @keyframes spl-ap{from{opacity:0}to{opacity:1}}
+  @keyframes spl-sale{from{opacity:1}to{opacity:0}}
+  @keyframes spl-dibujar{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+  @keyframes spl-escaner{0%{opacity:0}8%,90%{opacity:1}100%{opacity:0}}
+  @keyframes spl-barrer{from{transform:translateY(-100%)}to{transform:translateY(0)}}
+  @keyframes spl-item{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:none}}
+  @keyframes spl-ventana{0%,100%{opacity:1}}
+  @keyframes spl-ventana-fin{0%,70%{opacity:1}100%{opacity:0}}
+  @keyframes spl-destello{0%{opacity:0}30%{opacity:1}100%{opacity:0}}
+  @keyframes spl-atras{from{transform:translate(-50%,-50%);opacity:1}to{transform:translate(-50%,-50%) rotate(20deg) scale(1.55);opacity:.16}}
+  @keyframes spl-halo{0%{opacity:0;transform:translate(-50%,-50%) scale(.5)}40%{opacity:1}100%{opacity:.55;transform:translate(-50%,-50%) scale(1)}}
+  @keyframes spl-logo{from{opacity:0;transform:translate(-50%,-50%) scale(.6)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+  @keyframes spl-brillo{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+  @keyframes spl-letra{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  @keyframes splash-fuera{to{opacity:0;visibility:hidden;}}
 
   /* Login: cabecera verde curva y tarjeta que sube. */
   .pantalla-login{position:relative;background:var(--bg);overflow:hidden;}
@@ -633,3 +663,62 @@
   @media (prefers-reduced-motion: reduce){
     *,*::before,*::after{animation-duration:.01ms !important;animation-delay:0s !important;transition-duration:.01ms !important;}
   }
+
+  /* ===== Checklists por semana y mes + gráfico (v25) ===== */
+  .btn-barra-excel{margin-left:auto;border:none;border-radius:10px;padding:8px 12px;font-family:inherit;font-size:12.5px;font-weight:800;
+    background:var(--verde-100);color:var(--verde-texto);cursor:pointer;white-space:nowrap;flex-shrink:0;}
+  .btn-barra-excel:active{transform:scale(.96);}
+  .chk-grafico{margin-bottom:16px;padding:14px;}
+  .chk-graf-cab{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:2px;}
+  .chk-graf-cab b{font-size:14px;}
+  .chk-segmento{display:flex;background:var(--superficie);border:1px solid var(--linea);border-radius:10px;padding:2px;flex-shrink:0;}
+  .chk-segmento button{border:none;background:transparent;color:var(--tinta-600);font-family:inherit;font-weight:700;font-size:12px;padding:6px 10px;border-radius:8px;cursor:pointer;}
+  .chk-segmento button.activo{background:var(--verde-800);color:#fff;}
+  .chk-barras{margin-top:8px;display:flex;flex-direction:column;gap:2px;}
+  .chk-barra-fila{display:grid;grid-template-columns:minmax(0,118px) minmax(0,1fr) 28px;align-items:center;gap:8px;padding:6px 4px;border:none;
+    background:transparent;border-radius:8px;cursor:pointer;font-family:inherit;color:var(--tinta-900);text-align:left;width:100%;}
+  .chk-barra-fila.elegida{background:var(--verde-100);}
+  .chk-barra-nombre{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .chk-barra-pista{height:14px;display:flex;border-radius:4px;overflow:hidden;min-width:6px;}
+  .chk-barra-pista span{height:100%;}
+  .seg-nc{background:var(--rojo-600);}
+  .seg-o{background:var(--ambar-500);}
+  .chk-barra-num{font-size:12.5px;font-weight:800;text-align:right;font-variant-numeric:tabular-nums;}
+  .chk-leyenda{display:flex;gap:14px;margin-top:8px;font-size:11.5px;color:var(--tinta-600);}
+  .chk-leyenda i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px;}
+  .grupo-chk{margin-bottom:10px;}
+  .grupo-chk-cab{width:100%;display:flex;align-items:center;gap:10px;text-align:left;background:var(--card);border:1px solid var(--linea);
+    border-radius:12px;padding:12px 14px;cursor:pointer;color:var(--tinta-900);font-family:inherit;}
+  .grupo-chk-cab .chev{transition:transform .2s ease;color:var(--tinta-600);flex-shrink:0;}
+  .grupo-chk.abierto > .grupo-chk-cab .chev{transform:rotate(90deg);}
+  .grupo-chk-cab .txt{flex:1;min-width:0;display:flex;flex-direction:column;}
+  .grupo-chk-cab .tit{font-weight:800;font-size:14.5px;}
+  .grupo-chk-cab .subtexto{font-size:12.5px;}
+  .grupo-chk-cab.actual{border:2px solid var(--verde-700);padding:11px 13px;}
+  .grupo-chk-cab.mes{background:var(--superficie);}
+  .grupo-chk-cab.mes .tit{font-size:15.5px;}
+  .grupo-chk-cuerpo{display:none;padding-top:10px;}
+  .grupo-chk.abierto > .grupo-chk-cuerpo{display:block;}
+  .grupo-chk-cuerpo.sangria{padding-left:12px;border-left:2px solid var(--linea);margin-left:10px;}
+  .etiqueta-grupo-chk{font-size:11.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--tinta-600);margin:18px 2px 8px;}
+
+  /* ===== Ingreso con cuentas guardadas (v25) ===== */
+  .login-titulo-cuentas{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--tinta-600);margin:0 2px 10px;}
+  .cuenta-guardada{display:flex;align-items:center;gap:10px;width:100%;padding:11px 10px;border-radius:12px;border:1.5px solid var(--linea);
+    background:var(--card);color:var(--tinta-900);cursor:pointer;margin-bottom:8px;transition:border-color .15s,background-color .15s;}
+  .cuenta-guardada:focus-visible{outline:2px solid var(--ambar-500);outline-offset:2px;}
+  .cuenta-av{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:13.5px;
+    background:var(--verde-100);color:var(--verde-texto);flex-shrink:0;}
+  .cuenta-tx{flex:1;min-width:0;display:flex;flex-direction:column;}
+  .cuenta-tx b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .cuenta-tx span{font-size:12px;color:var(--tinta-600);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .cuenta-chk{width:21px;height:21px;border-radius:50%;border:2px solid var(--linea);flex-shrink:0;display:grid;place-items:center;}
+  .cuenta-guardada.elegida{border-color:var(--ambar-500);background:var(--ambar-100);}
+  .cuenta-guardada.elegida .cuenta-chk{border-color:var(--ambar-500);background:var(--ambar-500);}
+  .cuenta-guardada.elegida .cuenta-chk::after{content:"";width:6px;height:10px;border:solid var(--verde-950);border-width:0 2.5px 2.5px 0;transform:rotate(45deg) translate(-1px,-1px);}
+  .cuenta-olvidar{border:none;background:transparent;color:var(--tinta-600);font-size:20px;line-height:1;width:28px;height:28px;border-radius:8px;
+    cursor:pointer;flex-shrink:0;opacity:.6;}
+  .cuenta-olvidar:active{background:var(--superficie);}
+  .login-link-verde{color:var(--verde-texto);font-weight:800;}
+  .celular-fila{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--linea);margin-top:8px;font-size:13px;}
+  .celular-fila > span{min-width:0;overflow:hidden;text-overflow:ellipsis;}

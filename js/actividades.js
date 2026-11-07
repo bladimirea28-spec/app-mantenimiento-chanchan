@@ -221,7 +221,7 @@ async function renderListaMtto(){
 }
 
 /* ============ EVIDENCIA FOTOGRÁFICA (reutilizable) ============ */
-const fotosTemp = { mtto: [], falla: [], falla_operador: [], solicitud: [], solicitud_admin: [] };
+const fotosTemp = { mtto: [], falla: [], falla_operador: [] };
 
 function iniciarFotoInput(modulo, idInput, idPreviews){
   const input = document.getElementById(idInput);
