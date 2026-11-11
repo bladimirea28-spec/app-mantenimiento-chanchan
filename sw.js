@@ -1,5 +1,5 @@
 // Al publicar, subir este número y VERSION_APP en js/config.js (el mismo).
-const CACHE_NAME = "mantenimiento-chanchan-v25";
+const CACHE_NAME = "mantenimiento-chanchan-v26";
 const ARCHIVOS_BASE = [
   "./",
   "./index.html",

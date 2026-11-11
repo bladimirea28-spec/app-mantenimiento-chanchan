@@ -151,14 +151,17 @@ function ordenarMantenimientos(lista){
   return lista.slice().sort((a, b) => ((fechaDesdePE(a.fecha) || 0) - (fechaDesdePE(b.fecha) || 0)) || (Number(a.lectura) - Number(b.lectura)));
 }
 
-function estadoUnidad(eq){
+/* datos: por defecto controlDatos (admin); para el aviso del operador se pasa
+   el paquete de una sola unidad (datosDeUnaUnidad). */
+function estadoUnidad(eq, datos){
+  const d = datos || controlDatos;
   const plan = PLANES_MTTO[eq.plan] || { ciclo:[] };
   const ciclo = plan.ciclo;
-  const params = controlDatos.parametros.find(p => String(p.CODIGO) === eq.codigo) || null;
-  const delEquipo = ordenarMantenimientos(controlDatos.mantenimientos.filter(m => m.codigo === eq.codigo));
+  const params = d.parametros.find(p => String(p.CODIGO) === eq.codigo) || null;
+  const delEquipo = ordenarMantenimientos(d.mantenimientos.filter(m => m.codigo === eq.codigo));
   const preventivos = delEquipo.filter(m => m.tipo === "Preventivo");
   const ultimo = preventivos[preventivos.length - 1];
-  const lect = controlDatos.lecturas[eq.codigo] || null;
+  const lect = d.lecturas[eq.codigo] || null;
   const aviso = params && params.AVISO !== "" && params.AVISO != null ? Number(params.AVISO) : AVISO_POR_CONTROL[eq.control];
   if(eq.sinPlan){
     // Sin plan de PM: solo su historial (sin "le toca" ni vencidos).
@@ -204,7 +207,7 @@ function estadoUnidad(eq){
   return r;
 }
 
-function estadosDeUnidades(){ return equiposControl().map(estadoUnidad); }
+function estadosDeUnidades(){ return equiposControl().map(eq => estadoUnidad(eq)); }
 
 const CLASE_ESTADO = { "VENCIDO":"vencido", "PRÓXIMO":"proximo", "AL DÍA":"aldia", "SIN REGISTRO":"sinregistro", "SIN PLAN":"sinregistro" };
 
@@ -219,7 +222,7 @@ async function actualizarAlertaMantenimiento(refrescar){
   const s = sesionActual();
   const el = document.getElementById("alerta-mantenimiento");
   if(!el) return;
-  if(s.rol !== "admin"){ el.style.display = "none"; return; }   // alertas: solo admin
+  if(s.rol !== "admin") return actualizarAvisoOperador(el);   // solo sus unidades
   try{ await asegurarPlanesMtto(); }catch(e){ return; }
   // El aviso del inicio sale al instante con lo guardado y se refresca por detrás.
   if(refrescar || !controlDatos.actualizado) await cargarControlMantenimiento(true, null, () => actualizarAlertaMantenimiento(false));
@@ -234,6 +237,131 @@ async function actualizarAlertaMantenimiento(refrescar){
   const nombres = vencidas.concat(proximas).slice(0, 3).map(r => `${r.eq.codigo} (${r.proximo.split(" - ")[0]})`).join(", ");
   el.className = "alerta-mtto " + (vencidas.length ? "vencido" : "proximo");
   el.innerHTML = `<span class="alerta-mtto-icono">🔔</span><span><b>${vencidas.length ? `${vencidas.length} mantenimiento(s) vencido(s)` : ""}${vencidas.length && proximas.length ? " · " : ""}${proximas.length ? `${proximas.length} próximo(s)` : ""}</b><br><small>${esc(nombres)}${vencidas.length + proximas.length > 3 ? "…" : ""} — toca para ver</small></span>`;
+  el.style.display = "flex";
+}
+
+function tocarAlertaMantenimiento(){
+  if(esAdminSesion()) return abrirControlUnidades();
+  mostrarAvisoMtto(_avisosOperador, false);
+}
+
+/* ---------- Aviso al que llena el checklist (operador / técnico) ----------
+   "Sus" unidades son las que revisó con checklist en este celular en los
+   últimos 30 días. Se le avisa faltando 100 km / 15 h / 15 días (o lo que el
+   admin puso en "Punto de partida") y cuando ya se pasó. */
+const DIAS_UNIDAD_PROPIA = 30;
+let _avisosOperador = [];
+
+async function misUnidadesChecklist(){
+  const s = sesionActual();
+  const limite = Date.now() - DIAS_UNIDAD_PROPIA * 86400000;
+  const codigos = [];
+  (await leerStore("checklists"))
+    .filter(c => String(c.dni) === String(s.dni) && (Number(c.creado) || +(fechaDesdePE(c.fecha) || 0)) >= limite)
+    .sort((a, b) => (Number(b.creado) || 0) - (Number(a.creado) || 0))
+    .forEach(c => { const cod = String(c.equipo_codigo || ""); if(cod && !codigos.includes(cod)) codigos.push(cod); });
+  return codigos.map(equipoMtto).filter(eq => eq && !eq.sinPlan && eq.control).slice(0, 6);
+}
+
+/* Paquete de datos de UNA unidad (sin tocar controlDatos del admin): lo del
+   servidor + lo de este celular que el servidor todavía no tiene. */
+async function datosDeUnaUnidad(codigo, alActualizar){
+  let resp = null;
+  if(tokenSesion()){
+    try{
+      resp = await consultaRapida({ tipo:"control_mantenimiento", codigo }, { silencioso:true, alActualizar });
+    }catch(e){ resp = null; }
+  }
+  if(!(resp && resp.ok)) resp = null;
+  const d = {
+    parametros: resp ? resp.parametros || [] : [],
+    mantenimientos: resp ? (resp.mantenimientos || []).map(mantenimientoDesdeServidor).filter(m => m.codigo === codigo) : [],
+    lecturas: {}
+  };
+  if(resp && resp.lecturas && resp.lecturas[codigo]) d.lecturas[codigo] = resp.lecturas[codigo];
+  const ts = resp ? (resp._recibido || 0) : 0;
+  const nuevo = r => !resp || !r.sincronizado || (ts && r.creado > ts);
+  const anotar = (valor, fecha) => {
+    const n = Number(valor);
+    if(valor === "" || valor == null || isNaN(n)) return;
+    const actual = d.lecturas[codigo];
+    if(!actual || n > Number(actual.lectura)) d.lecturas[codigo] = { lectura:n, fecha };
+  };
+  (await leerStore("mantenimientos")).filter(m => m.codigo === codigo && nuevo(m)).forEach(m => {
+    if(!d.mantenimientos.some(x => x.id === m.id)) d.mantenimientos.push(m);
+  });
+  // Los checklists de este celular cuentan siempre: la respuesta guardada del
+  // servidor puede ser de segundos antes de que el checklist terminara de
+  // subir. (Si un admin borra uno, limpiarCopiasBorradas quita la copia.)
+  (await leerStore("checklists")).filter(c => c.equipo_clave === codigo).forEach(c => anotar(c.lectura, c.fecha));
+  d.mantenimientos.forEach(m => anotar(m.lectura, m.fecha));
+  return d;
+}
+
+/* Estado de la unidad si está PRÓXIMA o VENCIDA; si no, null. */
+async function avisoMttoDeUnidad(codigo, alActualizar){
+  await asegurarPlanesMtto();
+  const eq = equipoMtto(codigo);
+  if(!eq || eq.sinPlan || !eq.control) return null;
+  const r = estadoUnidad(eq, await datosDeUnaUnidad(codigo, alActualizar));
+  return (r.estado === "PRÓXIMO" || r.estado === "VENCIDO") ? r : null;
+}
+
+/* Al guardar un checklist: espera como mucho 4 s (sin señal no se traba). */
+function avisoMttoTrasChecklist(codigo){
+  if(!codigo) return Promise.resolve(null);
+  const tope = new Promise(res => setTimeout(() => res(null), 4000));
+  return Promise.race([avisoMttoDeUnidad(codigo).catch(() => null), tope]);
+}
+
+function nombreUnidad(eq){ return String(eq.descripcion || eq.codigo).split(/\s+-\s+/).slice(0, 2).join(" - "); }
+
+function textoAvisoMtto(r){
+  const pm = String(r.proximo).split(" - ")[0];
+  const cuando = r.proximoTexto ? (r.eq.control === "MESES" ? ` (le toca el ${esc(r.proximoTexto)})` : ` (le toca a los ${esc(r.proximoTexto)})`) : "";
+  return r.estado === "VENCIDO"
+    ? `El <b>${esc(pm)}</b> está vencido hace <b>${miles(Math.abs(r.falta))} ${esc(r.unidad)}</b>${cuando}.`
+    : `Faltan <b>${miles(r.falta)} ${esc(r.unidad)}</b> para el <b>${esc(pm)}</b>${cuando}.`;
+}
+
+function htmlAvisoMtto(r){
+  const venc = r.estado === "VENCIDO";
+  return `<div class="alerta-mtto ${venc ? "vencido" : "proximo"}" style="cursor:default;margin:8px 0;">
+    <span class="alerta-mtto-icono">${venc ? "🔴" : "⚠️"}</span>
+    <span><b>${esc(nombreUnidad(r.eq))}</b><br><small>${textoAvisoMtto(r)}</small></span></div>`;
+}
+
+/* despues: true si viene de guardar un checklist (al cerrar vuelve a la lista). */
+function mostrarAvisoMtto(lista, despues){
+  if(!lista || !lista.length) return;
+  const venc = lista.some(r => r.estado === "VENCIDO");
+  const cerrar = despues ? "cerrarModal(); abrirChecklists();" : "cerrarModal();";
+  abrirModal(`
+    <div class="modal-titulo"><span>${venc ? "Mantenimiento vencido" : "Próximo mantenimiento"}</span><button class="modal-cerrar" onclick="${cerrar}">×</button></div>
+    ${lista.map(htmlAvisoMtto).join("")}
+    <p class="subtexto">Avisa al técnico o a tu jefe para que programen el mantenimiento de la unidad.</p>
+    <button class="btn btn-primario" style="margin-top:14px;" onclick="${cerrar}">Entendido</button>
+  `);
+}
+
+async function actualizarAvisoOperador(el){
+  let unidades = [];
+  try{ unidades = await misUnidadesChecklist(); }catch(e){ unidades = []; }
+  if(!unidades.length){ _avisosOperador = []; el.style.display = "none"; return; }
+  let repintar = false;
+  const alActualizar = () => { if(!repintar){ repintar = true; setTimeout(() => actualizarAlertaMantenimiento(false), 300); } };
+  const avisos = (await Promise.all(unidades.map(eq => avisoMttoDeUnidad(eq.codigo, alActualizar).catch(() => null)))).filter(Boolean);
+  _avisosOperador = avisos;
+  if(!avisos.length){ el.style.display = "none"; return; }
+  const venc = avisos.some(r => r.estado === "VENCIDO");
+  const titulo = avisos.length === 1
+    ? (venc ? "Tu unidad tiene el mantenimiento vencido" : "Tu unidad está próxima a su mantenimiento")
+    : `${avisos.length} de tus unidades necesitan mantenimiento`;
+  const detalle = avisos.length === 1
+    ? `${esc(nombreUnidad(avisos[0].eq))}: ${textoAvisoMtto(avisos[0])}`
+    : avisos.map(r => esc(nombreUnidad(r.eq))).join(", ");
+  el.className = "alerta-mtto " + (venc ? "vencido" : "proximo");
+  el.innerHTML = `<span class="alerta-mtto-icono">🔔</span><span><b>${titulo}</b><br><small>${detalle} — toca para ver</small></span>`;
   el.style.display = "flex";
 }
 

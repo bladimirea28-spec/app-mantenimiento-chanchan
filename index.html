@@ -184,7 +184,7 @@
         <span>Elige qué vas a registrar. Tus datos se guardan aunque no tengas señal, y se suben solos cuando vuelva la conexión.</span>
       </div>
 
-      <button class="alerta-mtto" id="alerta-mantenimiento" style="display:none;" onclick="abrirControlUnidades()"></button>
+      <button class="alerta-mtto" id="alerta-mantenimiento" style="display:none;" onclick="tocarAlertaMantenimiento()"></button>
 
       <div id="resumen-inicio" class="resumen-grid" style="display:none;">
         <div class="resumen-tile rojo" style="cursor:pointer;" onclick="abrirFallasAbiertas()"><div class="num" id="resumen-fallas-abiertas">0</div><div class="lbl">Fallas abiertas</div></div>
@@ -194,17 +194,9 @@
       </div>
 
       <div id="menu-tecnico-admin" style="display:none;">
-        <button class="modulo-btn" id="btn-registros-mtto" onclick="verificarPinRegistrosMtto()">
-          <div class="modulo-icono verde">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14.7 6.3a4 4 0 1 1-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 1 1 5.4-5.4l3.6-3.6-3-3-3.6 3.6z"/></svg>
-          </div>
-          <div class="modulo-txt">
-            <div class="titulo-lg">Registros de mantenimiento</div>
-            <div class="subtexto">Actividades y fallas</div>
-          </div>
-          <div class="modulo-flecha"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>
-        </button>
-
+        <!-- "Registros de mantenimiento" (Actividades y fallas) se quitó del
+             inicio el 2026-11-10. Su pantalla y su PIN siguen en el código
+             (pantalla-registros-mtto, verificarPinRegistrosMtto) por si vuelve. -->
         <button class="modulo-btn" id="btn-control-mtto" onclick="abrirControlUnidades()">
           <div class="modulo-icono azul">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg>

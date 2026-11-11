@@ -410,8 +410,14 @@ async function guardarChecklist(){
   await guardarEnStore("checklists", registro);
   mostrarToast("Checklist guardado" + (navigator.onLine ? "" : " (pendiente de sincronizar)"), true);
 
+  // ¿Esta unidad ya está cerca de su mantenimiento (100 km / 15 h / 15 días)?
+  let avisoMtto = null;
+  try{ avisoMtto = await avisoMttoTrasChecklist(registro.equipo_codigo); }catch(e){ avisoMtto = null; }
+
   if(registro.nc > 0 || registro.puede_utilizar === "NO"){
-    avisarFallaAutomatica(registro);
+    avisarFallaAutomatica(registro, avisoMtto);
+  }else if(avisoMtto){
+    mostrarAvisoMtto([avisoMtto], true);
   }else{
     abrirChecklists();
   }
@@ -421,13 +427,14 @@ async function guardarChecklist(){
 /* ---------- NC o "No se puede utilizar" → alerta automática ----------
    La falla la crea el servidor al sincronizar (no depende de que el
    operador acepte), así le llega al técnico en Alertas / Fallas abiertas. */
-function avisarFallaAutomatica(registro){
+function avisarFallaAutomatica(registro, avisoMtto){
   const motivo = registro.puede_utilizar === "NO"
     ? "Marcaste que el equipo <b>no se puede utilizar</b>."
     : `Encontraste <b>${registro.nc} punto(s) No conforme</b>.`;
   abrirModal(`
     <div class="modal-titulo"><span>Se avisará a mantenimiento</span><button class="modal-cerrar" onclick="cerrarModal(); abrirChecklists();">×</button></div>
     <p class="subtexto">${motivo} Al sincronizar se crea automáticamente una alerta de falla para que un técnico la corrija.${navigator.onLine ? "" : " Ahora no tienes señal: se enviará cuando vuelva la conexión."}</p>
+    ${avisoMtto ? htmlAvisoMtto(avisoMtto) + `<p class="subtexto">Además, esta unidad está ${avisoMtto.estado === "VENCIDO" ? "con el mantenimiento vencido" : "próxima a su mantenimiento"}.</p>` : ""}
     <button class="btn btn-primario" style="margin-top:14px;" onclick="cerrarModal(); abrirChecklists();">Entendido</button>
   `);
 }
