@@ -167,6 +167,7 @@ window.addEventListener("beforeunload", (e) => {
    Lo ya enviado queda guardado en el celular para mostrarlo en "Mis
    registros". Si un admin lo borra del servidor, aquí se borra también su
    copia (si no, seguiría apareciendo, por ejemplo un checklist de prueba).
+   Si lo corrige (km, fecha, PM…), la copia se corrige con lo de la hoja.
    Solo se revisan registros desde el 15/10/2026: desde ahí todos tienen su
    código único en la hoja. Lo pendiente de enviar nunca se toca. */
 const COPIAS_REVISABLES_DESDE = new Date(2026, 9, 15).getTime();
@@ -175,7 +176,7 @@ async function limpiarCopiasBorradas(forzar){
   const ultima = Number(localStorage.getItem("copias_revisadas_ts") || 0);
   if(!forzar && Date.now() - ultima < 10 * 60 * 1000) return 0;
   localStorage.setItem("copias_revisadas_ts", String(Date.now()));
-  let borradas = 0;
+  let borradas = 0, corregidas = 0;
   for(const coleccion of ["checklists", "fallas", "actividades", "mantenimientos", "requerimientos"]){
     try{
       const locales = (await leerStore(coleccion)).filter(r => r.sincronizado && (r.creado || 0) >= COPIAS_REVISABLES_DESDE);
@@ -183,10 +184,27 @@ async function limpiarCopiasBorradas(forzar){
       const resp = await llamarServidor({ tipo:"existen_registros", coleccion, ids:locales.map(r => r.id).slice(0, 500) }, { silencioso:true });
       if(!resp || !resp.ok || !Array.isArray(resp.existen)) continue;
       const existen = new Set(resp.existen);
+      const valores = resp.valores || {};
       for(const r of locales.slice(0, 500)){
-        if(!existen.has(String(r.id))){ await borrarDeStore(coleccion, r.id); borradas++; }
+        if(!existen.has(String(r.id))){ await borrarDeStore(coleccion, r.id); borradas++; continue; }
+        // Corregido en la hoja (por un admin o a mano): la copia queda igual.
+        const v = valores[String(r.id)];
+        if(!v) continue;
+        let cambio = false;
+        Object.keys(v).forEach(k => {
+          let nuevo = v[k];
+          if(k === "lectura") nuevo = (nuevo === "" || nuevo == null || isNaN(Number(nuevo))) ? r.lectura : Number(nuevo);
+          else nuevo = nuevo == null ? "" : String(nuevo);
+          if(String(r[k] ?? "") !== String(nuevo ?? "")){ r[k] = nuevo; cambio = true; }
+        });
+        if(cambio){ await guardarEnStore(coleccion, r); corregidas++; }
       }
     }catch(e){ console.log("No se pudo revisar " + coleccion, e); }
+  }
+  if(borradas || corregidas){
+    // Algo cambió en la hoja: lo guardado en el celular ya no vale.
+    localStorage.removeItem("cache_lecturas_ts");
+    try{ actualizarAlertaMantenimiento(true); }catch(e){}
   }
   return borradas;
 }

@@ -222,7 +222,7 @@ async function actualizarAlertaMantenimiento(refrescar){
   const s = sesionActual();
   const el = document.getElementById("alerta-mantenimiento");
   if(!el) return;
-  if(s.rol !== "admin") return actualizarAvisoOperador(el);   // solo sus unidades
+  if(s.rol !== "admin") return actualizarAvisoOperador(el, refrescar);   // solo sus unidades
   try{ await asegurarPlanesMtto(); }catch(e){ return; }
   // El aviso del inicio sale al instante con lo guardado y se refresca por detrás.
   if(refrescar || !controlDatos.actualizado) await cargarControlMantenimiento(true, null, () => actualizarAlertaMantenimiento(false));
@@ -265,11 +265,13 @@ async function misUnidadesChecklist(){
 
 /* Paquete de datos de UNA unidad (sin tocar controlDatos del admin): lo del
    servidor + lo de este celular que el servidor todavía no tiene. */
-async function datosDeUnaUnidad(codigo, alActualizar){
+async function datosDeUnaUnidad(codigo, alActualizar, refrescar){
   let resp = null;
   if(tokenSesion()){
     try{
-      resp = await consultaRapida({ tipo:"control_mantenimiento", codigo }, { silencioso:true, alActualizar });
+      // refrescar: lo guardado se muestra igual, pero se pide al servidor ya
+      // (frescura 1 ms) y alActualizar repinta con lo nuevo.
+      resp = await consultaRapida({ tipo:"control_mantenimiento", codigo }, Object.assign({ silencioso:true, alActualizar }, refrescar ? { frescura:1 } : {}));
     }catch(e){ resp = null; }
   }
   if(!(resp && resp.ok)) resp = null;
@@ -290,20 +292,21 @@ async function datosDeUnaUnidad(codigo, alActualizar){
   (await leerStore("mantenimientos")).filter(m => m.codigo === codigo && nuevo(m)).forEach(m => {
     if(!d.mantenimientos.some(x => x.id === m.id)) d.mantenimientos.push(m);
   });
-  // Los checklists de este celular cuentan siempre: la respuesta guardada del
-  // servidor puede ser de segundos antes de que el checklist terminara de
-  // subir. (Si un admin borra uno, limpiarCopiasBorradas quita la copia.)
-  (await leerStore("checklists")).filter(c => c.equipo_clave === codigo).forEach(c => anotar(c.lectura, c.fecha));
+  // Del celular solo cuenta lo que el servidor todavía no tiene. Lo ya subido
+  // manda la hoja: si un admin corrige un km mal escrito (ej. 237,334 en vez
+  // de 23,734), la copia vieja del celular ya no se usa. Tras sincronizar se
+  // pide de nuevo al servidor (refrescar), así no queda un dato atrasado.
+  (await leerStore("checklists")).filter(c => c.equipo_clave === codigo && nuevo(c)).forEach(c => anotar(c.lectura, c.fecha));
   d.mantenimientos.forEach(m => anotar(m.lectura, m.fecha));
   return d;
 }
 
 /* Estado de la unidad si está PRÓXIMA o VENCIDA; si no, null. */
-async function avisoMttoDeUnidad(codigo, alActualizar){
+async function avisoMttoDeUnidad(codigo, alActualizar, refrescar){
   await asegurarPlanesMtto();
   const eq = equipoMtto(codigo);
   if(!eq || eq.sinPlan || !eq.control) return null;
-  const r = estadoUnidad(eq, await datosDeUnaUnidad(codigo, alActualizar));
+  const r = estadoUnidad(eq, await datosDeUnaUnidad(codigo, alActualizar, refrescar));
   return (r.estado === "PRÓXIMO" || r.estado === "VENCIDO") ? r : null;
 }
 
@@ -344,13 +347,13 @@ function mostrarAvisoMtto(lista, despues){
   `);
 }
 
-async function actualizarAvisoOperador(el){
+async function actualizarAvisoOperador(el, refrescar){
   let unidades = [];
   try{ unidades = await misUnidadesChecklist(); }catch(e){ unidades = []; }
   if(!unidades.length){ _avisosOperador = []; el.style.display = "none"; return; }
   let repintar = false;
   const alActualizar = () => { if(!repintar){ repintar = true; setTimeout(() => actualizarAlertaMantenimiento(false), 300); } };
-  const avisos = (await Promise.all(unidades.map(eq => avisoMttoDeUnidad(eq.codigo, alActualizar).catch(() => null)))).filter(Boolean);
+  const avisos = (await Promise.all(unidades.map(eq => avisoMttoDeUnidad(eq.codigo, alActualizar, refrescar).catch(() => null)))).filter(Boolean);
   _avisosOperador = avisos;
   if(!avisos.length){ el.style.display = "none"; return; }
   const venc = avisos.some(r => r.estado === "VENCIDO");
